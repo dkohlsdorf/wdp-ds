@@ -12,9 +12,5 @@ CREATE TABLE wdp_ds.pvl (
 )
 ;
 
-
 -- Example
-SELECT *
-FROM wdp_ds.pvl      x
-JOIN wdp_ds.encoding y ON x.encoding = y.encoding 
-WHERE FIND_IN_SET('SWIM', description) AND FIND_IN_SET('WH', sound_type) AND x.YEAR = 2008;
+SELECT * FROM wdp_ds.pvl WHERE FIND_IN_SET('COPPER', description) AND FIND_IN_SET('WH', sound_type) AND YEAR = 2008;

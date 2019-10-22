@@ -9,3 +9,6 @@ CREATE TABLE wdp_ds.encoding (
        spot_id      VARCHAR(512)
 )      
 ;
+
+-- EXAMPLE
+select spot_id from wdp_ds.encoding where INSTR(spot_id, ' VEGA ');

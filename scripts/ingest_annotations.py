@@ -11,6 +11,7 @@ def stopwords(filename):
 
 def matching_keywords(strg):
     strg = re.sub("[^A-Za-z ?]+", ' ', strg)    
+    strg = re.sub(" +", ' ', strg)    
     strg = strg.upper()
     strg = strg.strip()
     return strg

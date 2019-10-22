@@ -1,16 +1,34 @@
 DROP TABLE IF EXISTS wdp_ds.pvl;
 CREATE TABLE wdp_ds.pvl (
        id          BIGINT PRIMARY KEY,
-       encoding    BIGINT,
-       species     VARCHAR(256),
        YEAR        BIGINT,
-       sound_type  VARCHAR(8),
+       encoding    BIGINT,
        context     VARCHAR(32),
-       description VARCHAR(512),
+       sound_type  VARCHAR(8),
+       species     VARCHAR(256),
        spot_id     VARCHAR(8),
-       timecode    VARCHAR(32)
+       timecode    VARCHAR(32),
+       description VARCHAR(512)
 )
 ;
 
+
 -- Example
-SELECT * FROM wdp_ds.pvl WHERE FIND_IN_SET('COPPER', description) AND FIND_IN_SET('WH', sound_type) AND YEAR = 2008;
+SELECT
+	y.year, 
+	y.encoding,
+	x.timecode,
+	x.description
+FROM
+	wdp_ds.pvl      x
+JOIN
+	wdp_ds.encoding y
+ON
+	x.encoding = y.encoding 
+WHERE
+	INSTR(y.spot_id, ' BISHU ')    AND
+	INSTR(x.description, ' SWIM ') AND
+	x.YEAR = 2008
+ORDER BY
+	y.encoding
+;

@@ -1,0 +1,14 @@
+runtime: python37
+
+handlers:
+- url: /.*
+  secure: always
+  script: auto
+
+# [START gae_python_mysql_env]
+#env_variables:
+#    CLOUDSQL_CONNECTION_NAME: your-connection-name
+#    CLOUDSQL_USER: root
+#    CLOUDSQL_PASSWORD: your-cloudsql-user-password
+# [END gae_python_mysql_env]
+

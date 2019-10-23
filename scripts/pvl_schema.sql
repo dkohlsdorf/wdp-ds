@@ -2,16 +2,17 @@ DROP TABLE IF EXISTS wdp_ds.pvl;
 CREATE TABLE wdp_ds.pvl (
        id          BIGINT PRIMARY KEY,
        YEAR        BIGINT,
-       encoding    BIGINT,
+       encoding    BIGINT NOT NULL,
        context     VARCHAR(32),
        sound_type  VARCHAR(8),
        species     VARCHAR(256),
        spot_id     VARCHAR(8),
        timecode    VARCHAR(32),
-       description VARCHAR(512)
+       description VARCHAR(512),
+       FOREIGN KEY (encoding)
+       REFERENCES encoding(encoding)
 )
 ;
-
 
 -- Example
 SELECT

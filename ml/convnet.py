@@ -3,6 +3,7 @@ from tensorflow.keras.layers import *
 from tensorflow.keras.models import *
 from audio import *
 import os
+import sys
 
 K_SZE   = (3, 3)
 def conv(x, filters):
@@ -27,7 +28,7 @@ def reshape(x, shape):
 
 def encoder(in_shape, target_dim):
     inp = Input(in_shape)
-    x = conv(inp, 64)
+    x = conv(inp, 128)
     x = conv(x,   64)
     x = conv(x,   32) 
     before = conv(x,   16) 
@@ -50,7 +51,7 @@ def decoder(dim, before_flat):
     x = unconv(x, 16) 
     x = unconv(x, 32)
     x = unconv(x, 64)
-    x = unconv(x, 64) 
+    x = unconv(x, 128) 
     x = unconv(x, 1, stride = (1,1), linear=True) 
     model = Model(inputs = [inp], outputs = [x])
     model.summary()
@@ -85,7 +86,16 @@ def data_gen(paths, win):
 def ae_from_file(paths, win, latent):
     ae, enc = auto_encoder((win, 256, 1), latent)
     x = np.stack([x for x in data_gen(paths, win)])
-    ae.fit(x = x, y = x, batch_size = 10, shuffle = True, epochs = 512)
-    return enc
+    ae.fit(x = x, y = x, batch_size = 10, shuffle = True, epochs = 64)
+    return enc, ae
 
-ae_from_file(['data/catalogue/whistle_snippets/', 'data/catalogue/burst_snippet/'], 32, 128)
+if __name__ == "__main__":
+    if len(sys.argv) < 4:
+        print("python convnet.py WIN LATENT_DIM FOLDER1 ... FOLDERN")
+    else:
+        win = int(sys.argv[1])
+        dim = int(sys.argv[2])
+        folders = sys.argv[3:]
+        encoder, ae = ae_from_file(folders, win, dim)
+        encoder.save('encoder.h5') 
+        ae.save('autoencoder.h5')

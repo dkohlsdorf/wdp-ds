@@ -1,8 +1,8 @@
 DROP TABLE IF EXISTS wdp_ds.encoding;
 CREATE TABLE wdp_ds.encoding (
-       id           BIGINT PRIMARY KEY,
+       id           BIGINT,
        YEAR         BIGINT,
-       encoding     BIGINT,
+       encoding     BIGINT PRIMARY KEY NOT NULL,
        behavior     VARCHAR(32),
        activity_lvl DOUBLE,
        stenella_key VARCHAR(512),

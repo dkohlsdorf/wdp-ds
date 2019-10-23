@@ -86,7 +86,7 @@ def data_gen(paths, win):
 def ae_from_file(paths, win, latent):
     ae, enc = auto_encoder((win, 256, 1), latent)
     x = np.stack([x for x in data_gen(paths, win)])
-    ae.fit(x = x, y = x, batch_size = 10, shuffle = True, epochs = 64)
+    ae.fit(x = x, y = x, batch_size = 10, shuffle = True, epochs = 128)
     return enc, ae
 
 if __name__ == "__main__":

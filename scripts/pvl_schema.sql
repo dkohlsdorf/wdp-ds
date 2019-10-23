@@ -10,9 +10,10 @@ CREATE TABLE wdp_ds.pvl (
        timecode    VARCHAR(32),
        description VARCHAR(512),
        FOREIGN KEY (encoding)
-       REFERENCES encoding(encoding)
+       REFERENCES wdp_ds.encoding(encoding)
 )
 ;
+
 
 -- Example
 SELECT

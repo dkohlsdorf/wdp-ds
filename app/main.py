@@ -9,7 +9,9 @@ app = Flask(__name__)
 
 @app.route('/')
 def landing_page():
-    return "Wild Dolphin Project Data Science"
+    assertion = request.headers.get('X-Goog-IAP-JWT-Assertion')
+    email, id = validate_assertion(assertion) 
+    return "Wild Dolphin Project Data Science {}".format(email)
 
 @app.route("/wdp/encodings")
 def encodings():

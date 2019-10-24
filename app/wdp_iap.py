@@ -14,8 +14,8 @@ def validate_assertion(assertion):
 def audience():
     global AUDIENCE
     if AUDIENCE is None:
-        project_number = get_metadata('')
-        project_id = get_metadata('')
+        project_number = get_metadata('numeric-project-id')
+        project_id = get_metadata('project-id')
         AUDIENCE = 'projects/{}/apps/{}'.format(
             project_number, project_id
         )

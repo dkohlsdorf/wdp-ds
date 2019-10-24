@@ -3,11 +3,13 @@ import matplotlib.pyplot as plt
 import random 
 import sys
 
+from sklearn.cluster import KMeans
 from sklearn.manifold.t_sne import TSNE
 from tensorflow.keras.models import load_model
 from convnet import data_gen
 
-from matplotlib.offsetbox import OffsetImage, AnnotationBbox
+from matplotlib.offsetbox import OffsetImage, AnnotationBbox, AnchoredText
+from matplotlib.patches import Rectangle
 
 def imscatter(x,y,img,ax=None,zoom=1):
     assert len(x) == len(y) and len(x) == len(img)
@@ -17,8 +19,11 @@ def imscatter(x,y,img,ax=None,zoom=1):
     x, y = np.atleast_1d(x, y)
     artists = []
     for i in range(0, len(x)):
-        ab = AnnotationBbox(images[i], (x[i], y[i]), xycoords='data', frameon=True)
+        ab = AnnotationBbox(images[i], (x[i], y[i]), xycoords='data', frameon=True)        
         artists.append(ax.add_artist(ab))
+        #ab = AnchoredText('hi', (x[i], y[i]))        
+        #artists.append(ax.add_artist(ab))
+
     ax.update_datalim(np.column_stack([x, y]))
     ax.autoscale()
     return artists
@@ -34,9 +39,12 @@ if __name__ == "__main__":
         folders = sys.argv[2:]
         x = np.stack([x for x in data_gen(folders, win)])
 
+        km = KMeans(n_clusters=8, max_iter=1024)
         tsne = TSNE()
         h = encoder.predict(x)
+        c = km.fit_predict(h)
         l = tsne.fit_transform(h)
+
         fig, ax = plt.subplots()
         imscatter([a[0] for a in l], [a[1] for a in l], x, ax, zoom=0.15)
         plt.show()

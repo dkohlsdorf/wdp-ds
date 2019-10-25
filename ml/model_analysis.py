@@ -2,6 +2,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import random 
 import sys
+import pandas as pd
 
 from sklearn.cluster import KMeans
 from sklearn.manifold.t_sne import TSNE
@@ -11,7 +12,9 @@ from convnet import data_gen
 from matplotlib.offsetbox import OffsetImage, AnnotationBbox, AnchoredText
 from matplotlib.patches import Rectangle
 
-def imscatter(x,y,img,ax=None,zoom=1):
+COLORS = list(pd.read_csv('ml/colors.txt', sep='\t', header=None)[1])
+
+def imscatter(x,y,c,img,ax=None,zoom=1):
     assert len(x) == len(y) and len(x) == len(img)
     if ax is None:
         ax = plt.gca()
@@ -19,11 +22,8 @@ def imscatter(x,y,img,ax=None,zoom=1):
     x, y = np.atleast_1d(x, y)
     artists = []
     for i in range(0, len(x)):
-        ab = AnnotationBbox(images[i], (x[i], y[i]), xycoords='data', frameon=True)        
+        ab = AnnotationBbox(images[i], (x[i], y[i]), xycoords='data', frameon=True, bboxprops =dict(edgecolor=COLORS[c[i]]))        
         artists.append(ax.add_artist(ab))
-        #ab = AnchoredText('hi', (x[i], y[i]))        
-        #artists.append(ax.add_artist(ab))
-
     ax.update_datalim(np.column_stack([x, y]))
     ax.autoscale()
     return artists
@@ -46,7 +46,7 @@ if __name__ == "__main__":
         l = tsne.fit_transform(h)
 
         fig, ax = plt.subplots()
-        imscatter([a[0] for a in l], [a[1] for a in l], x, ax, zoom=0.15)
+        imscatter([a[0] for a in l], [a[1] for a in l],c, x, ax, zoom=0.15)
         plt.show()
 
         w = encoder.layers[1].get_weights()[0]

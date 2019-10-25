@@ -22,6 +22,18 @@ db = sqlalchemy.create_engine(
     pool_recycle=1800,  # 30 minutes
 )
 
+def filename_query(encoding):
+    return """
+        SELECT year, filename FROM (
+            SELECT filename, year, char_length(filename) as l 
+            FROM wdp_ds.audio    f
+            JOIN wdp_ds.encoding e ON f.encoding = e.encoding
+            WHERE e.encoding = {}
+            ORDER BY l 
+            LIMIT 1
+        ) x;
+    """.format(encoding)
+
 def encoding_query(year = None):
     if year is None:
         return "SELECT * FROM encoding"
@@ -39,7 +51,10 @@ def run_query(query):
         return rows
 
 def encodings():
-    return run_query(encoding_query())
+    return run_query(encoding_query(2011))
 
 def pvl(encoding):
     return run_query(pvl_query(encoding))
+
+def filename(encoding):    
+    return ["{}/{}".format(row['year'], row['filename']) for row in run_query(filename_query(encoding))]

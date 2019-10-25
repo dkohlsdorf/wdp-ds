@@ -34,10 +34,18 @@ if __name__ == "__main__":
     else:
         ae = load_model('autoencoder.h5')
         encoder = load_model('encoder.h5')
+        noise_classifier = load_model('sil.h5')
 
         win = int(sys.argv[1])
         folders = sys.argv[2:]
-        x = np.stack([x for x in data_gen(folders, win)])
+
+        x = np.stack([x for x, _ in data_gen(folders, win, lambda x: x.startswith('noise'))])
+        y = [y for _, y in data_gen(folders, win, lambda x: x.startswith('noise'))]
+        _y = noise_classifier.predict(x)
+        sil_confusion = np.zeros((2, 2))
+        for i in range(len(y)):
+            sil_confusion[int(y[i])][int(_y[i][0])] += 1.0
+        print(sil_confusion)
 
         km = KMeans(n_clusters=8, max_iter=1024)
         tsne = TSNE()

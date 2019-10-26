@@ -1,7 +1,5 @@
 Flask==1.1.1
 PyMySQL==0.9.3
 SQLAlchemy>=1.3.0
-cryptography
-python-jose[cryptography]
 requests
 google-cloud-storage==1.19.1

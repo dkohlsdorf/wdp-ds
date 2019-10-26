@@ -7,3 +7,5 @@
 + `stopwords.txt`: a collections of stopwords for keyword generation
 + `drive2cloudByColab`: move audio files from google drive to cloud storage using colab
 + `initial_model.sh`: train auto encoder and silence model
++ `scripts/SilenceDetector.ipynb`: apply silence detector in gcloud using notebook. writes results to database
++ `scripts/silence_schema.sql`: schema for non noise regions

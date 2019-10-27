@@ -18,6 +18,12 @@ def detector(win, encoder):
         metrics=['accuracy'])
     return model
 
+def label(x):
+    if x.startswith('noise'):
+        return 1.0
+    else:
+        return 0.0
+
 if __name__ == "__main__":
     if len(sys.argv) < 4:
         print("python convnet.py WIN FOLDER1 ... FOLDERN")
@@ -31,6 +37,6 @@ if __name__ == "__main__":
         encoder.summary()
         noise_classifier = detector(win, encoder)
         x = np.stack([x for x, _ in data_gen(folders, win, lambda x: x.startswith('noise'))])
-        y = [y for _, y in data_gen(folders, win, lambda x: x.startswith('noise'))]
+        y = np.array([y for _, y in data_gen(folders, win, label)])
         noise_classifier.fit(x = x, y = y, shuffle=True, epochs = 64, batch_size=10)  
         noise_classifier.save('sil.h5')

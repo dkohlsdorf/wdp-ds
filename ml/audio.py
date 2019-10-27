@@ -20,7 +20,7 @@ def fwd_spectrogram(audio, win=512, step=256):
     return np.array(spectrogram)
 
 
-def spectrogram_from_file(filename, win=512, step=256, filter=25):
+def spectrogram_from_file(filename, win=512, step=256):
     '''
     Read audio and convert to z-normalized spectrogram  
     filename: path to the file
@@ -31,6 +31,5 @@ def spectrogram_from_file(filename, win=512, step=256, filter=25):
         data = data[:, 0]    
     start = win // 2
     spec = np.abs(fwd_spectrogram(data))[:, start:win]
-    spec[:filter] = 0.0
     return spec
 

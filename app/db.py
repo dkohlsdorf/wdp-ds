@@ -47,7 +47,12 @@ def nonsil_query(filename):
     return "SELECT * FROM not_silent WHERE filename = '{}'".format(filename);
 
 def clusters_query(filename, algorithm_name):
-    return "SELECT * FROM clustering_results WHERE filename = {} AND algorithm = {}".format(
+    return """
+        SELECT 
+            encoding, filename, start, stop, algorithm, cluster_id 
+        FROM clustering_results 
+        WHERE filename = '{}' AND algorithm = '{}'
+    """.format(
         filename, algorithm_name
     ) 
 

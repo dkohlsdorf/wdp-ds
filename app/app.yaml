@@ -13,3 +13,10 @@ handlers:
 #    CLOUDSQL_USER: root
 #    CLOUDSQL_PASSWORD: your-cloudsql-user-password
 # [END gae_python_mysql_env]
+
+env_variables:
+  CLOUDSQL_CONNECTION_NAME: wdp-ds:us-central1:wdp-data-science
+  CLOUDSQL_USER: wdp_ds_app
+  CLOUDSQL_PASSWORD: Stenella%WDP$DS23
+  CLOUD_SQL_DATABASE_NAME: wdp_ds
+  CLOUD_SQL_INSTANCES: wdp-data-science

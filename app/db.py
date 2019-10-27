@@ -46,6 +46,11 @@ def pvl_query(encoding):
 def nonsil_query(filename):
     return "SELECT * FROM not_silent WHERE filename = '{}'".format(filename);
 
+def clusters_query(filename, algorithm_name):
+    return "SELECT * FROM clustering_results WHERE filename = {} AND algorithm = {}".format(
+        filename, algorithm_name
+    ) 
+
 def run_query(query):
     with db.connect() as conn:
         rows = []
@@ -64,3 +69,9 @@ def filename(encoding):
 
 def not_silent_regions(encoding):
     return [run_query(nonsil_query(row['filename']))for row in run_query(filename_query(encoding))]
+
+def clusters(encoding, algorithm_name):
+    return [
+        run_query(clusters_query(row['filename'], algorithm_name)) 
+            for row in run_query(filename_query(encoding))
+    ]

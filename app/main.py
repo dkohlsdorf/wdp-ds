@@ -51,5 +51,14 @@ def non_silent(enc_id):
     )
     return response
     
+@app.route("/wdp/ds/<algorithm>/<enc_id>")
+def non_silent(enc_id, algorithm):
+    response = app.response_class(
+        response=json.dumps(db.clusters(enc_id, algorithm)),
+        mimetype='application/json'
+    )
+    return response
+
+
 if __name__ == "__main__":
     app.run()

@@ -18,6 +18,7 @@ def unconv(x, filters, stride = (2,2), linear = False):
 
 def dense(x, dim):
     x = Dense(dim)(x)
+    x = BatchNormalization()(x)
     return LeakyReLU()(x)
 
 def flat(x):
@@ -94,7 +95,7 @@ def ae_from_file(paths, win, latent):
     ae, enc = auto_encoder((win, 256, 1), latent)
     w_before = enc.layers[1].get_weights()[0].flatten()
     x = np.stack([x for x in data_gen(paths, win)])
-    ae.fit(x = x, y = x, batch_size = 10, shuffle = True, epochs = 128)
+    ae.fit(x = x, y = x, batch_size = 50, shuffle = True, epochs = 32)
     w_after = enc.layers[1].get_weights()[0].flatten()
     print("DELTA W:", np.sum(np.square(w_before - w_after)))
     return enc, ae

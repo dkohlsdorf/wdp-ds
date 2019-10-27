@@ -7,7 +7,7 @@ import pandas as pd
 from sklearn.cluster import KMeans
 from sklearn.manifold.t_sne import TSNE
 from tensorflow.keras.models import load_model
-from convnet import data_gen
+from train_convnet_features import data_gen
 
 from scipy.io import wavfile
 

@@ -4,7 +4,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 from random import random
-from convnet import data_gen
+from train_convnet_features import data_gen
 from tensorflow.keras.layers import *
 from tensorflow.keras.models import *
 

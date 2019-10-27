@@ -9,3 +9,5 @@
 + `initial_model.sh`: train auto encoder and silence model
 + `scripts/SilenceDetector.ipynb`: apply silence detector in gcloud using notebook. writes results to database
 + `scripts/silence_schema.sql`: schema for non noise regions
++ `AgglomerativeClusteringDTW.ipynb`: apply encoding and then agglomerative clustering using dtw distance
++ `clustering_schema.sql`: the schema definition of the output of the clustering algorithm

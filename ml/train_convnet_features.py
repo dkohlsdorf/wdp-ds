@@ -5,7 +5,7 @@ from audio import *
 import os
 import sys
 
-K_SZE   = (3, 3)
+K_SZE   = (8, 8)
 def conv(x, filters):
     x = Conv2D(filters, strides = (2, 2), kernel_size = K_SZE, activation='relu', padding='same')(x)
     return LeakyReLU()(x)
@@ -31,7 +31,7 @@ def encoder(in_shape, target_dim):
     x = conv(inp, 128)
     x = conv(x,   64)
     x = conv(x,   32) 
-    before = conv(x,   16) 
+    before = conv(x, 16) 
     x = flat(before)
     x = dense(x, target_dim)
     model = Model(inputs = [inp], outputs = [x])
@@ -60,7 +60,6 @@ def decoder(dim, before_flat):
 def auto_encoder(in_shape, latent_dim):
     enc, shape = encoder(in_shape, latent_dim)
     dec = decoder(latent_dim, shape)
-
     inp = Input(in_shape)
     x  = enc(inp) 
     x  = dec(x) 

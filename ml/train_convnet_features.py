@@ -91,10 +91,13 @@ def data_gen(paths, win, mk_lable = None):
                     else:
                         yield ((x - mu) / std, lable)
             
-def ae_from_file(paths, win, latent):
+def ae_from_file(paths, win, latent):    
     ae, enc = auto_encoder((win, 256, 1), latent)
+    w_before = enc.layers[1].get_weights()[0].flatten()
     x = np.stack([x for x in data_gen(paths, win)])
     ae.fit(x = x, y = x, batch_size = 10, shuffle = True, epochs = 128)
+    w_after = enc.layers[1].get_weights()[0].flatten()
+    print("DELTA W:", np.sum(np.square(w_before - w_after)))
     return enc, ae
 
 if __name__ == "__main__":

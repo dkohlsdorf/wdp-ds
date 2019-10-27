@@ -7,6 +7,8 @@ from random import random
 from train_convnet_features import data_gen
 from tensorflow.keras.layers import *
 from tensorflow.keras.models import *
+from tensorflow.keras.initializers import Constant
+
 
 def detector(win, encoder):
     inp = Input((win, 256, 1))
@@ -23,6 +25,12 @@ def label(x):
         return 1.0
     else:
         return 0.0
+    
+def accept(y):
+    if y == 1 and random() < 0.25 or y == 0:
+        return True
+    else:
+        return False
 
 if __name__ == "__main__":
     if len(sys.argv) < 4:
@@ -36,7 +44,12 @@ if __name__ == "__main__":
             layer.trainable = False
         encoder.summary()
         noise_classifier = detector(win, encoder)
-        x = np.stack([x for x, _ in data_gen(folders, win, lambda x: x.startswith('noise'))])
-        y = np.array([y for _, y in data_gen(folders, win, label)])
+        sampled = [(x, y) for x, y in data_gen(folders, win, lambda x: x.startswith('noise')) if accept(y)]
+        x = np.stack([x for x, _ in sampled])
+        y = np.array([y for _, y in sampled])
+        c = [0, 0]
+        for i in y:
+            c[int(i)] += 1
+        print(c)
         noise_classifier.fit(x = x, y = y, shuffle=True, epochs = 64, batch_size=10)  
         noise_classifier.save('sil.h5')

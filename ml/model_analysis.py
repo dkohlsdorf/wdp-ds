@@ -43,7 +43,8 @@ if __name__ == "__main__":
 
         x = np.stack([x for x in data_gen([noise_test], win)])
         y = noise_classifier.predict(x).flatten()
-        not_noise = [sample == 0 for sample in y]
+        not_noise = [int(np.round(sample)) == 0 for sample in y]
+        print(not_noise)
         regions = []
         for i in range(0, len(not_noise)):
             if not_noise[i]:
@@ -71,11 +72,11 @@ if __name__ == "__main__":
         print(audio.shape)    
         wavfile.write('not_sil.wav', fs, audio)
         x = np.stack([x for x, _ in data_gen(folders, win, lambda x: x.startswith('noise'))])
-        y = [y for _, y in data_gen(folders, win, lambda x: x.startswith('noise'))]
+        y = [y for _, y in data_gen(folders, win, lambda x: x.startswith('noise'))]        
         _y = noise_classifier.predict(x)
         sil_confusion = np.zeros((2, 2))
         for i in range(len(y)):
-            sil_confusion[int(y[i])][int(_y[i][0])] += 1.0
+            sil_confusion[int(y[i])][int(np.round(_y[i][0]))] += 1.0
         print(sil_confusion)
 
         km = KMeans(n_clusters=24, max_iter=1024)

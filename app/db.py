@@ -43,6 +43,9 @@ def encoding_query(year = None):
 def pvl_query(encoding):
     return "SELECT * FROM pvl WHERE encoding = {}".format(encoding)
 
+def nonsil_query(filename):
+    return "SELECT * FROM not_silent WHERE filename = '{}'".format(filename);
+
 def run_query(query):
     with db.connect() as conn:
         rows = []
@@ -58,3 +61,6 @@ def pvl(encoding):
 
 def filename(encoding):    
     return ["{}/{}".format(row['year'], row['filename']) for row in run_query(filename_query(encoding))]
+
+def not_silent_regions(encoding):
+    return [run_query(nonsil_query(row['filename']))for row in run_query(filename_query(encoding))]

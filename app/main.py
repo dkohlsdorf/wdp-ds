@@ -43,5 +43,13 @@ def read_file(enc_id):
         method='GET')
     return redirect(url, code=302)
 
+@app.route("/wdp/ds/non_silent/<enc_id>")
+def non_silent(enc_id):
+    response = app.response_class(
+        response=json.dumps(db.not_silent_regions(enc_id)),
+        mimetype='application/json'
+    )
+    return response
+    
 if __name__ == "__main__":
     app.run()

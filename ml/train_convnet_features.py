@@ -68,28 +68,6 @@ def auto_encoder(in_shape, latent_dim):
     model.summary()
     model.compile(optimizer='adam', loss='mse')
     return model, enc
-
-def data_gen(paths, win, mk_lable = None):
-    frame = 0
-    for path in paths:
-        for file in os.listdir(path):
-            if file.endswith('.wav'):
-                lable = None
-                if mk_lable is not None:
-                    lable = mk_lable(file)
-                print('process file {} {}'.format(file, frame))
-                fp = "{}{}".format(path, file)
-                spec = spectrogram_from_file(fp) 
-                (t, d) = spec.shape
-                for i in range(win, t, win // 2):
-                    frame += 1
-                    x = np.reshape(spec[i - win:i], (win,d,1))
-                    mu  = np.mean(x)
-                    std = np.std(x) + 1.0
-                    if lable is None:
-                        yield (x - mu) / std
-                    else:
-                        yield ((x - mu) / std, lable)
             
 def ae_from_file(paths, win, latent):    
     ae, enc = auto_encoder((win, 256, 1), latent)
@@ -102,7 +80,7 @@ def ae_from_file(paths, win, latent):
 
 if __name__ == "__main__":
     if len(sys.argv) < 4:
-        print("python convnet.py WIN LATENT_DIM FOLDER1 ... FOLDERN")
+        print("python train_convnet_features.py WIN LATENT_DIM FOLDER1 ... FOLDERN")
     else:
         win = int(sys.argv[1])
         dim = int(sys.argv[2])

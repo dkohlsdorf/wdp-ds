@@ -33,3 +33,37 @@ def spectrogram_from_file(filename, win=512, step=256):
     spec = np.abs(fwd_spectrogram(data))[:, start:win]
     return spec
 
+def data_gen(paths, win, mk_lable = None):
+    frame = 0
+    for path in paths:
+        for file in os.listdir(path):
+            if file.endswith('.wav'):
+                lable = None
+                if mk_lable is not None:
+                    lable = mk_lable(file)
+                print('process file {} {}'.format(file, frame))
+                fp = "{}{}".format(path, file)
+                spec = spectrogram_from_file(fp) 
+                (t, d) = spec.shape
+                for i in range(win, t - 1, win // 2):
+                    frame += 1
+                    if lable is None:
+                        x = spec[i - win:i]
+                        mu  = np.mean(x)
+                        std = np.std(x) + 1.0
+                        x = (x - mu) / std
+                        yield np.reshape(x, (win, 256, 1))
+                    elif lable is 'predict_next':
+                        x = spec[i - win:i + 1]
+                        mu  = np.mean(x)
+                        std = np.std(x) + 1.0
+                        x = (x - mu) / std
+                        y = x[-1, :]
+                        x = x[:-1,:]
+                        yield np.reshape(x, (win, 256, 1)), y
+                    else:
+                        x = spec[i - win:i]
+                        x = np.reshape(x, (win, 256, 1))
+                        mu  = np.mean(x)
+                        std = np.std(x) + 1.0
+                        yield ((x - mu) / std, lable)

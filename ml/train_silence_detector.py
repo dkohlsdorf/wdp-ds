@@ -4,14 +4,14 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 from random import random
-from train_convnet_features import data_gen
+
 from tensorflow.keras.layers import *
 from tensorflow.keras.models import *
 from tensorflow.keras.initializers import Constant
 
-
 def detector(win, encoder):
-    inp = Input((win, 256, 1))
+    shape = encoder.layers[0].input_shape[0][1:]
+    inp = Input(shape)
     x   = encoder(inp)
     x   = Dense(1, activation='sigmoid')(x)
     model = Model(inputs = [inp], outputs = [x])
@@ -34,7 +34,7 @@ def accept(y):
 
 if __name__ == "__main__":
     if len(sys.argv) < 4:
-        print("python convnet.py WIN FOLDER1 ... FOLDERN")
+        print("python train_silence_detector.py WIN FOLDER1 ... FOLDERN")
     else:
         win = int(sys.argv[1])
         folders = sys.argv[2:]

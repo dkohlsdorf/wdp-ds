@@ -39,9 +39,6 @@ def data_gen(paths, win, mk_lable = None):
     for path in paths:
         for file in os.listdir(path):
             if file.endswith('.wav'):
-                lable = None
-                if mk_lable is not None:
-                    lable = mk_lable(file)
                 print('process file {} {}'.format(file, frame))
                 fp = "{}{}".format(path, file)
                 spec = spectrogram_from_file(fp) 
@@ -63,6 +60,9 @@ def data_gen(paths, win, mk_lable = None):
                         x = x[:-1,:]
                         yield np.reshape(x, (win, d, 1)), y
                     else:
+                        lable = None
+                        if mk_lable is not None:
+                            lable = mk_lable(file)
                         x = spec[i - win:i]
                         x = np.reshape(x, (win, d, 1))
                         mu  = np.mean(x)

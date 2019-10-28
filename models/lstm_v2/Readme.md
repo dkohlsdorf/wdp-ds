@@ -47,3 +47,10 @@ The embedding ...
 ... zoomed into the whistle part (top right corner)
 
 ![embedding](images/embedding_zoomed.png)
+
+
+# Conclusion
+
+Results: `agglomerative_dtw_lstm`
+
++ Silence detector finds way more (~ 3500)

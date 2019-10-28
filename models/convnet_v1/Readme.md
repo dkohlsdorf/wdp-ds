@@ -73,3 +73,12 @@ And some reconstructions:
 ![embedding](images/reconstruction2.png)
 ![embedding](images/reconstruction3.png)
 ![embedding](images/reconstruction4.png)
+
+# Conclusion
+
+Results: `agglomerative_dtw_tight`
+
++ Worked well for clicks and bursts
++ Quite a large and slow model
++ Did not work for clicks at all
+

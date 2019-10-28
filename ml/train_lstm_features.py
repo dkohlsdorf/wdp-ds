@@ -7,8 +7,8 @@ import sys
 
 def encoder(in_shape, target_dim):
     inp = Input(in_shape)
-    x   = Conv2D(32, kernel_size=(3, 256), activation='relu', padding='same')(inp) 
-    x   = Reshape((in_shape[0], in_shape[1] * 32))(x)
+    x   = Conv2D(32, kernel_size=(8, 256), activation='relu', strides=(1, 256), padding='same')(inp) 
+    x   = Reshape((in_shape[0], 32))(x)
     x   = Bidirectional(LSTM(8, return_sequences=True))(x)
     x   = LSTM(target_dim)(x)    
     model = Model(inputs = [inp], outputs = [x])

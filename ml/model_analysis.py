@@ -32,14 +32,14 @@ def imscatter(x,y,c,img,ax=None,zoom=1):
 
 if __name__ == "__main__":
     if len(sys.argv) < 6:
-        print("python model_analysis.py WIN NOISE_TEST DATA_GEN MODELS FOLDER1 ... FOLDERN")
+        print("python model_analysis.py WIN NOISE_TEST MODELS FOLDER1 ... FOLDERN")
     else:        
         win = int(sys.argv[1])
         noise_test = sys.argv[2]
-        if sys.argv[3] == 'self'
-            data_gen = None
+        if sys.argv[3] == 'self':
+            gen = None
         else:
-            data_gen = sys.argv[3]
+            gen = sys.argv[3]
         models = sys.argv[4]
         folders = sys.argv[5:]
 
@@ -48,7 +48,7 @@ if __name__ == "__main__":
         noise_classifier = load_model('{}sil.h5'.format(models))
         encoder.summary()
 
-        x = np.stack([x for x,_ in data_gen([noise_test], win)])
+        x = np.stack([x for x in data_gen([noise_test], win)])
         y = noise_classifier.predict(x).flatten()
         not_noise = [int(np.round(sample)) == 0 for sample in y]
         print(not_noise)
@@ -102,13 +102,14 @@ if __name__ == "__main__":
             plt.imshow(w[:, :, 0, i].T, cmap='gray')
         plt.show()
 
-        y = ae.predict(x)
-        sample = np.arange(len(x))
-        random.shuffle(sample)
-        sample = sample[0:10]
-        for i in sample:
-            plt.subplot(1, 2,  1)
-            plt.imshow(1.0 - x[i, :, :, 0].T, cmap='gray')
-            plt.subplot(1, 2,  2)
-            plt.imshow(1.0 - y[i, :, :, 0].T, cmap='gray')
-            plt.show()
+        if gen is None: 
+            y = ae.predict(x)
+            sample = np.arange(len(x))
+            random.shuffle(sample)
+            sample = sample[0:10]
+            for i in sample:
+                plt.subplot(1, 2,  1)
+                plt.imshow(1.0 - x[i, :, :, 0].T, cmap='gray')
+                plt.subplot(1, 2,  2)
+                plt.imshow(1.0 - y[i, :, :, 0].T, cmap='gray')
+                plt.show()

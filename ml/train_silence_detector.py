@@ -8,6 +8,7 @@ from random import random
 from tensorflow.keras.layers import *
 from tensorflow.keras.models import *
 from tensorflow.keras.initializers import Constant
+from audio import *
 
 def detector(win, encoder):
     shape = encoder.layers[0].input_shape[0][1:]

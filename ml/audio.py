@@ -1,3 +1,4 @@
+import os
 import numpy as np
 import matplotlib.pyplot as plt
 from numpy.fft import fft
@@ -52,7 +53,7 @@ def data_gen(paths, win, mk_lable = None):
                         mu  = np.mean(x)
                         std = np.std(x) + 1.0
                         x = (x - mu) / std
-                        yield np.reshape(x, (win, 256, 1))
+                        yield np.reshape(x, (win, d, 1))
                     elif lable is 'predict_next':
                         x = spec[i - win:i + 1]
                         mu  = np.mean(x)
@@ -60,10 +61,10 @@ def data_gen(paths, win, mk_lable = None):
                         x = (x - mu) / std
                         y = x[-1, :]
                         x = x[:-1,:]
-                        yield np.reshape(x, (win, 256, 1)), y
+                        yield np.reshape(x, (win, d, 1)), y
                     else:
                         x = spec[i - win:i]
-                        x = np.reshape(x, (win, 256, 1))
+                        x = np.reshape(x, (win, d, 1))
                         mu  = np.mean(x)
                         std = np.std(x) + 1.0
                         yield ((x - mu) / std, lable)

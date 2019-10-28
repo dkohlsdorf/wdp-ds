@@ -45,13 +45,13 @@ def data_gen(paths, win, mk_lable = None):
                 (t, d) = spec.shape
                 for i in range(win, t - 1, win // 2):
                     frame += 1
-                    if lable is None:
+                    if mk_lable is None:
                         x = spec[i - win:i]
                         mu  = np.mean(x)
                         std = np.std(x) + 1.0
                         x = (x - mu) / std
                         yield np.reshape(x, (win, d, 1))
-                    elif lable == 'predict_next':
+                    elif mk_lable == 'predict_next':
                         x = spec[i - win:i + 1]
                         mu  = np.mean(x)
                         std = np.std(x) + 1.0

@@ -31,21 +31,23 @@ def imscatter(x,y,c,img,ax=None,zoom=1):
     return artists
 
 if __name__ == "__main__":
-    if len(sys.argv) < 4:
-        print("python model_analysis.py WIN NOISE_TEST DATA_GEN FOLDER1 ... FOLDERN")
-    else:
-        ae = load_model('autoencoder.h5')
-        encoder = load_model('encoder.h5')
-        noise_classifier = load_model('sil.h5')
-        encoder.summary()
-        
+    if len(sys.argv) < 6:
+        print("python model_analysis.py WIN NOISE_TEST DATA_GEN MODELS FOLDER1 ... FOLDERN")
+    else:        
         win = int(sys.argv[1])
         noise_test = sys.argv[2]
         if sys.argv[3] == 'self'
             data_gen = None
         else:
             data_gen = sys.argv[3]
-        folders = sys.argv[4:]
+        models = sys.argv[4]
+        folders = sys.argv[5:]
+
+        ae = load_model('{}autoencoder.h5'.format(models))
+        encoder = load_model('{}encoder.h5'.format(models))
+        noise_classifier = load_model('{}sil.h5'.format(models))
+        encoder.summary()
+
         x = np.stack([x for x,_ in data_gen([noise_test], win)])
         y = noise_classifier.predict(x).flatten()
         not_noise = [int(np.round(sample)) == 0 for sample in y]

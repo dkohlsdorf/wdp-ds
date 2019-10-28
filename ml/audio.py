@@ -54,7 +54,7 @@ def data_gen(paths, win, mk_lable = None):
                         std = np.std(x) + 1.0
                         x = (x - mu) / std
                         yield np.reshape(x, (win, d, 1))
-                    elif lable is 'predict_next':
+                    elif lable == 'predict_next':
                         x = spec[i - win:i + 1]
                         mu  = np.mean(x)
                         std = np.std(x) + 1.0

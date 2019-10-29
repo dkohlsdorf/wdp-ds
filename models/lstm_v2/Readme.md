@@ -38,8 +38,8 @@ The silence detector's confusion matrix is:
 
 |truth/prediction|not silence|silence|
 |:---|:---|:---|
-|not silence|110|38|
-|silence|10|731|
+|not silence|111|36|
+|silence|4|737|
 
 The embedding ... 
 

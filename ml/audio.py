@@ -31,8 +31,9 @@ def spectrogram_from_file(filename, win=512, step=256, highpass=25):
     if len(data.shape) > 1:
         data = data[:, 0]    
     start = win // 2
-    spec = np.abs(fwd_spectrogram(data, win=win + 25))[:, start:win]
+    spec = np.abs(fwd_spectrogram(data, win=win + 2 * highpass))[:, start:win]
     return spec
+
 
 def data_gen(paths, win, mk_lable = None):
     frame = 0

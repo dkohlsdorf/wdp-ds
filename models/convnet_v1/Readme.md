@@ -61,7 +61,7 @@ The embedding ...
 
 ... zoomed into the whistle part (top right corner)
 
-![embedding](images/embedding_zoomed.png)
+![embedding](images/embedding_zoom.png)
 
 We also visualise the filters:
 

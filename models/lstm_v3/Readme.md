@@ -72,6 +72,9 @@ Here are some clusters from the offline experiment:
 ![embedding](images/3.png)
 ![embedding](images/4.png)
 
+And some of the silent regions
+
+![embedding](images/silence_extractor.png)
 
 # Conclusion
 

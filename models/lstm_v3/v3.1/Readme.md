@@ -1,4 +1,4 @@
-# LSTM V2
+# LSTM V3
 
 Idea:  
  Build an LSTM stack that predicts the next element in the sequence.
@@ -8,9 +8,14 @@ Idea:
  Build a silence detector on top. 
 
 ## Data:
+
+***v3.1: 28.10.2019***: 
 The data is the sound type catalog from my thesis. We slice each
 audio file using a sliding window of 32 frames. The spectorgram is
 computed using a window of 512 samples with a 256 sample skip.
+
+***v3.2: 29.10.2019***:
+Same as 3.1 but adding all cluster files from the last run.
 
 ## Model
 The encoder is shown below:
@@ -43,7 +48,7 @@ Non-trainable params: 0
 __________________________________________________________________________________________________
 ```
 
-# Offline Eval
+# Evaluation v3.1
 
 The silence detector's confusion matrix is:
 
@@ -76,8 +81,8 @@ And some of the silent regions
 
 ![embedding](images/silence_extractor.png)
 
-# Conclusion
+It is the first one where the clustering starts working
 
-Results: `agglomerative_dtw_lstm_v3`
+![embedding](images/clusters_1.png)
 
-+ Silence detector finds way more (~ 2690)
+Silence detector finds way more (~ 2690)

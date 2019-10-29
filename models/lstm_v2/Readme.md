@@ -16,16 +16,18 @@ Layer (type)                 Output Shape              Param #
 =================================================================
 input_1 (InputLayer)         [(None, 32, 256, 1)]      0         
 _________________________________________________________________
-conv2d (Conv2D)              (None, 32, 1, 32)         24608     
+conv2d (Conv2D)              (None, 32, 256, 128)      8320      
 _________________________________________________________________
-reshape (Reshape)            (None, 32, 32)            0         
+max_pooling2d (MaxPooling2D) (None, 32, 1, 128)        0         
 _________________________________________________________________
-bidirectional (Bidirectional (None, 32, 16)            2624      
+reshape (Reshape)            (None, 32, 128)           0         
 _________________________________________________________________
-lstm_1 (LSTM)                (None, 64)                20736     
+bidirectional (Bidirectional (None, 32, 64)            41216     
+_________________________________________________________________
+lstm_1 (LSTM)                (None, 64)                33024     
 =================================================================
-Total params: 47,968
-Trainable params: 47,968
+Total params: 82,560
+Trainable params: 82,560
 Non-trainable params: 0
 _________________________________________________________________
 ```
@@ -36,9 +38,8 @@ The silence detector's confusion matrix is:
 
 |truth/prediction|not silence|silence|
 |:---|:---|:---|
-|not silence|120|28|
-|silence|26|715|
-
+|not silence|110|38|
+|silence|10|731|
 
 The embedding ... 
 
@@ -47,6 +48,10 @@ The embedding ...
 ... zoomed into the whistle part (top right corner)
 
 ![embedding](images/embedding_zoomed.png)
+
+We also visualise the filters:
+
+![embedding](images/filters.png)
 
 
 # Conclusion

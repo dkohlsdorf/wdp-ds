@@ -14,6 +14,7 @@ def detector(win, encoder):
     shape = encoder.layers[0].input_shape[0][1:]
     inp = Input(shape)
     x   = encoder(inp)
+    x   = Dropout(0.5)(x) 
     x   = Dense(1, activation='sigmoid')(x)
     model = Model(inputs = [inp], outputs = [x])
     model.compile(optimizer='rmsprop',
@@ -28,7 +29,7 @@ def label(x):
         return 0.0
     
 def accept(y):
-    if y == 1 and random() < 0.25 or y == 0:
+    if y == 1 and random() < 1.0 or y == 0:
         return True
     else:
         return False

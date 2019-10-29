@@ -5,3 +5,4 @@
 + `train_silence_detector.py`: contains a silence detector based on the convnet
 + `model_analysis.py`: plot some outputs of the model for inspection
 + `colors.txt`: the xkcd color scheme
++ `data_viz.py`: visualize the generated data 

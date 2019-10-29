@@ -7,9 +7,10 @@ import sys
 
 def encoder(in_shape, target_dim):
     inp = Input(in_shape)
-    x   = Conv2D(32, kernel_size=(8, 256), activation='relu', strides=(1, 256), padding='same')(inp) 
-    x   = Reshape((in_shape[0], 32))(x)
-    x   = Bidirectional(LSTM(8, return_sequences=True))(x)
+    x   = Conv2D(128, kernel_size=(8, 8), activation='relu', padding='same')(inp) 
+    x   = MaxPool2D(pool_size=(1, 256))(x)
+    x   = Reshape((in_shape[0], 128))(x)
+    x   = Bidirectional(LSTM(32, return_sequences=True))(x)
     x   = LSTM(target_dim)(x)    
     model = Model(inputs = [inp], outputs = [x])
     model.summary()
@@ -17,7 +18,8 @@ def encoder(in_shape, target_dim):
 
 def predictor(target_dim, output_dim):
     inp = Input((target_dim))
-    x   = Dense(output_dim, activation='linear')(inp)
+    x   = Dropout(0.5)(inp)
+    x   = Dense(output_dim, activation='linear')(x)
     model = Model(inputs = [inp], outputs = [x])
     model.summary()
     return model

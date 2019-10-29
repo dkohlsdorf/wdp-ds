@@ -1,4 +1,4 @@
-# LSTM V2
+# LSTM V3
 
 Idea:  
  Build an LSTM stack that predicts the next element in the sequence.

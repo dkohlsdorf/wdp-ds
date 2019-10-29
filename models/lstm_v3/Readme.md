@@ -79,3 +79,5 @@ And some of the silent regions
 # Conclusion
 
 Results: `agglomerative_dtw_lstm_v3`
+
++ Silence detector finds way more (~ 2690)

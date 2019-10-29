@@ -58,4 +58,4 @@ We also visualise the filters:
 
 Results: `agglomerative_dtw_lstm`
 
-+ Silence detector finds way more (~ 3500)
++ Silence detector finds way more (~ 6759)

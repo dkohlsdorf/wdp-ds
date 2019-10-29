@@ -76,6 +76,6 @@ And some of the silent regions
 
 ![embedding](images/silence_extractor.png)
 
-# Conclusion
+It is the first one where the clustering starts working
 
-Results: `agglomerative_dtw_lstm_v3`
+![embedding](images/clusters_1.png)

@@ -59,3 +59,4 @@ We also visualise the filters:
 Results: `agglomerative_dtw_lstm`
 
 + Silence detector finds way more (~ 6759)
++ Worked better than convnet since it also got whistles

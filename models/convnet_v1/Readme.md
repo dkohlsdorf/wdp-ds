@@ -78,7 +78,6 @@ And some reconstructions:
 
 Results: `agglomerative_dtw_tight`
 
-+ Worked well for clicks and bursts
 + Quite a large and slow model
-+ Did not work for clicks at all
++ Did not work for whistles at all
 + Silence detector not a lot of detections (~1800 regions)

@@ -1,0 +1,64 @@
+import numpy as np 
+from tensorflow.keras.layers import *
+from tensorflow.keras.models import *
+from audio import *
+import os
+import sys
+
+def encoder(in_shape, target_dim):
+    inp = Input(in_shape)
+    loc   = Conv2D(64, kernel_size=(8, 8), activation='relu', padding='same')(inp) 
+    loc   = MaxPool2D(pool_size=(1, 256))(loc)
+    loc   = Reshape((in_shape[0], 64))(loc)
+    glob  = Reshape((in_shape[0], in_shape[1]))(inp)
+    glob  = Conv1D(64, kernel_size=8, activation='relu', padding='same')(glob) 
+    x   = Concatenate()([loc, glob])
+    x   = BatchNormalization()(x)
+    x   = Bidirectional(LSTM(32, return_sequences=True))(x)
+    x   = LSTM(target_dim)(x)    
+    model = Model(inputs = [inp], outputs = [x])
+    model.summary()
+    return model
+
+def predictor(target_dim, output_dim):
+    inp = Input((target_dim))
+    x   = Dropout(0.5)(inp)
+    x   = Dense(output_dim, activation='linear')(x)
+    model = Model(inputs = [inp], outputs = [x])
+    model.summary()
+    return model
+
+def auto_encoder(in_shape, latent_dim, output_dim):
+    enc = encoder(in_shape, latent_dim)
+    dec = predictor(latent_dim, output_dim)
+    inp = Input(in_shape)
+    x  = enc(inp) 
+    x  = dec(x) 
+    model = Model(inputs = [inp], outputs = [x])
+    model.summary()
+    model.compile(optimizer='adam', loss='mse')
+    return model, enc
+
+def ae_from_file(paths, win, latent):    
+    ae, enc = auto_encoder((win, 256, 1), latent, 256)
+    w_before = enc.layers[1].get_weights()[0].flatten()
+    data = [x for x in data_gen(paths, win, 'predict_next')]    
+    x = np.stack([x for x, _ in data])
+    y = np.stack([y for _, y in data])
+    print(x.shape)
+    print(y.shape)
+    ae.fit(x = x, y = y, batch_size = 10, shuffle = True, epochs = 256)
+    w_after = enc.layers[1].get_weights()[0].flatten()
+    print("DELTA W:", np.sum(np.square(w_before - w_after)))
+    return enc, ae
+
+if __name__ == "__main__":
+    if len(sys.argv) < 4:
+        print("python train_lstm_features.py WIN LATENT_DIM FOLDER1 ... FOLDERN")
+    else:
+        win = int(sys.argv[1])
+        dim = int(sys.argv[2])
+        folders = sys.argv[3:]
+        encoder, ae = ae_from_file(folders, win, dim)
+        encoder.save('encoder.h5') 
+        ae.save('autoencoder.h5')

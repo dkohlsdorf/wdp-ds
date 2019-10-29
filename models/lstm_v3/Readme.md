@@ -8,9 +8,14 @@ Idea:
  Build a silence detector on top. 
 
 ## Data:
+
+***v3.1: 28.10.2019***: 
 The data is the sound type catalog from my thesis. We slice each
 audio file using a sliding window of 32 frames. The spectorgram is
 computed using a window of 512 samples with a 256 sample skip.
+
+***v3.2: 29.10.2019***:
+Same as 3.1 but adding all cluster files from the last run.
 
 ## Model
 The encoder is shown below:
@@ -43,7 +48,7 @@ Non-trainable params: 0
 __________________________________________________________________________________________________
 ```
 
-# Offline Eval
+# Evaluation v3.1
 
 The silence detector's confusion matrix is:
 

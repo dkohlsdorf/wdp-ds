@@ -79,3 +79,5 @@ And some of the silent regions
 It is the first one where the clustering starts working
 
 ![embedding](images/clusters_1.png)
+
+Silence detector finds way more (~ 2690)

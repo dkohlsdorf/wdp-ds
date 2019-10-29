@@ -64,9 +64,15 @@ We also visualise the filters:
 
 ![embedding](images/filters.png)
 
+Here are some clusters from the offline experiment:
+
+![embedding](images/0.png)
+![embedding](images/1.png)
+![embedding](images/2.png)
+![embedding](images/3.png)
+![embedding](images/4.png)
+
 
 # Conclusion
 
-Results: `agglomerative_dtw_lstm`
-
-+ Silence detector finds way more (~ 6759)
+Results: `agglomerative_dtw_lstm_v3`

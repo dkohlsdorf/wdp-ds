@@ -44,7 +44,7 @@ def data_gen(paths, win, mk_lable = None):
                 fp = "{}{}".format(path, file)
                 spec = spectrogram_from_file(fp) 
                 (t, d) = spec.shape
-                for i in range(win, t - 1, win // 2):
+                for i in range(win, t - 10, win // 2):
                     frame += 1
                     if mk_lable is None:
                         x = spec[i - win:i]
@@ -60,6 +60,14 @@ def data_gen(paths, win, mk_lable = None):
                         y = x[-1, :]
                         x = x[:-1,:]
                         yield np.reshape(x, (win, d, 1)), y
+                    elif mk_lable == 'predict_next_window':
+                        x = spec[i - win:i + 10]
+                        mu  = np.mean(x)
+                        std = np.std(x) + 1.0
+                        x = (x - mu) / std
+                        y = x[-10:, :]                        
+                        x = x[0:win,  :]                        
+                        yield np.reshape(x, (win, d, 1)), y.flatten()
                     else:
                         lable = None
                         if mk_lable is not None:

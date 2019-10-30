@@ -40,14 +40,14 @@ def auto_encoder(in_shape, latent_dim, output_dim):
     return model, enc
 
 def ae_from_file(paths, win, latent):    
-    ae, enc = auto_encoder((win, 256, 1), latent, 256)
+    ae, enc = auto_encoder((win, 256, 1), latent, 256 * 10)
     w_before = enc.layers[1].get_weights()[0].flatten()
-    data = [x for x in data_gen(paths, win, 'predict_next')]    
+    data = [x for x in data_gen(paths, win, 'predict_next_window')]    
     x = np.stack([x for x, _ in data])
     y = np.stack([y for _, y in data])
     print(x.shape)
     print(y.shape)
-    ae.fit(x = x, y = y, batch_size = 10, shuffle = True, epochs = 256)
+    ae.fit(x = x, y = y, batch_size = 100, shuffle = True, epochs = 128)
     w_after = enc.layers[1].get_weights()[0].flatten()
     print("DELTA W:", np.sum(np.square(w_before - w_after)))
     return enc, ae

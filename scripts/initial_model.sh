@@ -9,6 +9,6 @@ python ml/train_silence_detector.py 32 data/catalogue/whistle_snippets/ data/cat
 python ml/model_analysis.py 32 data/demo/ predict_next models/lstm_v2/ data/catalogue/whistle_snippets/ data/catalogue/burst_snippet/ data/catalogue/noise_snippets/
 
 # LSTM V3
-python ml/train_lstm_combined.py 32 128 data/catalogue/whistle_snippets/ data/catalogue/burst_snippet/ data/291019/ data/catalogue/noise_snippets/ 
+python ml/train_lstm_combined.py 32 128 data/catalogue/whistle_snippets/ data/catalogue/burst_snippet/ data/301019/ data/catalogue/noise_snippets/ 
 python ml/train_silence_detector.py 32 data/catalogue/whistle_snippets/ data/catalogue/burst_snippet/ data/catalogue/noise_snippets/
 python ml/model_analysis.py 32 data/demo/ predict_next models/lstm_v3/v3.3/ data/catalogue/whistle_snippets/ data/catalogue/burst_snippet/ data/catalogue/noise_snippets/

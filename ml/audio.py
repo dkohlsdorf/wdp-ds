@@ -5,7 +5,7 @@ from numpy.fft import fft
 from scipy.io import wavfile
 
 
-def fwd_spectrogram(audio, win=512, step=256):
+def fwd_spectrogram(audio, win=512, step=64):
     '''
     Compute the spectrogram of audio data
 
@@ -21,7 +21,7 @@ def fwd_spectrogram(audio, win=512, step=256):
     return np.array(spectrogram)
 
 
-def spectrogram_from_file(filename, win=512, step=256, highpass=25):
+def spectrogram_from_file(filename, win=512, step=64, highpass=25):
     '''
     Read audio and convert to z-normalized spectrogram  
     filename: path to the file

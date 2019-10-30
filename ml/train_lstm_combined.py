@@ -9,7 +9,7 @@ def encoder(in_shape, target_dim):
     inp = Input(in_shape)
     loc   = Conv2D(128, kernel_size=(8, 8), activation='relu', padding='same')(inp) 
     loc   = MaxPool2D(pool_size=(1, 256))(loc)
-    loc   = Reshape((in_shape[0], 64))(loc)
+    loc   = Reshape((in_shape[0], 128))(loc)
     glob  = Reshape((in_shape[0], in_shape[1]))(inp)
     glob  = Conv1D(128, kernel_size=8, activation='relu', padding='same')(glob) 
     x   = Concatenate()([loc, glob])

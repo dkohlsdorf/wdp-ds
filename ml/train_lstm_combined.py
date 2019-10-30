@@ -7,14 +7,14 @@ import sys
 
 def encoder(in_shape, target_dim):
     inp = Input(in_shape)
-    loc   = Conv2D(64, kernel_size=(8, 8), activation='relu', padding='same')(inp) 
+    loc   = Conv2D(128, kernel_size=(8, 8), activation='relu', padding='same')(inp) 
     loc   = MaxPool2D(pool_size=(1, 256))(loc)
     loc   = Reshape((in_shape[0], 64))(loc)
     glob  = Reshape((in_shape[0], in_shape[1]))(inp)
-    glob  = Conv1D(64, kernel_size=8, activation='relu', padding='same')(glob) 
+    glob  = Conv1D(128, kernel_size=8, activation='relu', padding='same')(glob) 
     x   = Concatenate()([loc, glob])
     x   = BatchNormalization()(x)
-    x   = Bidirectional(LSTM(32, return_sequences=True))(x)
+    x   = Bidirectional(LSTM(256, return_sequences=True))(x)
     x   = LSTM(target_dim)(x)    
     model = Model(inputs = [inp], outputs = [x])
     model.summary()

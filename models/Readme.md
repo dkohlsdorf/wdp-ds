@@ -6,6 +6,6 @@
         - `v3.1`: only catalogue
         - `v3.2`: catalogue + clusters from `v3.1`
         - `v3.3`: larger model / dont freeze all layers form encoder 
-        - `v4.4`: larger model all data from before and increase input window from 32 (80 ms) to 128 (340 ms)  
+        - `v4.4`: larger model all data from before 
                   batch size increased to 100 since we have more data.
                   Predict 10 frames instead of one.

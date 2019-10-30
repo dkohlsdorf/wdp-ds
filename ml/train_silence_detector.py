@@ -14,10 +14,13 @@ def detector(win, encoder):
     shape = encoder.layers[0].input_shape[0][1:]
     inp = Input(shape)
     x   = encoder(inp)
+    x   = BatchNormalization()(x)    
+    x   = Dense(64)(x)
+    x   = Dense(32)(x)
     x   = Dropout(0.5)(x) 
     x   = Dense(1, activation='sigmoid')(x)
     model = Model(inputs = [inp], outputs = [x])
-    model.compile(optimizer='rmsprop',
+    model.compile(optimizer='adam',
         loss='binary_crossentropy',
         metrics=['accuracy'])
     return model
@@ -29,7 +32,7 @@ def label(x):
         return 0.0
     
 def accept(y):
-    if y == 1 and random() < 1.0 or y == 0:
+    if y == 1 and random() < 0.4 or y == 0:
         return True
     else:
         return False
@@ -41,8 +44,8 @@ if __name__ == "__main__":
         win = int(sys.argv[1])
         folders = sys.argv[2:]
         
-        encoder = load_model('encoder.h5')
-        for layer in encoder.layers:
+        encoder = load_model('models/lstm_v3/v3.2/encoder.h5')
+        for layer in encoder.layers[:-1]:
             layer.trainable = False
         encoder.summary()
         noise_classifier = detector(win, encoder)

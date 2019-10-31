@@ -12,6 +12,7 @@ from audio import *
 
 def detector(win, encoder):
     shape = encoder.layers[0].input_shape[0][1:]
+    print(shape)
     inp = Input(shape)
     x   = encoder(inp)
     x   = BatchNormalization()(x)    
@@ -43,8 +44,8 @@ if __name__ == "__main__":
     else:
         win = int(sys.argv[1])
         folders = sys.argv[2:]
-        
-        encoder = load_model('models/lstm_v3/v3.2/encoder.h5')
+        print(win)
+        encoder = load_model('encoder.h5')
         for layer in encoder.layers[:-1]:
             layer.trainable = False
         encoder.summary()

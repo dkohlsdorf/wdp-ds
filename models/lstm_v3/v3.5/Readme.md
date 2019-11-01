@@ -94,3 +94,6 @@ And some of the silent regions
 ![embedding](images/silent.png)
 
 
+More clustering working now:
+
+![embedding](images/clusters.png)

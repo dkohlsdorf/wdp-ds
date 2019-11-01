@@ -17,46 +17,59 @@ computed using a window of 512 samples with a 256 sample skip.
 ***v3.2: 29.10.2019***:
 Same as 3.1 but adding all cluster files from the last run.
 
+***v3.3: 30.10.2019***:
+More parameters
+
+***v3.4: 30.10.2019***:
+Larger input (128 frames) smaller skip for dft (64) all data.
+
+***v3.5 31.10.2019***:
+Catalgoue + Clusters + Thesis2012
+
 ## Model
 The encoder is shown below:
 
 ```
+__________________________________________________________________________________________________
 Layer (type)                    Output Shape         Param #     Connected to                     
 ==================================================================================================
-input_1 (InputLayer)            [(None, 32, 256, 1)] 0                                            
+input_1 (InputLayer)            [(None, 128, 256, 1) 0                                            
 __________________________________________________________________________________________________
-conv2d (Conv2D)                 (None, 32, 256, 64)  4160        input_1[0][0]                    
+conv2d (Conv2D)                 (None, 128, 256, 128 8320        input_1[0][0]                    
 __________________________________________________________________________________________________
-max_pooling2d (MaxPooling2D)    (None, 32, 1, 64)    0           conv2d[0][0]                     
+max_pooling2d (MaxPooling2D)    (None, 128, 1, 128)  0           conv2d[0][0]                     
 __________________________________________________________________________________________________
-reshape_1 (Reshape)             (None, 32, 256)      0           input_1[0][0]                    
+reshape_1 (Reshape)             (None, 128, 256)     0           input_1[0][0]                    
 __________________________________________________________________________________________________
-reshape (Reshape)               (None, 32, 64)       0           max_pooling2d[0][0]              
+reshape (Reshape)               (None, 128, 128)     0           max_pooling2d[0][0]              
 __________________________________________________________________________________________________
-conv1d (Conv1D)                 (None, 32, 64)       131136      reshape_1[0][0]                  
+conv1d (Conv1D)                 (None, 128, 128)     262272      reshape_1[0][0]                  
 __________________________________________________________________________________________________
-concatenate (Concatenate)       (None, 32, 128)      0           reshape[0][0]                    
+concatenate (Concatenate)       (None, 128, 256)     0           reshape[0][0]                    
                                                                  conv1d[0][0]                     
 __________________________________________________________________________________________________
-bidirectional (Bidirectional)   (None, 32, 64)       41216       concatenate[0][0]                
+batch_normalization (BatchNorma (None, 128, 256)     1024        concatenate[0][0]                
 __________________________________________________________________________________________________
-lstm_1 (LSTM)                   (None, 128)          98816       bidirectional[0][0]              
+bidirectional (Bidirectional)   (None, 128, 512)     1050624     batch_normalization[0][0]        
+__________________________________________________________________________________________________
+lstm_1 (LSTM)                   (None, 128)          328192      bidirectional[0][0]              
 ==================================================================================================
-Total params: 275,328
-Trainable params: 275,328
-Non-trainable params: 0
+Total params: 1,650,432
+Trainable params: 1,649,920
+Non-trainable params: 512
 __________________________________________________________________________________________________
 ```
 
-# Evaluation v3.2
+# Evaluation v3.5
 
 The silence detector's confusion matrix is:
 
 |truth/prediction|not silence|silence|
 |:---|:---|:---|
 |not silence|139|0|
-|silence|1|740|
+|silence|3|738|
 
+ 
 The embedding ... 
 
 ![embedding](images/embedding.png)
@@ -73,19 +86,11 @@ Here are some clusters from the offline experiment:
 
 ![embedding](images/0.png)
 ![embedding](images/1.png)
-![embedding](images/2.png)
 ![embedding](images/3.png)
 ![embedding](images/4.png)
-![embedding](images/5.png)
-![embedding](images/6.png)
-![embedding](images/7.png)
-![embedding](images/8.png)
-![embedding](images/9.png)
-![embedding](images/10.png)
-![embedding](images/11.png)
 
 And some of the silent regions
 
-![embedding](images/silence.png)
+![embedding](images/silent.png)
 
 

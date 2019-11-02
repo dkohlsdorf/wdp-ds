@@ -102,6 +102,15 @@ if __name__ == "__main__":
             plt.imshow(w[:, :, 0, i].T, cmap='gray')
         plt.show()
 
+        w = encoder.layers[5].get_weights()[0]
+        n = w.shape[-1]
+        for i in range(0, n):
+            plt.subplot(1, n, i + 1)
+            frame = plt.imshow(w[:, :, i].T)#, cmap='gray')
+            frame.axes.get_xaxis().set_ticks([])
+            frame.axes.get_yaxis().set_ticks([])
+        plt.show()
+
         if gen is None: 
             y = ae.predict(x)
             sample = np.arange(len(x))

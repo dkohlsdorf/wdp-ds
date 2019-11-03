@@ -106,7 +106,7 @@ if __name__ == "__main__":
         n = w.shape[-1]
         for i in range(0, n):
             plt.subplot(1, n, i + 1)
-            frame = plt.imshow(w[:, :, i].T)#, cmap='gray')
+            frame = plt.imshow(w[:, :, i].T, cmap='gray')
             frame.axes.get_xaxis().set_ticks([])
             frame.axes.get_yaxis().set_ticks([])
         plt.show()

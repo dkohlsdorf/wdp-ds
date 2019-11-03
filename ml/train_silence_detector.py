@@ -33,7 +33,7 @@ def label(x):
         return 0.0
     
 def accept(y):
-    if y == 1 and random() < 0.4 or y == 0:
+    if y == 1 and random() < 1.0 or y == 0:
         return True
     else:
         return False

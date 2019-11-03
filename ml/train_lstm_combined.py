@@ -7,14 +7,14 @@ import sys
 
 def encoder(in_shape, target_dim):
     inp = Input(in_shape)
-    loc   = Conv2D(128, kernel_size=(8, 8), activation='relu', padding='same')(inp) 
+    loc   = Conv2D(256, kernel_size=(8, 8), activation='relu', padding='same')(inp) 
     loc   = MaxPool2D(pool_size=(1, 256))(loc)
-    loc   = Reshape((in_shape[0], 128))(loc)
+    loc   = Reshape((in_shape[0], 256))(loc)
     glob  = Reshape((in_shape[0], in_shape[1]))(inp)
-    glob  = Conv1D(128, kernel_size=8, activation='relu', padding='same')(glob) 
+    glob  = Conv1D(256, kernel_size=8, activation='relu', padding='same')(glob) 
     x   = Add()([loc, glob])
     x   = BatchNormalization()(x)
-    x   = Bidirectional(LSTM(256, return_sequences=True))(x)
+    x   = Bidirectional(LSTM(128, return_sequences=True))(x)
     x   = LSTM(target_dim)(x)    
     model = Model(inputs = [inp], outputs = [x])
     model.summary()
@@ -47,8 +47,6 @@ def ae_from_file(paths, win, latent):
     data = [x for x in data_gen(paths, win, 'predict_next_window')]    
     x = np.stack([x for x, _ in data])
     y = np.stack([y for _, y in data])
-    print(x.shape)
-    print(y.shape)
     ae.fit(x = x, y = y, batch_size = 100, shuffle = True, epochs = 128)
     w_after  = enc.layers[1].get_weights()[0].flatten()
     w_after2 = enc.layers[5].get_weights()[0].flatten()

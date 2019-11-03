@@ -6,6 +6,8 @@
         - `v3.1`: only catalogue
         - `v3.2`: catalogue + clusters from `v3.1`
         - `v3.3`: larger model / dont freeze all layers form encoder 
-        - `v4.4`: larger model all data from before 
+        - `v3.4`: larger model all data from before 
                   batch size increased to 100 since we have more data.
                   Predict 10 frames instead of one.
+        - `v3.5`: same model as `v3.4` but use silence results not clustering results
+        - `v3.6`: even more parameters but only data from thesis

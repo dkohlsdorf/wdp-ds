@@ -41,8 +41,8 @@ def auto_encoder(in_shape, latent_dim, output_dim):
 
 def ae_from_file(paths, win, latent):    
     ae, enc = auto_encoder((win, 256, 1), latent, 256 * 10)
-    w_before = enc.layers[1].get_weights()[0].flatten()
-    w_before2 = encoder.layers[5].get_weights()[0].flatten()
+    w_before  = enc.layers[1].get_weights()[0].flatten()
+    w_before2 = enc.layers[5].get_weights()[0].flatten()
 
     data = [x for x in data_gen(paths, win, 'predict_next_window')]    
     x = np.stack([x for x, _ in data])
@@ -50,10 +50,10 @@ def ae_from_file(paths, win, latent):
     print(x.shape)
     print(y.shape)
     ae.fit(x = x, y = y, batch_size = 100, shuffle = True, epochs = 128)
-    w_after = enc.layers[1].get_weights()[0].flatten()
-    w_after2 = encoder.layers[5].get_weights()[0].flatten()
+    w_after  = enc.layers[1].get_weights()[0].flatten()
+    w_after2 = enc.layers[5].get_weights()[0].flatten()
 
-    print("DELTA W: {} {}".format(np.sum(np.square(w_before - w_after)), np.sum(np.square(w_before - w_after))))
+    print("DELTA W: {} {}".format(np.sum(np.square(w_before - w_after)), np.sum(np.square(w_before2 - w_after2))))
     return enc, ae
 
 if __name__ == "__main__":

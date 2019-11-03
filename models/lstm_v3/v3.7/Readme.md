@@ -96,5 +96,6 @@ Here are some clusters from the offline experiment:
 ![embedding](images/4.png)
 
 .. and some regions from density based discovery:
+
 ![embedding](images/density_0.png)
 ![embedding](images/density_1.png)

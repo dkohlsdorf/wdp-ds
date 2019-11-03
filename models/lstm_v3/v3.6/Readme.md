@@ -64,7 +64,7 @@ Non-trainable params: 512
 __________________________________________________________________________________________________
 ```
 
-# Evaluation v3.5
+# Evaluation v3.6
 
 The silence detector's confusion matrix is:
 

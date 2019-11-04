@@ -1,21 +1,22 @@
 import numpy as np 
 from tensorflow.keras.layers import *
 from tensorflow.keras.models import *
+
 from audio import *
 import os
 import sys
 
-def encoder(in_shape, target_dim):
-    inp = Input(in_shape)
-    loc   = Conv2D(256, kernel_size=(8, 8), activation='relu', padding='same')(inp) 
-    loc   = MaxPool2D(pool_size=(1, 256))(loc)
-    loc   = Reshape((in_shape[0], 256))(loc)
-    x   = BatchNormalization()(loc)
-    x   = Bidirectional(LSTM(128, return_sequences=True))(x)
-    x   = LSTM(target_dim)(x)    
-    model = Model(inputs = [inp], outputs = [x])
-    model.summary()
-    return model
+def encoder(in_shape, latent_dim):
+        inp = Input(in_shape)
+        loc = Conv2D(256, kernel_size=(8, 8), activation='relu', padding='same')(inp) 
+        loc = MaxPool2D(pool_size=(1, 256))(loc)
+        loc = Reshape((in_shape[0], 256))(loc)
+        x   = BatchNormalization()(loc)
+        x   = Bidirectional(LSTM(128, return_sequences=True))(x)
+        x   = LSTM(latent_dim)(x)            
+        encoder    = Model(inputs =[inp], outputs=[x])
+        encoder.summary()
+        return encoder
 
 def predictor(win, target_dim, output_dim):
     inp = Input((target_dim))
@@ -38,13 +39,13 @@ def auto_encoder(in_shape, latent_dim, output_dim, win):
     x  = dec(x) 
     model = Model(inputs = [inp], outputs = [x])
     model.summary()
+
     model.compile(optimizer='adam', loss='mse')
     return model, enc
 
 def ae_from_file(paths, win, latent):    
     ae, enc  = auto_encoder((win, 256, 1), latent, 256 * win, win)
     w_before = enc.layers[1].get_weights()[0].flatten()
-
     x = np.stack([x for x in data_gen(paths, win)])
     ae.fit(x = x, y = x, batch_size = 10, shuffle = True, epochs = 128)
     w_after = enc.layers[1].get_weights()[0].flatten()

@@ -11,3 +11,5 @@
                   Predict 10 frames instead of one.
   - `v3.5`: same model as `v3.4` but use silence results not clustering results
   - `v3.6`: even more parameters but only data from thesis
+- `lstm_v4`: encoder is lstm stacked on top of convnet (only local features) and the output is one single vector.
+            the decoder is a lstm with one vector as an input and then predicting through the same lstm stack anf conv layer as the encoder but reversed itself.

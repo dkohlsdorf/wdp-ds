@@ -45,10 +45,14 @@ The silence detector's confusion matrix is:
 
 |truth/prediction|not silence|silence|
 |:---|:---|:---|
-|not silence|||
-|silence|||
+|not silence|139|0|
+|silence|0|741|
 
- 
+And some silent regions:
+
+![embedding](images/sil.png)
+
+
 The embedding:
 
 ![embedding](images/embedding.png)

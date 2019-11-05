@@ -15,3 +15,4 @@ python ml/model_analysis.py 128 data/demo/ predict_next models/lstm_v3/v3.8/ dat
 
 # LSTM V4
 python ml/train_lstm_auto_encoder.py 128 128 data/catalogue/whistle_snippets/ data/catalogue/burst_snippet/ data/2012/
+python ml/model_analysis.py 128 data/demo/ self models/lstm_v4/v4.1/ data/catalogue/whistle_snippets/ data/catalogue/burst_snippet/ data/catalogue/noise_snippets/

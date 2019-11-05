@@ -87,7 +87,9 @@ Furthermore the clustering experiments:
 ![embedding](images/3.png)
 ![embedding](images/4.png)
 
+
 And discovery experiments:
+
 ![embedding](images/density_0.png)
 ![embedding](images/density_1.png)
 

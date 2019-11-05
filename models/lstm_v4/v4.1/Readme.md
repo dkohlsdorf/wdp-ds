@@ -80,16 +80,25 @@ The reconstructions are shown below:
 ![embedding](images/reconstruction5.png)
 ![embedding](images/reconstruction6.png)
 
+In the experiments with sequences i reduced the step size from `win / 2` to `win / 10`
+
 Furthermore the clustering experiments:
 
 ![embedding](images/0.png)
 ![embedding](images/1.png)
+![embedding](images/2.png)
 ![embedding](images/3.png)
 ![embedding](images/4.png)
+![embedding](images/5.png)
+![embedding](images/6.png)
 
 
 And discovery experiments:
 
 ![embedding](images/density_0.png)
 ![embedding](images/density_1.png)
+![embedding](images/density_2.png)
+![embedding](images/density_3.png)
+![embedding](images/density_4.png)
+
 

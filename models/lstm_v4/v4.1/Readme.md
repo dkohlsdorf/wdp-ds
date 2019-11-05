@@ -106,3 +106,6 @@ And discovery experiments:
 ![embedding](images/density_4.png)
 
 
+The discovery experiment on the actual data is:
+
+![embedding](images/clusters.png)

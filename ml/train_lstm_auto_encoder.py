@@ -47,7 +47,7 @@ def ae_from_file(paths, win, latent):
     ae, enc  = auto_encoder((win, 256, 1), latent, 256 * win, win)
     w_before = enc.layers[1].get_weights()[0].flatten()
     x = np.stack([x for x in data_gen(paths, win)])
-    ae.fit(x = x, y = x, batch_size = 10, shuffle = True, epochs = 128)
+    ae.fit(x = x, y = x, batch_size = 10, shuffle = True, epochs = 32)
     w_after = enc.layers[1].get_weights()[0].flatten()
 
     print("DELTA W:", np.sum(np.square(w_before - w_after)))

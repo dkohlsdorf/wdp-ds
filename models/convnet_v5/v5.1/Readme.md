@@ -109,3 +109,7 @@ And discovery experiments:
 ![embedding](images/density_2.png)
 ![embedding](images/density_3.png)
 ![embedding](images/density_4.png)
+
+Final results:
+
+![embedding](images/results.png)

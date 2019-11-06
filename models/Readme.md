@@ -6,4 +6,4 @@
 + `lstm_v4`: encoder is lstm stacked on top of convnet (only local features) and the output is one single vector.
             the decoder is a lstm with one vector as an input and then predicting through the same 
             lstm stack anf conv layer as the encoder but reversed itself.
-         
++ `convnet_v5`: multi layer convolutional auto encoder more data, larger input

@@ -94,15 +94,17 @@ if __name__ == "__main__":
         fig, ax = plt.subplots()
         imscatter([a[0] for a in l], [a[1] for a in l],c, x, ax, zoom=0.15)
         plt.show()
-
-        w = encoder.layers[1].get_weights()[0]
-        n = w.shape[-1]
-        for i in range(0, n):
-            frame = plt.subplot(8, n//8, i + 1)
-            plt.imshow(w[:, :, 0, i].T, cmap='gray')
-            frame.axes.get_xaxis().set_ticks([])
-            frame.axes.get_yaxis().set_ticks([])
-        plt.show()
+    
+    
+        for l in [1,3,5,7]:
+            w = encoder.layers[1].get_weights()[0]
+            n = w.shape[-1]
+            for i in range(0, n):
+                frame = plt.subplot(8, n//8, i + 1)
+                plt.imshow(w[:, :, 0, i].T, cmap='gray')
+                frame.axes.get_xaxis().set_ticks([])
+                frame.axes.get_yaxis().set_ticks([])
+            plt.show()
 
         if gen is None: 
             y = ae.predict(x[0:10])

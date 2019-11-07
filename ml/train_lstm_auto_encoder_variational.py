@@ -53,7 +53,7 @@ class VAE:
 
         def vae_r_loss(y_true, y_pred ): 
             r_loss = K.mean(K.square(y_true - y_pred), axis = [ 1 , 2 , 3 ]) 
-            return 2 * r_loss 
+            return r_loss 
 
         def vae_kl_loss(y_true, y_pred): 
             kl_loss = -0.5 * K.sum( 1 + self.log_var -  K.square(self.mu) - K.exp(self.log_var), axis = 1 ) 
@@ -64,8 +64,7 @@ class VAE:
             kl_loss = vae_kl_loss(y_true, y_pred) 
             return r_loss + kl_loss 
         
-        optimizer = Adam(lr = 0.01) 
-        self.model.compile(optimizer=optimizer, 
+        self.model.compile(optimizer='adam', 
                         loss=vae_loss, 
                         metrics = [ vae_r_loss , vae_kl_loss ],
                         experimental_run_tf_function=False)

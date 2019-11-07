@@ -22,3 +22,6 @@ python ml/train_convnet_features.py 128 128 data/catalogue/whistle_snippets/ dat
 python ml/train_silence_detector.py 128 data/catalogue/whistle_snippets/ data/catalogue/burst_snippet/ data/catalogue/noise_snippets/ data/catalogue2011/noise/ data/catalogue2011/not_noise/
 python ml/model_analysis.py 128 data/demo/ self models/convnet_v5/ data/catalogue/whistle_snippets/ data/catalogue/burst_snippet/ data/catalogue/noise_snippets/
 
+# LSTM V6
+python ml/train_lstm_auto_encoder_variational.py 128 128 data/catalogue/whistle_snippets/ data/catalogue/burst_snippet/ data/2012/ data/011119/
+

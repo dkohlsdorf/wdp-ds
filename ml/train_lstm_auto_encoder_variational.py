@@ -64,7 +64,10 @@ class VAE:
             kl_loss = vae_kl_loss(y_true, y_pred) 
             return r_loss + kl_loss 
         optimizer = Adam(lr = 0.01) 
-        self.model.compile(optimizer=optimizer, loss=vae_loss, metrics = [ vae_r_loss , vae_kl_loss ])
+        self.model.compile(optimizer=optimizer, 
+                        loss=vae_loss, 
+                        metrics = [ vae_r_loss , vae_kl_loss ],
+                        experimental_run_tf_function=False)
 
 def ae_from_file(paths, win, latent):    
     vae = VAE()

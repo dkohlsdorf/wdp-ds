@@ -93,8 +93,8 @@ if __name__ == "__main__":
 
         fig, ax = plt.subplots()
         imscatter([a[0] for a in l], [a[1] for a in l],c, x, ax, zoom=0.15)
-        plt.show()
-    
+        plt.savefig('kmeans.png')
+        plt.close()
     
         for l in [1,3,5,7]:
             w = encoder.layers[1].get_weights()[0]
@@ -104,8 +104,8 @@ if __name__ == "__main__":
                 plt.imshow(w[:, :, 0, i].T, cmap='gray')
                 frame.axes.get_xaxis().set_ticks([])
                 frame.axes.get_yaxis().set_ticks([])
-            plt.show()
-
+            plt.savefig('filters.png')
+            plt.close()
         if gen is None: 
             y = ae.predict(x[0:10])
             sample = np.arange(len(y))
@@ -116,4 +116,5 @@ if __name__ == "__main__":
                 plt.imshow(1.0 - x[i, :, :, 0].T, cmap='gray')
                 plt.subplot(1, 2,  2)
                 plt.imshow(1.0 - y[i, :, :, 0].T, cmap='gray')
-                plt.show()
+                plt.savefig('reconstruction{}.png'.format(i))
+                plt.close()

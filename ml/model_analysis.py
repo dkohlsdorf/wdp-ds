@@ -42,11 +42,19 @@ if __name__ == "__main__":
             gen = sys.argv[3]
         models = sys.argv[4]
         folders = sys.argv[5:]
-
-        ae = load_model('{}autoencoder.h5'.format(models))
-        encoder = load_model('{}encoder.h5'.format(models))
-        noise_classifier = load_model('{}sil.h5'.format(models))
+        
+        from train_lstm_auto_encoder_variational import VAE
+        vae = VAE()
+        vae.auto_encoder((win, 256, 1), 128, 256 * win, win)
+        ae  = vae.model
+        encoder = vae.encoder 
+        ae.load_weights('{}autoencoder.h5'.format(models))
+        encoder.load_weights('{}encoder.h5'.format(models))
         encoder.summary()
+
+        #ae = load_model('{}autoencoder.h5'.format(models))
+        #encoder = load_model('{}encoder.h5'.format(models))
+        noise_classifier = load_model('{}sil.h5'.format(models))
 
         x = np.stack([x for x in data_gen([noise_test], win)])
         y = noise_classifier.predict(x).flatten()

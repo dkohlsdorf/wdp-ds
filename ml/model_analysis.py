@@ -96,8 +96,8 @@ if __name__ == "__main__":
         plt.savefig('kmeans.png')
         plt.close()
     
-        for l in [1,3,5,7]:
-            w = encoder.layers[1].get_weights()[0]
+        for l in [1]:
+            w = encoder.layers[l].get_weights()[0]
             n = w.shape[-1]
             for i in range(0, n):
                 frame = plt.subplot(8, n//8, i + 1)

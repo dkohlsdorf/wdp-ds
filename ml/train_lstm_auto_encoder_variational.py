@@ -15,14 +15,13 @@ class VAE:
         loc = Conv2D(256, kernel_size=(8, 8), activation='relu', padding='same')(self.enc_inp) 
         loc = MaxPool2D(pool_size=(1, 256))(loc)
         loc = Reshape((in_shape[0], 256))(loc)
-        x   = BatchNormalization()(loc)
-        x   = Bidirectional(LSTM(128, return_sequences=True))(x)
-        x   = LSTM(32)(x)            
+        x   = Bidirectional(LSTM(128, return_sequences=True))(loc)
+        x   = LSTM(latent_dim)(x)            
         self.mu      = Dense(latent_dim, activation = 'linear')(x)
         self.log_var = Dense(latent_dim, activation = 'linear')(x)        
 
         def sampling (args) : 
-            mu , log_var = args 
+            mu, log_var = args 
             epsilon = K.random_normal(shape =K.shape(mu), mean = 0. , stddev = 1.)
             return mu + K.exp (log_var / 2) * epsilon
 
@@ -38,7 +37,7 @@ class VAE:
         x = Bidirectional(LSTM(128, return_sequences=True))(x)
         x = Reshape((win, 256, 1))(x)
         x = Conv2DTranspose(256, kernel_size=(8, 8), activation='relu', padding='same')(x) 
-        self.dec_output = Conv2DTranspose(1,   kernel_size=(1, 1), activation='relu', padding='same')(x)     
+        self.dec_output = Conv2DTranspose(1, kernel_size=(1, 1), activation='relu', padding='same')(x)     
         self.decoder = Model(inputs = [self.dec_inp], outputs = [self.dec_output])
         self.decoder.summary()
 
@@ -53,14 +52,14 @@ class VAE:
 
         def vae_r_loss(y_true, y_pred ): 
             r_loss = K.mean(K.square(y_true - y_pred), axis = [ 1 , 2 , 3 ]) 
-            return r_loss 
+            return 1000 * r_loss 
 
         def vae_kl_loss(y_true, y_pred): 
-            kl_loss = -0.5 * K.sum( 1 + self.log_var -  K.square(self.mu) - K.exp(self.log_var), axis = 1 ) 
+            kl_loss = -0.5 * K.sum( 1 + self.log_var -  K.square(self.mu) - K.exp(self.log_var), axis = -1 ) 
             return kl_loss
             
         def vae_loss(y_true, y_pred): 
-            r_loss = vae_r_loss(y_true, y_pred) 
+            r_loss  = vae_r_loss(y_true, y_pred) 
             kl_loss = vae_kl_loss(y_true, y_pred) 
             return r_loss + kl_loss 
         

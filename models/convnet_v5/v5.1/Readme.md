@@ -76,9 +76,6 @@ The embedding:
 We also visualise the filters:
 
 ![embedding](images/filters_l1.png)
-![embedding](images/filters_l2.png)
-![embedding](images/filters_l3.png)
-![embedding](images/filters_l4.png)
 
 The reconstructions are shown below:
 

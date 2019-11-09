@@ -102,7 +102,8 @@ if __name__ == "__main__":
         h = encoder.predict(x)
         c = km.fit_predict(h)
         l = tsne.fit_transform(h)
-
+    
+        plt.figure(figsize=(800, 600))
         fig, ax = plt.subplots()
         imscatter([a[0] for a in l], [a[1] for a in l],c, x, ax, zoom=0.15)
         plt.savefig('kmeans.png')

@@ -11,3 +11,7 @@
 + `scripts/silence_schema.sql`: schema for non noise regions
 + `AgglomerativeClusteringDTW.ipynb`: apply encoding and then agglomerative clustering using dtw distance
 + `clustering_schema.sql`: the schema definition of the output of the clustering algorithm
++ `DiscoveryDTW.ipybn`: apply encoding then run density based discoveru
++ `DTWParallel.ipybn`: compute distance matrix with DTW in beam
++ `OfflineClusteringExperiment.ipybn`: same as agglomerative clustering but on a tiny known dataset
++ `OfflineDensityBasedDiscoveryExperiment.ipybn`: same as discovery experiment but on tiny known dataset

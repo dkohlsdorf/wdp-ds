@@ -107,3 +107,4 @@ reconstructions seem to be shitty.
 
 The discovery experiment on the actual data is:
 
+![embedding](images/discovery.png)

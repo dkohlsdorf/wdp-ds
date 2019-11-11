@@ -102,3 +102,7 @@ So far this encoder is one of the best ones. Even if the
 reconstructions seem to be shitty.
 
 The discovery experiment on the actual data is:
+![embedding](images/discovery.png)
+
+The clustering experiment on the actual data is:
+![embedding](images/clustering.png)

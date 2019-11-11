@@ -1,6 +1,5 @@
-import matplotlib
-matplotlib.use('Agg')
-
+#import matplotlib
+#matplotlib.use('Agg')
 
 import numpy as np 
 import matplotlib.pyplot as plt
@@ -47,18 +46,18 @@ if __name__ == "__main__":
         models = sys.argv[4]
         folders = sys.argv[5:]
         
-        from train_lstm_auto_encoder_variational import VAE
-        vae = VAE()
-        vae.auto_encoder((win, 256, 1), 128, 256 * win, win)
-        ae  = vae.model
-        encoder = vae.encoder 
-        ae.load_weights('{}autoencoder.h5'.format(models))
-        encoder.load_weights('{}encoder.h5'.format(models))
-        encoder.summary()
+        #from train_lstm_auto_encoder_variational import VAE
+        #vae = VAE()
+        #vae.auto_encoder((win, 256, 1), 128, 256 * win, win)
+        #ae  = vae.model
+        #encoder = vae.encoder 
+        #ae.load_weights('{}autoencoder.h5'.format(models))
+        #encoder.load_weights('{}encoder.h5'.format(models))
 
-        #ae = load_model('{}autoencoder.h5'.format(models))
-        #encoder = load_model('{}encoder.h5'.format(models))
+        ae = load_model('{}autoencoder.h5'.format(models))
+        encoder = load_model('{}encoder.h5'.format(models))
         noise_classifier = load_model('{}sil.h5'.format(models))
+        encoder.summary()
 
         x = np.stack([x for x in data_gen([noise_test], win)])
         y = noise_classifier.predict(x).flatten()
@@ -97,18 +96,17 @@ if __name__ == "__main__":
             sil_confusion[int(y[i])][int(np.round(_y[i][0]))] += 1.0
         print(sil_confusion)
 
+        x = np.stack([x for x, _ in data_gen(folders, win, lambda x: x.startswith('noise'))])
         km = KMeans(n_clusters=24, max_iter=1024)
         tsne = TSNE()
         h = encoder.predict(x)
         c = km.fit_predict(h)
         l = tsne.fit_transform(h)
     
-        plt.figure(figsize=(800, 600))
-        fig, ax = plt.subplots()
+        f, ax  = plt.subplots() 
         imscatter([a[0] for a in l], [a[1] for a in l],c, x, ax, zoom=0.15)
-        plt.savefig('kmeans.png')
-        plt.close()
-    
+        plt.show()
+        
         for l in [1]:
             w = encoder.layers[l].get_weights()[0]
             n = w.shape[-1]
@@ -117,8 +115,10 @@ if __name__ == "__main__":
                 plt.imshow(w[:, :, 0, i].T, cmap='gray')
                 frame.axes.get_xaxis().set_ticks([])
                 frame.axes.get_yaxis().set_ticks([])
-            plt.savefig('filters.png')
-            plt.close()
+            #plt.savefig('filters.png')
+            #plt.close()
+            plt.show()
+            
         if gen is None: 
             y = ae.predict(x[0:10])
             sample = np.arange(len(y))
@@ -129,5 +129,6 @@ if __name__ == "__main__":
                 plt.imshow(1.0 - x[i, :, :, 0].T, cmap='gray')
                 plt.subplot(1, 2,  2)
                 plt.imshow(1.0 - y[i, :, :, 0].T, cmap='gray')
-                plt.savefig('reconstruction{}.png'.format(i))
-                plt.close()
+                #plt.savefig('reconstruction{}.png'.format(i))
+                #plt.close()
+                plt.show()

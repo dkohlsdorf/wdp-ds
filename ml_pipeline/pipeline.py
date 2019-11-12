@@ -1,4 +1,8 @@
 import sys
+import yaml
+
+import os
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3' 
 
 from tensorflow.keras.models import load_model
 
@@ -42,6 +46,7 @@ def train(folder, params, lable, model, batch_size=10, epochs=128):
     batch_size: size of the mini batch
     epochs: number of runs over the complete dataset
     '''
+    n_processed = 0
     for epoch in range(epochs):
         batch = []
         for (x, y, _, _, _) in dataset(folder, params, lable, True):
@@ -51,10 +56,51 @@ def train(folder, params, lable, model, batch_size=10, epochs=128):
                 x = np.stack([x.reshape(x.shape[0], x.shape[1], 1) for x, _ in batch])
                 y = np.stack([y.reshape(y.shape[0], y.shape[1], 1) for _, y in batch])
                 total_loss += model.train_on_batch(x=x, y=y)
-                batch = []                        
-        print("EPOCH: {} LOSS: {}".format(epoch, total_loss))
+                batch = []      
+                if n_processed % 10 == 0:
+                    print("#: {} EPOCH: {} LOSS: {}".format(n_processed, epoch, total_loss))
+                    total_loss = 0.0
+                n_processed += 1
 
 
+def train_silence(version_tag, input_folder, output_folder, params, encoder_file, batch, epoch):
+    '''
+    Train a silence dectector on top of an encoder
+
+    version_tag: basically the model name
+    input_folder: the folder with the training data
+    output_folder: the folder to save the model
+    params: window parameters
+    encoder_file: a saved encoder
+    batch: batch size
+    epochs: number of training epochs
+    '''
+    print("Training Auto Encoder: {}".format(version_tag))
+
+    enc     = load_model(encoder_file)
+    cls_sil = classifier(enc)
+    train(input_folder, params, sil, cls_sil, batch, epochs)
+    cls_sil.save('{}/sil.h5'.format(output_folder))
+    
+
+def test_silence(version_tag, input_folder, output_folder, params, sil_file):
+    '''
+    Evaluation of the accuracy as confusion matrix
+    
+    version_tag: basically the model name
+    input_folder: the folder with the training data
+    output_folder: the folder to save the model
+    params: window parameters
+    sil_file: saved silence detector
+    '''
+    sil = load_model(sil_file)
+    confusion = np.zeros((2,2))
+    for (x, y) in dataset(input_folder, params, sil, False):
+        _y = int(round(sil.predict(x.reshape(1, x.shape[0], x.shape[1], 1))[0]))
+        confusion[y][_y] += 1
+    np.savetxt('{}/confusion.csv'.format(output_folder), confusion)
+    
+    
 def train_auto_encoder(version_tag, input_folder, output_folder, params, latent, batch, epochs):
     '''
     Train an auto encoder for feature embedding
@@ -100,19 +146,39 @@ def evaluate_encoder(version_tag, input_folder, output_folder, encoder_file, par
     visualize_embedding("{}/embeddings.png".format(output_folder), x, enc, k)
 
     
-# Global Parameters in config file
-params      = WindowParams(128, 64, 512, 64, 25)
-latent      = 128 
-batch       = 10
-version     = "v1.1"
+def header():
+    return """
+    =================================================================
+    Dolphin Machine Learning Pipeline
+    
+    Training: 
+        - training unsupervised encoder / decoder
+        - plot evaluations
+        - training supervised silence detector
+        - plot confusion matrix
+    
+    usage for training: python ml_pipeline/pipeline.py train default_config.yaml
+    
+    by Daniel Kyu Hwa Kohlsdorf
+    =================================================================
+    """
 
-# Local Parameters Per Command
-epochs      = 2
-folder      = 'data/classification_noise'
-viz_k       = 12
-
-# command train encoder
-train_auto_encoder(version, folder, "./", params, latent, batch, epochs)
-# command test encoder
-evaluate_encoder(version, folder, "./", "encoder.h5", params, viz_k)
-# TODO: train / test silence, apply sil + encoding, clustering dtw
+    
+if __name__== "__main__":
+    print(header())
+    if len(sys.argv) == 3 and sys.argv[1] == 'train':
+        c = yaml.load(open(sys.argv[2]))
+        print("Parameters: {}".format(c))
+        params       = WindowParams(c['spec_win'], c['spec_step'], c['fft_win'], c['fft_step'], c['highpass'])
+        latent       = c['latent']
+        batch        = c['batch']
+        version      = c['version']
+        epochs       = c['epochs']
+        viz_k        = c['viz_k']
+        silence      = c['sil']
+        unsupervised = c['unsupervised']
+        output       = c['output']        
+        train_auto_encoder(version, unsupervised, output, params, latent, batch, epochs)
+        evaluate_encoder(version, silence, output, "encoder.h5", params, viz_k)
+        train_silence(version_tag, input_folder, output_folder, params, "encoder.h5", batch, epoch)
+        test_silence(version_tag, input_folder, output_folder, params, "sil.h5")        

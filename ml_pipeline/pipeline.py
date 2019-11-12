@@ -99,13 +99,20 @@ def evaluate_encoder(version_tag, input_folder, output_folder, encoder_file, par
     )])
     visualize_embedding("{}/embeddings.png".format(output_folder), x, enc, k)
 
-
+    
+# Global Parameters in config file
 params      = WindowParams(128, 64, 512, 64, 25)
 latent      = 128 
 batch       = 10
+version     = "v1.1"
+
+# Local Parameters Per Command
 epochs      = 2
 folder      = 'data/classification_noise'
-k           = 12
-version     = "v1.1"
+viz_k       = 12
+
+# command train encoder
 train_auto_encoder(version, folder, "./", params, latent, batch, epochs)
-evaluate_encoder(version, folder, "./", "encoder.h5", params, k)
+# command test encoder
+evaluate_encoder(version, folder, "./", "encoder.h5", params, viz_k)
+# TODO: train / test silence, apply sil + encoding, clustering dtw

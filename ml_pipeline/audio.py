@@ -34,6 +34,8 @@ class WindowParams(namedtuple('WindowParams', 'spec_win spec_step fft_win fft_st
         The range of a sample in a spectrogam window in the audio file
 
         sample: a sample in the spectrogram window
+
+        returns: start sample in raw audio, stop sample in raw audio
         '''        
         start_audio = sample * self.step 
         stop_audio  = start_audio + self.win_len
@@ -44,6 +46,8 @@ class WindowParams(namedtuple('WindowParams', 'spec_win spec_step fft_win fft_st
         Compute the number of spectrogram window in an audio file
 
         audio_samples: number of audio samples in audio_file
+
+        return: length of the window
         '''
         return (audio_samples - self.win_len) // self.step + 1
 
@@ -60,11 +64,14 @@ def labeled_spectrogram_windows(filename, params, shuffle=False, label_func):
     params: parameters 
     shuffle: shuffle the dataset
     label_func: f(filename, spectrogram) => target 
+    
+    returns: (spectrogram, label, filename, start, stop)
     '''
-    for spectrogram in spectrogram_windows(filename, params, shuffle):
-        yield (spectrogram, label_func(label, spectrogram))
-        
+    for (spectrogram, _, start, stop) in spectrogram_windows(filename, params, shuffle):
+        label = label_func(filename, spectrogram)
+        yield (spectrogram, label, filename, start, stop)
 
+        
 def spectrogram_windows(filename, params, shuffle=False):
     '''
     Extract all spectrogram windows from an audio file.
@@ -72,6 +79,8 @@ def spectrogram_windows(filename, params, shuffle=False):
 
     params: Windowing parameters
     highpass: Frequency below which we cut the spectrogram
+    
+    returns: (spectrogram, filename, start, stop)
     '''    
     assert isinstance(params, WindowParams)
     _, data = wavfile.read(filename)
@@ -86,12 +95,12 @@ def spectrogram_windows(filename, params, shuffle=False):
         start, stop = params.range(i)
         audio = data[start:stop]
         spec  = fwd_spectrogram(audio, params.fft_win_filtered, params.fft_step)
-        start = params.fft_win - params.fft_win//2
-        stop  = params.fft_win 
-        spec  = spec[:, start:stop]
+        dft_start = params.fft_win - params.fft_win//2
+        dft_stop  = params.fft_win 
+        spec  = spec[:, dft_start:dft_stop]
         mu      = np.mean(spec)
         sigma   = np.std(spec) + 1.0
-        yield (spec - mu) / sigma
+        yield ((spec - mu) / sigma, filename, start, stop)
 
         
 def fwd_spectrogram(audio, win=512, step=64):
@@ -101,6 +110,8 @@ def fwd_spectrogram(audio, win=512, step=64):
     audio: one channel audio
     win: window size for dft sliding window
     step: step size for dft sliding windo
+
+    return: power spectrum
     '''
     spectrogram = []
     hanning = np.hanning(win)

@@ -8,6 +8,8 @@ def classifier(encoder, n_labels=1):
     
     encoder: an encoder that ouputs a vector 
     n_labels: number of labels for the classification
+
+    returns: a keras model
     '''
     for layer in encoder.layers[:-1]:
         layer.trainable = False

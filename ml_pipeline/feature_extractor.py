@@ -12,6 +12,8 @@ def encoder(in_shape, latent_dim):
 
     in_shape: the input shape to the model
     latent_dim: embedding size of the model
+    
+    returns: a keras model
     '''
     dft_dim = in_shape[1]
     inp = Input(in_shape)
@@ -30,6 +32,8 @@ def decoder(length, latent_dim, output_dim):
 
     length: length of the sequence to reconstruct
     latent_dim: dimension of the latent space we reconstruct from
+
+    returns: a keras model
     '''
     inp = Input((latent_dim))
     x   = Reshape((1, target_dim))(inp)
@@ -49,6 +53,8 @@ def auto_encoder(in_shape, latent_dim):
 
     in_shape: input shape (time, dimensions, 1)
     latent_dim: the length of the embedding vector
+
+    returns: a keras model for the auto encoder and a separate for the encoder
     '''
     enc = encoder(in_shape, latent_dim)
     dec = decoder(in_shape[0], latent_dim, in_shape[1])

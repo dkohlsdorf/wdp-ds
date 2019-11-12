@@ -50,9 +50,9 @@ def train(folder, params, lable, model, batch_size=10, epochs=128):
             if len(batch) == batch_size:
                 x = np.stack([x.reshape(x.shape[0], x.shape[1], 1) for x, _ in batch])
                 y = np.stack([y.reshape(y.shape[0], y.shape[1], 1) for _, y in batch])
-                total_loss  += model.train_on_batch(x=x, y=y)
+                total_loss += model.train_on_batch(x=x, y=y)
                 batch = []                        
-                print("EPOCH: {} LOSS: {}".format(epoch, total_loss))
+        print("EPOCH: {} LOSS: {}".format(epoch, total_loss))
 
 
 def train_auto_encoder(version_tag, input_folder, output_folder, params, latent, batch, epochs):
@@ -104,7 +104,7 @@ params      = WindowParams(128, 64, 512, 64, 25)
 latent      = 128 
 batch       = 10
 epochs      = 2
-folder      = 'data/unsupervised_mini'
+folder      = 'data/classification_noise'
 k           = 12
 version     = "v1.1"
 train_auto_encoder(version, folder, "./", params, latent, batch, epochs)

@@ -1,4 +1,5 @@
 import numpy as np
+import random
 
 from numpy.fft import fft
 from scipy.io import wavfile
@@ -47,7 +48,7 @@ class WindowParams(namedtuple('WindowParams', 'spec_win spec_step fft_win fft_st
         return (audio_samples - self.win_len) // self.step + 1
 
         
-def spectrogram_windows(filename, params):
+def spectrogram_windows(filename, params, shuffle=False):
     '''
     Extract all spectrogram windows from an audio file.
     Also z-normalizes the spectrograms
@@ -61,7 +62,10 @@ def spectrogram_windows(filename, params):
         data = np.mean(data, axis=1) 
     n = len(data)
     n_windows = params.len(n)
-    for i in range(0, n_windows):
+    ordered   = [i for i in range(0, n_windows)]
+    if shuffle:
+        random.shuffle(ordered)
+    for i in ordered:
         start, stop = params.range(i)
         audio = data[start:stop]
         spec  = fwd_spectrogram(audio, params.fft_win_filtered, params.fft_step)

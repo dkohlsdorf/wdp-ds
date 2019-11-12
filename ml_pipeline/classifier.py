@@ -1,7 +1,6 @@
 from tensorflow.keras.layers import *
 from tensorflow.keras.models import *
 
-
 def classifier(encoder, n_labels=1):
     '''
     A classifier stacked on top of an encoder. 
@@ -28,4 +27,3 @@ def classifier(encoder, n_labels=1):
         model = Model(inputs = [inp], outputs = [x])
         model.compile(optimizer='adam', loss='categorical_crossentropy', metrics=['accuracy'])        
     return model
-

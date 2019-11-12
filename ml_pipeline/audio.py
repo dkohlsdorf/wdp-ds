@@ -47,7 +47,24 @@ class WindowParams(namedtuple('WindowParams', 'spec_win spec_step fft_win fft_st
         '''
         return (audio_samples - self.win_len) // self.step + 1
 
+
+def labeled_spectrogram_windows(filename, params, shuffle=False, label_func):
+    '''
+    Generate spectrogram windows from file as well as labels
+    generated from the filename or spectrogram.
+    
+    For example:
+      a binary classifier: f(name, x) => 1 if name == 'noise' else 0
+      an auto encoder:     f(name, x) => x
+    filename: the filename
+    params: parameters 
+    shuffle: shuffle the dataset
+    label_func: f(filename, spectrogram) => target 
+    '''
+    for spectrogram in spectrogram_windows(filename, params, shuffle):
+        yield (spectrogram, label_func(label, spectrogram))
         
+
 def spectrogram_windows(filename, params, shuffle=False):
     '''
     Extract all spectrogram windows from an audio file.

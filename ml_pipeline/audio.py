@@ -1,5 +1,6 @@
 import numpy as np
 import random
+import os
 
 from numpy.fft import fft
 from scipy.io import wavfile
@@ -7,6 +8,10 @@ from collections import namedtuple
 
 
 class WindowParams(namedtuple('WindowParams', 'spec_win spec_step fft_win fft_step highpass')):
+
+    @property
+    def n_fft_bins(self):
+        return self.fft_win // 2
 
     @property
     def fft_win_filtered(self):
@@ -52,7 +57,26 @@ class WindowParams(namedtuple('WindowParams', 'spec_win spec_step fft_win fft_st
         return (audio_samples - self.win_len) // self.step + 1
 
 
-def labeled_spectrogram_windows(filename, params, shuffle=False, label_func):
+def dataset(folder, params, label_func, shuffle):
+    '''
+    Build an iterator over labeled spectrograms from a folder
+
+    folder: the folder we search
+    params: window parameters
+    label_func: how to label the instances
+    shuffle: if we shuffle the windows per file
+    
+    returns: iterator (spectrogram, label, filename, start, stop)
+    '''
+    for filename in os.listdir(folder):
+        if filename.endswith('.wav'):
+            path = "{}/{}".format(folder, filename)
+            spec_iter = labeled_spectrogram_windows(path, params, label_func, shuffle=shuffle)
+            for x in spec_iter:
+                yield x
+
+
+def labeled_spectrogram_windows(filename, params, label_func, shuffle=False):
     '''
     Generate spectrogram windows from file as well as labels
     generated from the filename or spectrogram.
@@ -65,7 +89,7 @@ def labeled_spectrogram_windows(filename, params, shuffle=False, label_func):
     shuffle: shuffle the dataset
     label_func: f(filename, spectrogram) => target 
     
-    returns: (spectrogram, label, filename, start, stop)
+    returns: iterator (spectrogram, label, filename, start, stop)
     '''
     for (spectrogram, _, start, stop) in spectrogram_windows(filename, params, shuffle):
         label = label_func(filename, spectrogram)
@@ -80,7 +104,7 @@ def spectrogram_windows(filename, params, shuffle=False):
     params: Windowing parameters
     highpass: Frequency below which we cut the spectrogram
     
-    returns: (spectrogram, filename, start, stop)
+    returns: iterator (spectrogram, filename, start, stop)
     '''    
     assert isinstance(params, WindowParams)
     _, data = wavfile.read(filename)
@@ -95,7 +119,7 @@ def spectrogram_windows(filename, params, shuffle=False):
         start, stop = params.range(i)
         audio = data[start:stop]
         spec  = fwd_spectrogram(audio, params.fft_win_filtered, params.fft_step)
-        dft_start = params.fft_win - params.fft_win//2
+        dft_start = params.fft_win - params.n_fft_bins
         dft_stop  = params.fft_win 
         spec  = spec[:, dft_start:dft_stop]
         mu      = np.mean(spec)

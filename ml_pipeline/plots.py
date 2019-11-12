@@ -1,6 +1,10 @@
 import matplotlib
 matplotlib.use('Agg')
 
+import pandas as pd
+import matplotlib.pyplot as plt
+import numpy as np
+
 from matplotlib.offsetbox import OffsetImage, AnnotationBbox, AnchoredText
 from matplotlib.patches import Rectangle
 
@@ -57,11 +61,11 @@ def visualize_2dfilters(img_path, encoder, layers, n_rows = 8):
             plt.imshow(w[:, :, 0, i].T, cmap='gray')
             frame.axes.get_xaxis().set_ticks([])
             frame.axes.get_yaxis().set_ticks([])
-            plt.savefig("{}/{}.png".format(img_path, l))
-            plt.close()
+        plt.savefig("{}/filters{}.png".format(img_path, l))
+        plt.close()
         
             
-def visualize_embedding(img_path, examples, encoder, k=240, figsize=(800, 600), zoom=-.15):
+def visualize_embedding(img_path, examples, encoder, k=240, figsize=(80, 60), zoom=0.15):
     '''
     Plot the examples in the embedding space projected to 2D using
     t-sne
@@ -75,7 +79,7 @@ def visualize_embedding(img_path, examples, encoder, k=240, figsize=(800, 600), 
     '''
     km   = KMeans(n_clusters=k, max_iter=1024)
     tsne = TSNE()
-    h = encoder.predict(x)
+    h = encoder.predict(examples)
     c = km.fit_predict(h)
     l = tsne.fit_transform(h)
     f, ax = plt.subplots(figsize=figsize)

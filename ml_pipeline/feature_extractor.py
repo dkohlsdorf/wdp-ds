@@ -3,7 +3,7 @@ from tensorflow.keras.models import *
 
 
 KERNEL_SIZE = (8,8)
-N_FILTERS   = 128
+N_FILTERS   = 256
 
 
 def encoder(in_shape, latent_dim):
@@ -36,11 +36,11 @@ def decoder(length, latent_dim, output_dim):
     returns: a keras model
     '''
     inp = Input((latent_dim))
-    x   = Reshape((1, target_dim))(inp)
+    x   = Reshape((1, latent_dim))(inp)
     x   = ZeroPadding1D((0, length - 1))(x)
     x   = LSTM(latent_dim, return_sequences=True)(x)    
     x   = Bidirectional(LSTM(output_dim // 2, return_sequences=True))(x)
-    x   = Reshape((win, output_dim, 1))(x)
+    x   = Reshape((length, output_dim, 1))(x)
     x   = Conv2DTranspose(N_FILTERS, kernel_size=KERNEL_SIZE, activation='relu', padding='same')(x) 
     x   = Conv2DTranspose(1, kernel_size=(1, 1), activation='linear', padding='same')(x) 
     return Model(inputs = [inp], outputs = [x])

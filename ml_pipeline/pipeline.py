@@ -99,14 +99,18 @@ def test_silence(version_tag, input_folder, output_folder, params, sil_file):
     params: window parameters
     sil_file: saved silence detector
     '''
+    print("Evaluate silence model {}".format(version_tag))
     silence = load_model(sil_file)
     confusion = np.zeros((2,2))
     for (x, y,_,_,_) in dataset(input_folder, params, sil, False):
         _y = int(np.round(silence.predict(x.reshape(1, x.shape[0], x.shape[1], 1))[0]))
         y = int(y)
-        print(y, _y)
         confusion[y][_y] += 1
     np.savetxt('{}/confusion.csv'.format(output_folder), confusion)
+    accuracy = np.sum(confusion * np.eye(2)) / np.sum(confusion)
+    print("Accuracy: {}".format(accuracy))
+    print("Confusion")
+    print(confusion)
     
     
 def train_auto_encoder(version_tag, input_folder, output_folder, params, latent, batch, epochs):

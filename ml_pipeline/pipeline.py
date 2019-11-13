@@ -111,6 +111,9 @@ def test_silence(version_tag, input_folder, output_folder, params, sil_file):
     print("Accuracy: {}".format(accuracy))
     print("Confusion")
     print(confusion)
+    plot_confusion_matrix(confusion, ['not silence', 'silence'], 'Silence Classification')
+    plt.savefig('confusion.png')
+    plt.close()
     
     
 def train_auto_encoder(version_tag, input_folder, output_folder, params, latent, batch, epochs):

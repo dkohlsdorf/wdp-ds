@@ -175,7 +175,7 @@ def run_embedder(seq_embedder, folder, output):
     folder: folder containing wav files on google cloud
     '''
     print("Apply sequence embedder to {}".format(folder))
-    devnull = open(os.devnull, 'w')
+    log = open('audio_log.txt', 'w')
     client = storage.Client.from_service_account_json('secret.json') 
     bucket = client.get_bucket('wdp-data') 
     paths = [f.name for f in bucket.list_blobs(prefix=folder) if f.name.endswith('.m4a')] 
@@ -186,7 +186,7 @@ def run_embedder(seq_embedder, folder, output):
         with open("/tmp/audio.m4a", "wb") as file_obj: 
             blob = bucket.blob(path) 
             blob.download_to_file(file_obj)   
-        subprocess.call(['ffmpeg', '-y', '-i', '/tmp/audio.m4a', '/tmp/audio.wav'], stdout=devnull, stderr=devnull) 
+        subprocess.call(['ffmpeg', '-y', '-i', '/tmp/audio.m4a', '/tmp/audio.wav'], stdout=log, stderr=log) 
         for x in seq_embedder.embed('/tmp/audio.wav'):                
             regions.append(x)
         end = time.time()

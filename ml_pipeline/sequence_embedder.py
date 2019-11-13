@@ -25,10 +25,10 @@ class SequenceEmbedder:
         '''
         for x in spectrogram_windows(filename, self.param):
             snippet = x[0].reshape(1, x[0].shape[0], x[0].shape[1], 1)
-            is_silence = int(round(self.silence_detector.predict(snippet)))
+            is_silence = int(np.round(self.silence_detector.predict(snippet)[0]))
             if is_silence == 0:
                 embedding = self.encoder.predict(snippet)
                 filename  = x[1]
                 start     = x[2]
                 stop      = x[3]
-                yield(embedding, filename, start, stop)
+                yield(embedding, snippet, filename, start, stop)

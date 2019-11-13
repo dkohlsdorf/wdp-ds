@@ -1,5 +1,6 @@
 import sys
 import yaml
+import pickle
 
 import os
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3' 
@@ -10,7 +11,7 @@ from audio import *
 from feature_extractor import *
 from classifier import *
 from plots import *
-
+from sequence_embedder import *
 
 def no_label(f,x):
     '''
@@ -153,6 +154,24 @@ def evaluate_encoder(version_tag, input_folder, output_folder, encoder_file, par
     )])
     visualize_embedding("{}/embeddings.png".format(output_folder), x, enc, k)
 
+
+def run_embedder(seq_embedder, folder, output):
+    '''
+    Run sequence embedding on all files in a folder
+
+    seq_embedder: a sequence embedder
+    folder: folder containing wav files
+    '''
+    print("Apply sequence embedder to {}".format(folder))
+    regions = []
+    for filename in os.listdir(folder):
+        if filename.endswith('.wav'):
+            path = "{}/{}".format(folder, filename)
+            for x in seq_embedder.embed(path):                
+                regions.append(x)
+    print("Extracted {} regions".format(len(regions)))
+    pickle.dump(regions, open('{}/regions.p'.format(output), 'wb'))
+
     
 def header():
     return """
@@ -165,16 +184,33 @@ def header():
         - training supervised silence detector
         - plot confusion matrix
     
-    usage for training: python ml_pipeline/pipeline.py train default_config.yaml
+    Run:
+        - convert all files in input folder to spectrogram
+        - extract silence detector to all windows
+        - embed every window
+        - cluster windows and write the results to csv (filename, start, stop, cluster)
     
+    usage for training: python ml_pipeline/pipeline.py train default_config.yaml
+    usage for testing:  python ml_pipeline/pipeline.py run application_config.yaml
+
     by Daniel Kyu Hwa Kohlsdorf
     =================================================================
     """
-
     
 if __name__== "__main__":
     print(header())
-    if len(sys.argv) == 3 and sys.argv[1] == 'train':
+    if  len(sys.argv) == 3 and sys.argv[1] == 'run':
+        c = yaml.load(open(sys.argv[2]))
+        print("Parameters: {}".format(c))
+        params       = WindowParams(c['spec_win'], c['spec_step'], c['fft_win'], c['fft_step'], c['highpass'])
+        k            = c['k']
+        inp          = c['gs_input']
+        output       = c['output']        
+        enc          = load_model("{}/encoder.h5".format(output))
+        silence      = load_model("{}/sil.h5".format(output))
+        embedder     = SequenceEmbedder(enc, silence, params)
+        run_embedder(embedder, inp, output)        
+    elif len(sys.argv) == 3 and sys.argv[1] == 'train':
         c = yaml.load(open(sys.argv[2]))
         print("Parameters: {}".format(c))
         params       = WindowParams(c['spec_win'], c['spec_step'], c['fft_win'], c['fft_step'], c['highpass'])

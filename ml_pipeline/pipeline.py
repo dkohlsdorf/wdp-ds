@@ -167,7 +167,7 @@ def evaluate_encoder(version_tag, input_folder, output_folder, encoder_file, par
     visualize_embedding("{}/embeddings.png".format(output_folder), x, enc, k)
 
 
-def run_embedder(seq_embedder, folder, output):
+def run_embedder(seq_embedder, folder, output, bucket_size = 1000):
     '''
     Run sequence embedding on all files in a folder
 
@@ -180,6 +180,7 @@ def run_embedder(seq_embedder, folder, output):
     bucket = client.get_bucket('wdp-data') 
     paths = [f.name for f in bucket.list_blobs(prefix=folder) if f.name.endswith('.m4a')] 
     regions = []
+    n_buckets = 0
     for path in paths:
         print("- Working on embedding {}".format(path))
         start = time.time()
@@ -189,9 +190,12 @@ def run_embedder(seq_embedder, folder, output):
         subprocess.call(['ffmpeg', '-y', '-i', '/tmp/audio.m4a', '/tmp/audio.wav'], stdout=log, stderr=log) 
         for x in seq_embedder.embed('/tmp/audio.wav'):                
             regions.append(x)
+            if len(regions) == bucket_size:
+                pickle.dump(regions, open('{}/regions_{}.p'.format(output, n_buckets), 'wb'))
+                n_buckets += 1
+                regions = []
         end = time.time()
         print("- Done on embedding n regions: {} took {} [sec]".format(len(regions, end - start)))
-    pickle.dump(regions, open('{}/regions.p'.format(output), 'wb'))
 
     
 def header():

@@ -22,11 +22,12 @@ def plot_confusion_matrix(confusion, classes, title, cmap=plt.cm.Blues):
     confusion: confusion matrix
     classes: class label
     title: plot title    
+    
+    shamelessly stolen from: https://scikit-learn.org/stable/auto_examples/model_selection/plot_confusion_matrix.html
     '''
     fig, ax = plt.subplots()
-    im = ax.imshow(cm, interpolation='nearest', cmap=cmap)
+    im = ax.imshow(confusion, interpolation='nearest', cmap=cmap)
     ax.figure.colorbar(im, ax=ax)
-    # We want to show all ticks...
     ax.set(xticks=np.arange(confusion.shape[1]),
            yticks=np.arange(confusion.shape[0]),
            # ... and label them with the respective list entries
@@ -34,19 +35,15 @@ def plot_confusion_matrix(confusion, classes, title, cmap=plt.cm.Blues):
            title=title,
            ylabel='True label',
            xlabel='Predicted label')
-
-    # Rotate the tick labels and set their alignment.
     plt.setp(ax.get_xticklabels(), rotation=45, ha="right",
              rotation_mode="anchor")
-
-    # Loop over data dimensions and create text annotations.
-    fmt = '.2f' if normalize else 'd'
-    thresh = cm.max() / 2.
-    for i in range(cm.shape[0]):
-        for j in range(cm.shape[1]):
-            ax.text(j, i, format(cm[i, j], fmt),
+    fmt = '.2f'
+    thresh = confusion.max() / 2.
+    for i in range(confusion.shape[0]):
+        for j in range(confusion.shape[1]):
+            ax.text(j, i, format(confusion[i, j], fmt),
                     ha="center", va="center",
-                    color="white" if cm[i, j] > thresh else "black")
+                    color="white" if confusion[i, j] > thresh else "black")
     fig.tight_layout()
     return ax
 

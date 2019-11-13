@@ -59,7 +59,7 @@ def train(folder, params, lable, model, batch_size=10, epochs=128):
                 else:
                     y = np.stack([y.reshape(y.shape[0], y.shape[1], 1) for _, y in batch])
                 loss = model.train_on_batch(x=x, y=y)
-                if isinstance(loss, float):
+                if isinstance(loss, np.float):
                     total_loss += loss
                 else:
                     total_loss += loss[0]
@@ -112,7 +112,7 @@ def test_silence(version_tag, input_folder, output_folder, params, sil_file):
     print("Confusion")
     print(confusion)
     plot_confusion_matrix(confusion, ['not silence', 'silence'], 'Silence Classification')
-    plt.savefig('confusion.png')
+    plt.savefig('{}/confusion.png'.format(output_folder))
     plt.close()
     
     

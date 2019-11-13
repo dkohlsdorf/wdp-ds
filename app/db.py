@@ -43,9 +43,6 @@ def encoding_query(year = None):
 def pvl_query(encoding):
     return "SELECT * FROM pvl WHERE encoding = {}".format(encoding)
 
-def nonsil_query(filename):
-    return "SELECT * FROM not_silent WHERE filename = '{}'".format(filename);
-
 def clusters_query(filename, algorithm_name):
     return """
         SELECT 

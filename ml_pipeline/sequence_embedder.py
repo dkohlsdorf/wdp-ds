@@ -32,3 +32,4 @@ class SequenceEmbedder:
                 start     = x[2]
                 stop      = x[3]
                 yield(embedding, snippet, filename, start, stop)
+                

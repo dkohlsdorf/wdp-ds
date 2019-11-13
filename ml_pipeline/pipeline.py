@@ -186,7 +186,7 @@ def run_embedder(seq_embedder, folder, output):
         with open("/tmp/audio.m4a", "wb") as file_obj: 
             blob = bucket.blob(path) 
             blob.download_to_file(file_obj)   
-        subprocess.call(["ffmpeg", "-i", '/tmp/audio.m4a', '/tmp/audio.wav'], stdout=devnull, stderr=devnull) 
+        subprocess.call(['ffmpeg', '-y', '-i', '/tmp/audio.m4a', '/tmp/audio.wav'], stdout=devnull, stderr=devnull) 
         for x in seq_embedder.embed('/tmp/audio.wav'):                
             regions.append(x)
         end = time.time()

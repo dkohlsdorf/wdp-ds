@@ -179,14 +179,14 @@ def run_embedder(seq_embedder, folder, output):
     paths = [f.name for f in bucket.list_blobs(prefix=folder) if f.name.endswith('.m4a')] 
     regions = []
     for path in paths:
+        print("- Working on embedding {}".format(path))
         with open("/tmp/audio.m4a", "wb") as file_obj: 
             blob = bucket.blob(path) 
             blob.download_to_file(file_obj)   
         subprocess.call(["ffmpeg", "-i", '/tmp/audio.m4a', '/tmp/audio.wav'], stdout=devnull, stderr=devnull) 
         for x in seq_embedder.embed('/tmp/audio.wav'):                
             regions.append(x)
-            if len(regions) % 100 == 0:
-                print("- Working on embedding {}: {}".format(path, len(regions)))
+        print("- Done on embedding n regions: {}".format(len(regions)))
     pickle.dump(regions, open('{}/regions.p'.format(output), 'wb'))
 
     

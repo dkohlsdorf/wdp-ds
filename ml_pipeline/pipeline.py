@@ -2,16 +2,19 @@ import sys
 import yaml
 import pickle
 
+import subprocess  
 import os
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3' 
 
 from tensorflow.keras.models import load_model
+from google.cloud import storage 
 
 from audio import *
 from feature_extractor import *
 from classifier import *
 from plots import *
 from sequence_embedder import *
+
 
 def no_label(f,x):
     '''
@@ -167,16 +170,23 @@ def run_embedder(seq_embedder, folder, output):
     Run sequence embedding on all files in a folder
 
     seq_embedder: a sequence embedder
-    folder: folder containing wav files
+    folder: folder containing wav files on google cloud
     '''
     print("Apply sequence embedder to {}".format(folder))
+    devnull = open(os.devnull, 'w')
+    client = storage.Client.from_service_account_json('secret.json') 
+    bucket = client.get_bucket('wdp-data') 
+    paths = [f.name for f in bucket.list_blobs(prefix=folder) if f.name.endswith('.m4a')] 
     regions = []
-    for filename in os.listdir(folder):
-        if filename.endswith('.wav'):
-            path = "{}/{}".format(folder, filename)
-            for x in seq_embedder.embed(path):                
-                regions.append(x)
-    print("Extracted {} regions".format(len(regions)))
+    for path in paths:
+        with open("/tmp/audio.m4a", "wb") as file_obj: 
+            blob = bucket.blob(path) 
+            blob.download_to_file(file_obj)   
+        subprocess.call(["ffmpeg", "-i", '/tmp/audio.m4a', '/tmp/audio.wav'], stdout=devnull, stderr=devnull) 
+        for x in seq_embedder.embed('/tmp/audio.wav'):                
+            regions.append(x)
+            if len(regions) % 100 == 0:
+                print("- Working on embedding {}: {}".format(path, len(regions)))
     pickle.dump(regions, open('{}/regions.p'.format(output), 'wb'))
 
     

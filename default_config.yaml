@@ -7,7 +7,7 @@ latent       : 128
 batch        : 10
 version      : "v1.0"
 epochs       : 128
-viz_k        : 12
+viz_k        : 100
 sil          : 'data/classification_noise'
 unsupervised : 'data/unsupervised'
 output       : 'models/v2_lstm_v4/'

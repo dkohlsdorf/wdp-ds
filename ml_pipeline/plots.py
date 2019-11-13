@@ -15,6 +15,39 @@ from sklearn.manifold.t_sne import TSNE
 COLORS = list(
     pd.read_csv('ml_pipeline/colors.txt', sep='\t', header=None)[1])
 
+def plot_confusion_matrix(confusion, classes, title, cmap=plt.cm.Blues):
+    '''
+    Plot confusion matrix   
+    
+    confusion: confusion matrix
+    classes: class label
+    title: plot title    
+    
+    shamelessly stolen from: https://scikit-learn.org/stable/auto_examples/model_selection/plot_confusion_matrix.html
+    '''
+    fig, ax = plt.subplots()
+    im = ax.imshow(confusion, interpolation='nearest', cmap=cmap)
+    ax.figure.colorbar(im, ax=ax)
+    ax.set(xticks=np.arange(confusion.shape[1]),
+           yticks=np.arange(confusion.shape[0]),
+           # ... and label them with the respective list entries
+           xticklabels=classes, yticklabels=classes,
+           title=title,
+           ylabel='True label',
+           xlabel='Predicted label')
+    plt.setp(ax.get_xticklabels(), rotation=45, ha="right",
+             rotation_mode="anchor")
+    fmt = '.2f'
+    thresh = confusion.max() / 2.
+    for i in range(confusion.shape[0]):
+        for j in range(confusion.shape[1]):
+            ax.text(j, i, format(confusion[i, j], fmt),
+                    ha="center", va="center",
+                    color="white" if confusion[i, j] > thresh else "black")
+    fig.tight_layout()
+    return ax
+
+
 
 def imscatter(x, y, c, img, ax=None, zoom=1):
     '''

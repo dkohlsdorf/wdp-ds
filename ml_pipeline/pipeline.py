@@ -2,6 +2,8 @@ import sys
 import yaml
 import pickle
 
+
+import time
 import subprocess  
 import os
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3' 
@@ -180,13 +182,15 @@ def run_embedder(seq_embedder, folder, output):
     regions = []
     for path in paths:
         print("- Working on embedding {}".format(path))
+        start = time.time()
         with open("/tmp/audio.m4a", "wb") as file_obj: 
             blob = bucket.blob(path) 
             blob.download_to_file(file_obj)   
         subprocess.call(["ffmpeg", "-i", '/tmp/audio.m4a', '/tmp/audio.wav'], stdout=devnull, stderr=devnull) 
         for x in seq_embedder.embed('/tmp/audio.wav'):                
             regions.append(x)
-        print("- Done on embedding n regions: {}".format(len(regions)))
+        end = time.time()
+        print("- Done on embedding n regions: {} took {} [sec]".format(len(regions, end - start)))
     pickle.dump(regions, open('{}/regions.p'.format(output), 'wb'))
 
     

@@ -15,59 +15,59 @@ class WindowParams(namedtuple('WindowParams', 'spec_win spec_step fft_win fft_st
 
     @property
     def fft_win_filtered(self):
-        '''
-        Pad the FFT window by the highpass so the target dimension stays the same
-        '''
+        """
+        Pad the FFT window by the highpass so the target dimension stays the sameß
+        """
         return self.fft_win + 2 * self.highpass
     
     @property
     def win_len(self):
-        '''
+        """
         Length of the spectrogram window returned in audio samples
-        '''
+        """
         return self.spec_win * self.fft_step + self.fft_win_filtered
 
     @property
     def step(self):
-        '''
+        """
         Step size of spectrogram window in audio samples
-        '''
+        """
         return self.spec_step * self.fft_step 
     
     def range(self, sample):
-        '''
+        """
         The range of a sample in a spectrogam window in the audio file
 
-        sample: a sample in the spectrogram window
+        :param sample: a sample in the spectrogram window
 
-        returns: start sample in raw audio, stop sample in raw audio
-        '''        
+        :returns: start sample in raw audio, stop sample in raw audio
+        """
         start_audio = sample * self.step 
         stop_audio  = start_audio + self.win_len
         return start_audio, stop_audio
 
     def len(self, audio_samples):
-        '''
+        """
         Compute the number of spectrogram window in an audio file
 
-        audio_samples: number of audio samples in audio_file
+        :param audio_samples: number of audio samples in audio_file
 
-        return: length of the window
-        '''
+        :return: length of the window
+        """
         return (audio_samples - self.win_len) // self.step + 1
 
 
 def dataset(folder, params, label_func, shuffle):
-    '''
+    """
     Build an iterator over labeled spectrograms from a folder
 
-    folder: the folder we search
-    params: window parameters
-    label_func: how to label the instances
-    shuffle: if we shuffle the windows per file
-    
-    returns: iterator (spectrogram, label, filename, start, stop)
-    '''
+    :param folder: the folder we search
+    :param params: window parameters
+    :param label_func: how to label the instances
+    :param shuffle: if we shuffle the windows per file
+
+    :returns: iterator (spectrogram, label, filename, start, stop)
+    """
     for filename in os.listdir(folder):
         if filename.endswith('.wav'):
             path = "{}/{}".format(folder, filename)
@@ -77,35 +77,35 @@ def dataset(folder, params, label_func, shuffle):
 
 
 def labeled_spectrogram_windows(filename, params, label_func, shuffle=False):
-    '''
+    """
     Generate spectrogram windows from file as well as labels
     generated from the filename or spectrogram.
-    
+
     For example:
       a binary classifier: f(name, x) => 1 if name == 'noise' else 0
       an auto encoder:     f(name, x) => x
-    filename: the filename
-    params: parameters 
-    shuffle: shuffle the dataset
-    label_func: f(filename, spectrogram) => target 
-    
-    returns: iterator (spectrogram, label, filename, start, stop)
-    '''
+    :param filename: the filename
+    :param params: parameters
+    :param shuffle: shuffle the dataset
+    :param label_func: f(filename, spectrogram) => target
+
+    :returns: iterator (spectrogram, label, filename, start, stop)
+    """
     for (spectrogram, _, start, stop) in spectrogram_windows(filename, params, shuffle):
         label = label_func(filename, spectrogram)
         yield (spectrogram, label, filename, start, stop)
 
         
 def spectrogram_windows(filename, params, shuffle=False):
-    '''
+    """
     Extract all spectrogram windows from an audio file.
     Also z-normalizes the spectrograms
 
-    params: Windowing parameters
-    highpass: Frequency below which we cut the spectrogram
-    
-    returns: iterator (spectrogram, filename, start, stop)
-    '''    
+    :param params: Windowing parameters
+    :param highpass: Frequency below which we cut the spectrogram
+
+    :returns: iterator (spectrogram, filename, start, stop)
+    """
     assert isinstance(params, WindowParams)
     _, data = wavfile.read(filename)
     if len(data.shape) > 1:
@@ -128,15 +128,15 @@ def spectrogram_windows(filename, params, shuffle=False):
 
         
 def fwd_spectrogram(audio, win=512, step=64):
-    '''
+    """
     Compute the spectrogram of audio data
 
-    audio: one channel audio
-    win: window size for dft sliding window
-    step: step size for dft sliding windo
+    :param audio: one channel audio
+    :param win: window size for dft sliding window
+    :param step: step size for dft sliding windo
 
-    return: power spectrum
-    '''
+    :returns: power spectrum
+    """
     spectrogram = []
     hanning = np.hanning(win)
     for i in range(win, len(audio), step):

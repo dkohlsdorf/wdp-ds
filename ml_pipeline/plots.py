@@ -5,8 +5,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import numpy as np
 
-from matplotlib.offsetbox import OffsetImage, AnnotationBbox, AnchoredText
-from matplotlib.patches import Rectangle
+from matplotlib.offsetbox import OffsetImage, AnnotationBbox
 
 from sklearn.cluster import KMeans
 from sklearn.manifold.t_sne import TSNE
@@ -16,15 +15,16 @@ COLORS = list(
     pd.read_csv('ml_pipeline/colors.txt', sep='\t', header=None)[1])
 
 def plot_confusion_matrix(confusion, classes, title, cmap=plt.cm.Blues):
-    '''
-    Plot confusion matrix   
-    
-    confusion: confusion matrix
-    classes: class label
-    title: plot title    
-    
+    """
+    Plot confusion matrix
+
+    :param confusion: confusion matrix
+    :param classes: class label
+    :param title: plot title
+    :param cmap: color map
+
     shamelessly stolen from: https://scikit-learn.org/stable/auto_examples/model_selection/plot_confusion_matrix.html
-    '''
+    """
     fig, ax = plt.subplots()
     im = ax.imshow(confusion, interpolation='nearest', cmap=cmap)
     ax.figure.colorbar(im, ax=ax)
@@ -48,16 +48,17 @@ def plot_confusion_matrix(confusion, classes, title, cmap=plt.cm.Blues):
     return ax
 
 
-
 def imscatter(x, y, c, img, ax=None, zoom=1):
-    '''
+    """
     Plots the images on a scatter plot with a colored frame
 
-    x: x values of input
-    y: y values of input
-    c: colors for frames
-    img: img for each point
-    '''
+    :param x: x values of input
+    :param y: y values of input
+    :param c: colors for frames
+    :param img: img for each point
+    :param ax: plot axis
+    :param zoom: image zoom
+    """
     assert len(x) == len(y) and len(x) == len(img)
     if ax is None:
         ax = plt.gca()
@@ -78,14 +79,14 @@ def imscatter(x, y, c, img, ax=None, zoom=1):
 
 
 def visualize_2dfilters(img_path, encoder, layers, n_rows = 8):
-    '''
+    """
     Vizualize filter banks in encoding model
-    
-    img_path: path where the image is saved exluding the name
-    encoder: a keras model with convolutions
-    layers: layers we want to visualize
-    n_rows: number of rows in the plot
-    '''
+
+    :param img_path: path where the image is saved exluding the name
+    :param encoder: a keras model with convolutions
+    :param layers: layers we want to visualize
+    :param n_rows: number of rows in the plot
+    """
     for l in layers:
         w = encoder.layers[l].get_weights()[0]
         n = w.shape[-1]
@@ -99,17 +100,17 @@ def visualize_2dfilters(img_path, encoder, layers, n_rows = 8):
         
             
 def visualize_embedding(img_path, examples, encoder, k=240, figsize=(80, 60), zoom=0.15):
-    '''
+    """
     Plot the examples in the embedding space projected to 2D using
     t-sne
 
-    img_path: path where the image is saved including the name
-    examples: the examples to embedd
-    encoder: a keras model 
-    k: number of clusters 
-    figsize: size of figure
-    zoom: zoom the examples
-    '''
+    :param img_path: path where the image is saved including the name
+    :param examples: the examples to embedd
+    :param encoder: a keras model
+    :param k: number of clusters
+    :param figsize: size of figure
+    :param zoom: zoom the examples
+    """
     km   = KMeans(n_clusters=k, max_iter=1024)
     tsne = TSNE()
     h = encoder.predict(examples)

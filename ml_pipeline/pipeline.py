@@ -9,27 +9,28 @@ import os
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3' 
 
 from tensorflow.keras.models import load_model
-from google.cloud import storage 
-
-from audio import *
-from feature_extractor import *
-from classifier import *
-from plots import *
-from sequence_embedder import *
+from ml_pipeline.feature_extractor import *
+from ml_pipeline.classifier import *
+from ml_pipeline.plots import *
+from ml_pipeline.sequence_embedder import *
 
 
 def no_label(f,x):
-    '''
+    """
     Return none for no label
-    '''
+
+    :returns: None
+    """
     return None
 
 
 def sil(f, x):
-    ''' 
-    For silence classification return 
+    """
+    For silence classification return
     positive label if the file starts with noise
-    '''
+
+    :returns: 1 if name starts with noise 0 otherwise
+    """
     if f.split('/')[-1].startswith('noise'):
         return 1.0
     else:
@@ -37,21 +38,23 @@ def sil(f, x):
 
 
 def auto_encode(f, x):
-    '''
+    """
     For auto encoding the label is the spectrogram itself
-    '''
+
+    :returns: spectrogram itself
+    """
     return x
 
 
 def train(folder, params, lable, model, batch_size=10, epochs=128):
-    '''
+    """
     Train the model for some epochs with a specific batch size
-    
-    data: a data iterator
-    model: a keras model
-    batch_size: size of the mini batch
-    epochs: number of runs over the complete dataset
-    '''            
+
+    :param data: a data iterator
+    :param model: a keras model
+    :param batch_size: size of the mini batch
+    :param epochs: number of runs over the complete dataset
+    """
     n_processed = 0
     for epoch in range(epochs):
         batch = []
@@ -77,34 +80,34 @@ def train(folder, params, lable, model, batch_size=10, epochs=128):
 
 
 def train_silence(version_tag, input_folder, output_folder, params, encoder_file, batch, epoch):
-    '''
+    """
     Train a silence dectector on top of an encoder
 
-    version_tag: basically the model name
-    input_folder: the folder with the training data
-    output_folder: the folder to save the model
-    params: window parameters
-    encoder_file: a saved encoder
-    batch: batch size
-    epochs: number of training epochs
-    '''
+    :param version_tag: basically the model name
+    :param input_folder: the folder with the training data
+    :param output_folder: the folder to save the model
+    :param params: window parameters
+    :param encoder_file: a saved encoder
+    :param batch: batch size
+    :param epochs: number of training epochs
+    """
     print("Training Auto Encoder: {}".format(version_tag))
-    enc     = load_model(encoder_file)
+    enc = load_model(encoder_file)
     cls_sil = classifier(enc)
     train(input_folder, params, sil, cls_sil, batch, epochs)
     cls_sil.save('{}/sil.h5'.format(output_folder))
     
 
 def test_silence(version_tag, input_folder, output_folder, params, sil_file):
-    '''
+    """
     Evaluation of the accuracy as confusion matrix
-    
-    version_tag: basically the model name
-    input_folder: the folder with the training data
-    output_folder: the folder to save the model
-    params: window parameters
-    sil_file: saved silence detector
-    '''
+
+    :param version_tag: basically the model name
+    :param input_folder: the folder with the training data
+    :param output_folder: the folder to save the model
+    :param params: window parameters
+    :param sil_file: saved silence detector
+    """
     print("Evaluate silence model {}".format(version_tag))
     silence = load_model(sil_file)
     confusion = np.zeros((2,2))
@@ -123,17 +126,17 @@ def test_silence(version_tag, input_folder, output_folder, params, sil_file):
     
     
 def train_auto_encoder(version_tag, input_folder, output_folder, params, latent, batch, epochs):
-    '''
+    """
     Train an auto encoder for feature embedding
 
-    version_tag: basically the model name
-    input_folder: the folder with the training data
-    output_folder: the folder to save the model
-    params: window parameters
-    latent: dimension of the latent space
-    batch: batch size
-    epochs: number of training epochs
-    '''
+    :param version_tag: basically the model name
+    :param input_folder: the folder with the training data
+    :param output_folder: the folder to save the model
+    :param params: window parameters
+    :param latent: dimension of the latent space
+    :param batch: batch size
+    :param epochs: number of training epochs
+    """
     print("Training Auto Encoder: {}".format(version_tag))
     ae, enc     = auto_encoder(
         (params.spec_win, params.n_fft_bins, 1), latent
@@ -148,16 +151,16 @@ def train_auto_encoder(version_tag, input_folder, output_folder, params, latent,
 
 
 def evaluate_encoder(version_tag, input_folder, output_folder, encoder_file, params, k):
-    '''
+    """
     Evaluate an encoder for feature embedding
 
-    version_tag: basically the model name
-    input_folder: the folder with the data to embed
-    output_folder: the folder to save the plots
-    encoder_file: a saved encoder
-    params: window parameters
-    k: number of clusters
-    '''
+    :param version_tag: basically the model name
+    :param input_folder: the folder with the data to embed
+    :param output_folder: the folder to save the plots
+    :param encoder_file: a saved encoder
+    :param params: window parameters
+    :param k: number of clusters
+    """
     print("Evaluate Encoder: {}".format(version_tag))
     enc = load_model(encoder_file)
     visualize_2dfilters(output_folder, enc, [1], n_rows = 8)    
@@ -167,17 +170,21 @@ def evaluate_encoder(version_tag, input_folder, output_folder, encoder_file, par
     visualize_embedding("{}/embeddings.png".format(output_folder), x, enc, k)
 
 
-def run_embedder(seq_embedder, folder, output, bucket_size = 1000):
-    '''
+def run_embedder_gs(seq_embedder, folder, output, bucket_size = 1000):
+    """
     Run sequence embedding on all files in a folder
 
-    seq_embedder: a sequence embedder
-    folder: folder containing wav files on google cloud
-    '''
+    :param seq_embedder: a sequence embedder
+    :param folder: folder containing wav files on google cloud
+    """
+    from google.cloud import storage
     print("Apply sequence embedder to {}".format(folder))
+    cmp = folder.replace("gs://", "").split('/')
+    bucket_path = cmp[0]
+    folder = "/".join(cmp[1:])
     log = open('audio_log.txt', 'w')
     client = storage.Client.from_service_account_json('secret.json') 
-    bucket = client.get_bucket('wdp-data') 
+    bucket = client.get_bucket(bucket_path)
     paths = [f.name for f in bucket.list_blobs(prefix=folder) if f.name.endswith('.m4a')] 
     regions = []
     n_buckets = 0
@@ -230,12 +237,13 @@ if __name__== "__main__":
         print("Parameters: {}".format(c))
         params       = WindowParams(c['spec_win'], c['spec_step'], c['fft_win'], c['fft_step'], c['highpass'])
         k            = c['k']
-        inp          = c['gs_input']
+        inp          = c['input']
         output       = c['output']        
         enc          = load_model("{}/encoder.h5".format(output))
         silence      = load_model("{}/sil.h5".format(output))
         embedder     = SequenceEmbedder(enc, silence, params)
-        run_embedder(embedder, inp, output)        
+        if inp.startswih('gs://'):
+            run_embedder_gs(embedder, inp, output)
     elif len(sys.argv) == 3 and sys.argv[1] == 'train':
         c = yaml.load(open(sys.argv[2]))
         print("Parameters: {}".format(c))

@@ -1,16 +1,17 @@
 from tensorflow.keras.layers import *
 from tensorflow.keras.models import *
 
-def classifier(encoder, n_labels=1):
-    '''
-    A classifier stacked on top of an encoder. 
-    All layers except the last are frozen.
-    
-    encoder: an encoder that ouputs a vector 
-    n_labels: number of labels for the classification
 
-    returns: a keras model
-    '''
+def classifier(encoder, n_labels=1):
+    """
+    A classifier stacked on top of an encoder.
+    All layers except the last are frozen.
+
+    :param encoder: an encoder that ouputs a vector
+    :param n_labels: number of labels for the classification
+
+    :returns: a keras model
+    """
     for layer in encoder.layers[:-1]:
         layer.trainable = False
     shape = encoder.layers[0].input_shape[0][1:]

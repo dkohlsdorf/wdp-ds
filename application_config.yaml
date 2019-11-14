@@ -4,5 +4,5 @@ fft_win      : 512
 fft_step     : 64
 highpass     : 25
 k            : 250
-gs_input     : 'audio_files/2011/'
+input        : 'gs://wdp-data/audio_files/2011/'
 output       : 'models/v2_lstm_v4/'

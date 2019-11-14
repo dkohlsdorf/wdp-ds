@@ -30,7 +30,7 @@ class SequenceEmbedder:
         regions = []
         for win in spectrogram_windows(filename, self.param):
             batch.append(win)
-            if len(batch) == 100:
+            if len(batch) == 1000:
                 b = np.stack([x[0].reshape(x[0].shape[0], x[0].shape[1], 1) for x in batch]) 
                 is_silence = self.silence_detector.predict(b)
                 embedding  = self.encoder.predict(b)

@@ -3,16 +3,15 @@ import yaml
 import pickle
 
 
-import time
 import subprocess  
 import os
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3' 
 
 from tensorflow.keras.models import load_model
-from ml_pipeline.feature_extractor import *
-from ml_pipeline.classifier import *
-from ml_pipeline.plots import *
-from ml_pipeline.sequence_embedder import *
+from feature_extractor import *
+from classifier import *
+from plots import *
+from sequence_embedder import *
 
 
 def no_label(f,x):
@@ -138,7 +137,7 @@ def train_auto_encoder(version_tag, input_folder, output_folder, params, latent,
     :param epochs: number of training epochs
     """
     print("Training Auto Encoder: {}".format(version_tag))
-    ae, enc     = auto_encoder(
+    ae, enc = auto_encoder(
         (params.spec_win, params.n_fft_bins, 1), latent
     )
     enc.summary()
@@ -170,9 +169,26 @@ def evaluate_encoder(version_tag, input_folder, output_folder, encoder_file, par
     visualize_embedding("{}/embeddings.png".format(output_folder), x, enc, k)
 
 
-def run_embedder_gs(seq_embedder, folder, output, bucket_size = 1000):
+def run_embedder_fs(seq_embedder, folder, output, bucket_size = 1000):
     """
     Run sequence embedding on all files in a folder
+
+    :param seq_embedder: a sequence embedder
+    :param folder: folder containing wav files
+    """
+    for filename in os.listdir(folder):
+        if filename.endswith('.wav'):
+            path = "{}/{}".format(folder, filename)
+            print("- Working on embedding {}".format(path))
+            regions = seq_embedder.embed(path)
+            f = filename.replace('.wav', '.p')
+            pickle.dump(regions, open('{}/regions_{}.p'.format(output, filename), 'wb'))
+            print("- Done on embedding n regions: {}".format(len(regions)))
+
+
+def run_embedder_gs(seq_embedder, folder, output, bucket_size = 1000):
+    """
+    Run sequence embedding on all files in a bucket from google cloud
 
     :param seq_embedder: a sequence embedder
     :param folder: folder containing wav files on google cloud
@@ -186,23 +202,16 @@ def run_embedder_gs(seq_embedder, folder, output, bucket_size = 1000):
     client = storage.Client.from_service_account_json('secret.json') 
     bucket = client.get_bucket(bucket_path)
     paths = [f.name for f in bucket.list_blobs(prefix=folder) if f.name.endswith('.m4a')] 
-    regions = []
-    n_buckets = 0
     for path in paths:
         print("- Working on embedding {}".format(path))
-        start = time.time()
         with open("/tmp/audio.m4a", "wb") as file_obj: 
             blob = bucket.blob(path) 
             blob.download_to_file(file_obj)   
         subprocess.call(['ffmpeg', '-y', '-i', '/tmp/audio.m4a', '/tmp/audio.wav'], stdout=log, stderr=log) 
-        for x in seq_embedder.embed('/tmp/audio.wav'):                
-            regions.append(x)
-            if len(regions) == bucket_size:
-                pickle.dump(regions, open('{}/regions_{}.p'.format(output, n_buckets), 'wb'))
-                n_buckets += 1
-                regions = []
-        end = time.time()
-        print("- Done on embedding n regions: {} took {} [sec]".format(len(regions, end - start)))
+        regions = seq_embedder.embed('/tmp/audio.wav')
+        f = folder.split('/')[-1].replace('.wav', '.p')
+        pickle.dump(regions, open('{}/regions_{}.p'.format(output, f), 'wb'))
+        print("- Done on embedding n regions: {}".format(len(regions)))
 
     
 def header():
@@ -242,8 +251,10 @@ if __name__== "__main__":
         enc          = load_model("{}/encoder.h5".format(output))
         silence      = load_model("{}/sil.h5".format(output))
         embedder     = SequenceEmbedder(enc, silence, params)
-        if inp.startswih('gs://'):
+        if inp.startswith('gs://'):
             run_embedder_gs(embedder, inp, output)
+        else:
+            run_embedder_fs(embedder, inp, output)
     elif len(sys.argv) == 3 and sys.argv[1] == 'train':
         c = yaml.load(open(sys.argv[2]))
         print("Parameters: {}".format(c))

@@ -1,4 +1,6 @@
-from ml_pipeline.audio import *
+import numpy as np
+
+from audio import *
 
 
 class SequenceEmbedder:
@@ -24,13 +26,20 @@ class SequenceEmbedder:
         :param filename: path to file
         :param returns: iterator over (embedding, filename, start, stop)
         """
-        for x in spectrogram_windows(filename, self.param):
-            snippet = x[0].reshape(1, x[0].shape[0], x[0].shape[1], 1)
-            is_silence = int(np.round(self.silence_detector.predict(snippet)[0]))
-            if is_silence == 0:
-                embedding = self.encoder.predict(snippet)
-                filename  = x[1]
-                start     = x[2]
-                stop      = x[3]
-                yield(embedding, filename, start, stop)
-                
+        batch = []
+        regions = []
+        for win in spectrogram_windows(filename, self.param):
+            batch.append(win)
+            if len(batch) == 100:
+                b = np.stack([x[0].reshape(x[0].shape[0], x[0].shape[1], 1) for x in batch]) 
+                is_silence = self.silence_detector.predict(b)
+                embedding  = self.encoder.predict(b)
+                for i in range(0, len(batch)):
+                    if int(round(is_silence[i][0])) == 0:
+                        filename  = batch[i][1]
+                        start     = batch[i][2]
+                        stop      = batch[i][3]
+                        print('- Found non silent region {} {}:{} extracting embedding of size {}'.format(filename, start / 48000, stop / 48000, embedding[i, :].shape))
+                        regions.append((embedding[i, :], filename, start, stop))
+                batch = []
+        return regions

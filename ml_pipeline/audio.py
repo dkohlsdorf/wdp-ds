@@ -16,7 +16,7 @@ class WindowParams(namedtuple('WindowParams', 'spec_win spec_step fft_win fft_st
     @property
     def fft_win_filtered(self):
         """
-        Pad the FFT window by the highpass so the target dimension stays the sameß
+        Pad the FFT window by the highpass so the target dimension stays the same
         """
         return self.fft_win + 2 * self.highpass
     

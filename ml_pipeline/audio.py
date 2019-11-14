@@ -126,6 +126,29 @@ def spectrogram_windows(filename, params, shuffle=False):
         sigma   = np.std(spec) + 1.0
         yield ((spec - mu) / sigma, filename, start, stop)
 
+
+def spectrogram_regions(filename, params, regions):
+    '''
+    Spectrogram Region Extraction
+
+    :param filename: the filename
+    :param params: Windowing parameters
+    :param regions: sequence of start, stop tuples
+    :returns: spectrogram of the normalized region
+    '''
+    _, data = wavfile.read(filename)
+    if len(data.shape) > 1:
+        data = np.mean(data, axis=1) 
+    for (start, stop) in regions:
+        audio = data[start:stop]
+        spec  = fwd_spectrogram(audio, params.fft_win_filtered, params.fft_step)
+        dft_start = params.fft_win - params.n_fft_bins
+        dft_stop  = params.fft_win 
+        spec  = spec[:, dft_start:dft_stop]
+        mu      = np.mean(spec)
+        sigma   = np.std(spec) + 1.0
+        yield (spec - mu) / sigma
+        
         
 def fwd_spectrogram(audio, win=512, step=64):
     """

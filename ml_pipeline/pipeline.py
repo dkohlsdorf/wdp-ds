@@ -166,7 +166,8 @@ def evaluate_encoder(version_tag, input_folder, output_folder, encoder_file, par
     x = np.stack([x.reshape(x.shape[0], x.shape[1], 1) for (x,_,_,_,_) in dataset(
         input_folder, params, no_label, False
     )])
-    visualize_embedding("{}/embeddings.png".format(output_folder), x, enc, k)
+    h = encoder.predict(examples)
+    visualize_embedding("{}/embeddings.png".format(output_folder), h, x, k)
 
 
 def run_embedder_fs(seq_embedder, folder, output, bucket_size = 1000):
@@ -184,7 +185,7 @@ def run_embedder_fs(seq_embedder, folder, output, bucket_size = 1000):
             f = filename.replace('.wav', '.p')
             pickle.dump(regions, open('{}/regions_{}.p'.format(output, filename), 'wb'))
             print("- Done on embedding n regions: {}".format(len(regions)))
-
+            
 
 def run_embedder_gs(seq_embedder, folder, output, bucket_size = 1000):
     """
@@ -213,6 +214,45 @@ def run_embedder_gs(seq_embedder, folder, output, bucket_size = 1000):
         pickle.dump(regions, open('{}/regions_{}.p'.format(output, f), 'wb'))
         print("- Done on embedding n regions: {}".format(len(regions)))
 
+
+def evaluate_embedding(embedding_folder, params, k):
+    '''
+    Evaluate a large embedding run
+
+    :param embedding_folder: where the embeddings are coming from
+    :param params: windowing parameters
+    :param k: number of clusters
+    '''
+    # group all embeddings found by file
+    grouped_by_filename = {}
+    for filename in os.listdir(embedding_folder):
+        if filename.startswith('region') and filename.endswith('.p'):
+            path = "{}/{}".format(embedding_folder, filename)
+            embeddings = pickle.load(open(path, "rb"))
+            for (x, filename, start, stop) in embeddings:
+                if filename not in grouped_by_filename:
+                    grouped_by_filename[filename] = [(x, start, stop)]
+                else:
+                    grouped_by_filename[filename].append((x, start, stop))
+    # collect all spectrograms, embeddings and regions
+    spectrograms = []
+    embeddings   = []
+    all_regions  = []
+    for filename in grouped_by_filename:
+        regions = [(start, stop) for (_, start, stop) in grouped_by_filename[filename]]
+        x       = [x for x, _, _ in  grouped_by_filename[filename]] 
+        for region in spectrogram_regions(filename, params, regions):            
+            spectrograms.append(region.reshape(region.shape[0], region.shape[1], 1))
+        embeddings.extend(x)
+        all_regions.extend([(filename, start, stop) for (_, start, stop) in grouped_by_filename[filename]])
+    spectrograms = np.stack(spectrograms)
+    embeddings   = np.stack(embeddings)
+    # visualize the results and save the clustering
+    clusters     = visualize_embedding("{}/embeddings_test.png".format(embedding_folder), embeddings, spectrograms, k)
+    with open("{}/clusters.csv".format(embedding_folder), "w") as fp:
+        for cluster, (filename, start, stop) in zip(clusters, all_regions):
+            fp.write("{},{},{},{}\n".format(cluster, filename, start, stop))
+
     
 def header():
     return """
@@ -230,7 +270,8 @@ def header():
         - extract silence detector to all windows
         - embed every window
         - cluster windows and write the results to csv (filename, start, stop, cluster)
-    
+        - plot the embeddings
+
     usage for training: python ml_pipeline/pipeline.py train default_config.yaml
     usage for testing:  python ml_pipeline/pipeline.py run application_config.yaml
 
@@ -255,6 +296,7 @@ if __name__== "__main__":
             run_embedder_gs(embedder, inp, output)
         else:
             run_embedder_fs(embedder, inp, output)
+        evaluate_embedding(output, params, k)
     elif len(sys.argv) == 3 and sys.argv[1] == 'train':
         c = yaml.load(open(sys.argv[2]))
         print("Parameters: {}".format(c))

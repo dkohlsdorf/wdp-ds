@@ -209,7 +209,7 @@ def run_embedder_gs(seq_embedder, folder, output, bucket_size = 1000):
             blob.download_to_file(file_obj)   
         subprocess.call(['ffmpeg', '-y', '-i', '/tmp/audio.m4a', '/tmp/audio.wav'], stdout=log, stderr=log) 
         regions = seq_embedder.embed('/tmp/audio.wav')
-        f = folder.split('/')[-1].replace('.wav', '.p')
+        f = path.split('/')[-1].replace('.wav', '.p')
         pickle.dump(regions, open('{}/regions_{}.p'.format(output, f), 'wb'))
         print("- Done on embedding n regions: {}".format(len(regions)))
 

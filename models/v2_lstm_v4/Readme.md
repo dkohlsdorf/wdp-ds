@@ -71,14 +71,14 @@ _________________________________________________________________
 ## 2) Feature Extraction
 The parameters to extract the features from the audio files are listed in the table below:    
 
-    |Parameter|Value|
-    |:--- |:---|
-    |DFT Win |512|
-    |DFT Skip|64|
-    |Spetrogram Win |128|
-    |Spetrogram Skip|64|
-    |Highpass|25|
-    |K-Means|250|
+|Parameter|Value|
+|:--- |:---|
+|DFT Win |512|
+|DFT Skip|64|
+|Spetrogram Win |128|
+|Spetrogram Skip|64|
+|Highpass|25|
+|K-Means|64|
     
     
 ## 3) Classification Experiment

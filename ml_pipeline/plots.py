@@ -9,7 +9,7 @@ from matplotlib.offsetbox import OffsetImage, AnnotationBbox
 
 from sklearn.cluster import KMeans
 from sklearn.manifold.t_sne import TSNE
-
+from sklearn.metrics import silhouette_samples, silhouette_score
 
 COLORS = list(
     pd.read_csv('ml_pipeline/colors.txt', sep='\t', header=None)[1])
@@ -111,7 +111,8 @@ def visualize_embedding(img_path, embeddings, examples, k=240, figsize=(80, 60),
     :param k: number of clusters
     :param figsize: size of figure
     :param zoom: zoom the examples
-    :returns: clusters
+    :param sparse: sparsify clusters by shillouette 
+    :returns: clusters    
     """
     km   = KMeans(n_clusters=k, max_iter=1024)
     tsne = TSNE()
@@ -121,11 +122,14 @@ def visualize_embedding(img_path, embeddings, examples, k=240, figsize=(80, 60),
         silhouette_avg = silhouette_score(embeddings, c)
         print("For n_clusters = {} The average silhouette_score is : {}".format(k, silhouette_avg))
         sample_silhouette_values = silhouette_samples(embeddings, c)
-        c = [cluster for (cluster, shillouette) in zip(c, sample_silhouette_values) if shillouette > silhouette_avg]
-        l = [latent for (latent, shillouette) in zip(l, sample_silhouette_values) if shillouette > silhouette_avg]
-        examples = [x for (x, shillouette) in zip(examples, sample_silhouette_values) > silhouette_avg]
+        c = [cluster for cluster, shillouette in zip(c, sample_silhouette_values) if shillouette > silhouette_avg]
+        l = [latent for latent, shillouette in zip(l, sample_silhouette_values) if shillouette > silhouette_avg]
+        examples = [x for x, shillouette in zip(examples, sample_silhouette_values) > silhouette_avg]
+        ids = [i for i in range(0, len(sample_silhouette_values)) if sample_silhouette_values[i] > silhouette_avg]
+    else:
+        ids = [i for i in range(0, len(sample_silhouette_values))]
     f, ax = plt.subplots(figsize=figsize)
     imscatter([a[0] for a in l], [a[1] for a in l], c, examples, ax, zoom=zoom)
     plt.savefig(img_path)
     plt.close()
-    return c, km
+    return c, km, ids

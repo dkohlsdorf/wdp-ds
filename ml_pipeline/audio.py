@@ -149,6 +149,21 @@ def spectrogram_regions(filename, params, regions):
         sigma   = np.std(spec) + 1.0
         yield (spec - mu) / sigma
         
+
+def audio_regions(filename, regions):
+    '''
+    Audio Region Extraction
+
+    :param filename: the filename
+    :param regions: sequence of start, stop tuples
+    :returns: audio snippets
+    '''
+    _, data = wavfile.read(filename)
+    if len(data.shape) > 1:
+        data = np.mean(data, axis=1) 
+    for (start, stop) in regions:
+        yield data[start:stop]
+
         
 def fwd_spectrogram(audio, win=512, step=64):
     """

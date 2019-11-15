@@ -2,7 +2,6 @@ import sys
 import yaml
 import pickle
 
-
 import subprocess  
 import os
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3' 
@@ -12,6 +11,7 @@ from feature_extractor import *
 from classifier import *
 from plots import *
 from sequence_embedder import *
+from generate_report import *
 
 
 def no_label(f,x):
@@ -166,7 +166,8 @@ def evaluate_encoder(version_tag, input_folder, output_folder, encoder_file, par
     x = np.stack([x.reshape(x.shape[0], x.shape[1], 1) for (x,_,_,_,_) in dataset(
         input_folder, params, no_label, False
     )])
-    visualize_embedding("{}/embeddings.png".format(output_folder), x, enc, k)
+    h = encoder.predict(examples)
+    visualize_embedding("{}/embeddings.png".format(output_folder), h, x, k)
 
 
 def run_embedder_fs(seq_embedder, folder, output, bucket_size = 1000):
@@ -184,7 +185,7 @@ def run_embedder_fs(seq_embedder, folder, output, bucket_size = 1000):
             f = filename.replace('.wav', '.p')
             pickle.dump(regions, open('{}/regions_{}.p'.format(output, filename), 'wb'))
             print("- Done on embedding n regions: {}".format(len(regions)))
-
+            
 
 def run_embedder_gs(seq_embedder, folder, output, bucket_size = 1000):
     """
@@ -213,7 +214,73 @@ def run_embedder_gs(seq_embedder, folder, output, bucket_size = 1000):
         pickle.dump(regions, open('{}/regions_{}.p'.format(output, f), 'wb'))
         print("- Done on embedding n regions: {}".format(len(regions)))
 
+
+def evaluate_embedding(embedding_folder, wav_folder, params, k, p_keep = 1.0, cloud=True):
+    '''
+    Evaluate a large embedding run
+
+    :param embedding_folder: where the embeddings are coming from
+    :param params: windowing parameters
+    :param k: number of clusters
+    '''
+    print("Evaluate embeddings: Clustering and Scatter Plot Experiment")
+    # group all embeddings found by file
+    grouped_by_filename = {}
+    for filename in os.listdir(embedding_folder):
+        if filename.startswith('region') and filename.endswith('.p'):
+            path = "{}/{}".format(embedding_folder, filename)
+            embeddings = pickle.load(open(path, "rb"))
+            for (x, f, start, stop) in embeddings:
+                if not cloud:
+                    filename = f
+                if np.random.uniform() < p_keep:
+                    if filename not in grouped_by_filename:
+                        grouped_by_filename[filename] = [(x, start, stop)]
+                    else:
+                        grouped_by_filename[filename].append((x, start, stop))
+    if cloud: 
+        from google.cloud import storage
+        cmp = wav_folder.replace("gs://", "").split('/')
+        bucket_path = cmp[0]
+        path = "/".join(cmp[1:])
+        client = storage.Client.from_service_account_json('secret.json') 
+        bucket = client.get_bucket(bucket_path)                        
+    # collect all spectrograms, embeddings and regions
+    spectrograms = []
+    embeddings   = []
+    all_regions  = []
+    for filename in grouped_by_filename:
+        regions = [(start, stop) for (_, start, stop) in grouped_by_filename[filename]]
+        x       = [x for x, _, _ in  grouped_by_filename[filename]] 
+        if cloud:
+            fname = filename.replace(".p", "").replace("regions_", "")            
+            log = open('audio_log.txt', 'w')
+            with open("/tmp/audio.m4a", "wb") as file_obj: 
+                print("- Process: {}{}".format(path, fname))
+                blob = bucket.blob("{}{}".format(path, fname))
+                blob.download_to_file(file_obj)   
+            subprocess.call(['ffmpeg', '-y', '-i', '/tmp/audio.m4a', '/tmp/audio.wav'], stdout=log, stderr=log) 
+            for region in spectrogram_regions('/tmp/audio.wav', params, regions):            
+                spectrograms.append(region.reshape(region.shape[0], region.shape[1], 1))
+            embeddings.extend(x)
+            all_regions.extend([(filename, start, stop) for (_, start, stop) in grouped_by_filename[filename]])
+        else:
+            regions = [(start, stop) for (_, start, stop) in grouped_by_filename[filename]]
+            x       = [x for x, _, _ in  grouped_by_filename[filename]] 
+            for region in spectrogram_regions(filename, params, regions):            
+                spectrograms.append(region.reshape(region.shape[0], region.shape[1], 1))
+            embeddings.extend(x)
+            all_regions.extend([(filename, start, stop) for (_, start, stop) in grouped_by_filename[filename]])            
+    spectrograms = np.stack(spectrograms)
+    embeddings   = np.stack(embeddings)
+    # visualize the results and save the clustering
+    clusters, km = visualize_embedding("{}/embeddings_test.png".format(embedding_folder), embeddings, spectrograms, k)
+    pickle.dump(km, open("{}/km.p".format(embedding_folder), "wb"))
+    with open("{}/clusters.csv".format(embedding_folder), "w") as fp:
+        for cluster, (filename, start, stop) in zip(clusters, all_regions):
+            fp.write("{},{},{},{}\n".format(cluster, filename, start, stop))
     
+            
 def header():
     return """
     =================================================================
@@ -230,10 +297,19 @@ def header():
         - extract silence detector to all windows
         - embed every window
         - cluster windows and write the results to csv (filename, start, stop, cluster)
+        - plot the embeddings
+    
+    Report:
+        - Compile a model report including
+        - Confusion Matrix for silence detection
+        - Convolutional Filters
+        - Clustering Image
     
     usage for training: python ml_pipeline/pipeline.py train default_config.yaml
     usage for testing:  python ml_pipeline/pipeline.py run application_config.yaml
-
+    usage for report:   python ml_pipeline/pipeline.py report application_config.yaml
+    
+    
     by Daniel Kyu Hwa Kohlsdorf
     =================================================================
     """
@@ -253,8 +329,14 @@ if __name__== "__main__":
         embedder     = SequenceEmbedder(enc, silence, params)
         if inp.startswith('gs://'):
             run_embedder_gs(embedder, inp, output)
+            evaluate_embedding(output, inp, params, k, 0.1, True)
         else:
             run_embedder_fs(embedder, inp, output)
+            evaluate_embedding(output, inp, params, k, 0.1, False)
+    elif len(sys.argv) == 3 and sys.argv[1] == 'report':
+        c = yaml.load(open(sys.argv[2]))
+        print("Parameters: {}".format(c))
+        from_template('ml_pipeline/reporting_template.md', c)
     elif len(sys.argv) == 3 and sys.argv[1] == 'train':
         c = yaml.load(open(sys.argv[2]))
         print("Parameters: {}".format(c))

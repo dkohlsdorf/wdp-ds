@@ -14,6 +14,7 @@ from sklearn.manifold.t_sne import TSNE
 COLORS = list(
     pd.read_csv('ml_pipeline/colors.txt', sep='\t', header=None)[1])
 
+
 def plot_confusion_matrix(confusion, classes, title, cmap=plt.cm.Blues):
     """
     Plot confusion matrix
@@ -99,24 +100,25 @@ def visualize_2dfilters(img_path, encoder, layers, n_rows = 8):
         plt.close()
         
             
-def visualize_embedding(img_path, examples, encoder, k=240, figsize=(80, 60), zoom=0.15):
+def visualize_embedding(img_path, embeddings, examples, k=240, figsize=(80, 60), zoom=0.15):
     """
     Plot the examples in the embedding space projected to 2D using
     t-sne
 
     :param img_path: path where the image is saved including the name
-    :param examples: the examples to embedd
-    :param encoder: a keras model
+    :param embeddings: the embeddings to visualize and cluster
+    :param examples: the associated spectrograms
     :param k: number of clusters
     :param figsize: size of figure
     :param zoom: zoom the examples
+    :returns: clusters
     """
     km   = KMeans(n_clusters=k, max_iter=1024)
     tsne = TSNE()
-    h = encoder.predict(examples)
-    c = km.fit_predict(h)
-    l = tsne.fit_transform(h)
+    c = km.fit_predict(embeddings)
+    l = tsne.fit_transform(embeddings)
     f, ax = plt.subplots(figsize=figsize)
     imscatter([a[0] for a in l], [a[1] for a in l], c, examples, ax, zoom=zoom)
     plt.savefig(img_path)
     plt.close()
+    return c, km

@@ -215,7 +215,7 @@ def run_embedder_gs(seq_embedder, folder, output, bucket_size = 1000):
         print("- Done on embedding n regions: {}".format(len(regions)))
 
 
-def evaluate_embedding(embedding_folder, wav_folder, params, k, p_keep = 1.0, cloud=True):
+def evaluate_embedding(embedding_folder, wav_folder, params, k, p_keep = 1.0, cloud=True, sparsify=False):
     '''
     Evaluate a large embedding run
 
@@ -274,7 +274,7 @@ def evaluate_embedding(embedding_folder, wav_folder, params, k, p_keep = 1.0, cl
     spectrograms = np.stack(spectrograms)
     embeddings   = np.stack(embeddings)
     # visualize the results and save the clustering
-    clusters, km = visualize_embedding("{}/embeddings_test.png".format(embedding_folder), embeddings, spectrograms, k)
+    clusters, km = visualize_embedding("{}/embeddings_test.png".format(embedding_folder), embeddings, spectrograms, k, sparsify)
     pickle.dump(km, open("{}/km.p".format(embedding_folder), "wb"))
     with open("{}/clusters.csv".format(embedding_folder), "w") as fp:
         for cluster, (filename, start, stop) in zip(clusters, all_regions):
@@ -328,11 +328,11 @@ if __name__== "__main__":
         silence      = load_model("{}/sil.h5".format(output))
         embedder     = SequenceEmbedder(enc, silence, params)
         if inp.startswith('gs://'):
-            run_embedder_gs(embedder, inp, output)
-            evaluate_embedding(output, inp, params, k, 0.1, True)
+            #run_embedder_gs(embedder, inp, output)
+            evaluate_embedding(output, inp, params, k, 0.1, True, True)
         else:
-            run_embedder_fs(embedder, inp, output)
-            evaluate_embedding(output, inp, params, k, 0.1, False)
+            #run_embedder_fs(embedder, inp, output)
+            evaluate_embedding(output, inp, params, k, 0.1, False, True)
     elif len(sys.argv) == 3 and sys.argv[1] == 'report':
         c = yaml.load(open(sys.argv[2]))
         print("Parameters: {}".format(c))

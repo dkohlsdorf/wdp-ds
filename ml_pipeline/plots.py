@@ -100,7 +100,7 @@ def visualize_2dfilters(img_path, encoder, layers, n_rows = 8):
         plt.close()
         
             
-def visualize_embedding(img_path, embeddings, examples, k=240, figsize=(80, 60), zoom=0.15):
+def visualize_embedding(img_path, embeddings, examples, k=240, figsize=(80, 60), zoom=0.15, sparse=False):
     """
     Plot the examples in the embedding space projected to 2D using
     t-sne
@@ -117,6 +117,13 @@ def visualize_embedding(img_path, embeddings, examples, k=240, figsize=(80, 60),
     tsne = TSNE()
     c = km.fit_predict(embeddings)
     l = tsne.fit_transform(embeddings)
+    if sparse:
+        silhouette_avg = silhouette_score(embeddings, c)
+        print("For n_clusters = {} The average silhouette_score is : {}".format(k, silhouette_avg))
+        sample_silhouette_values = silhouette_samples(embeddings, c)
+        c = [cluster for (cluster, shillouette) in zip(c, sample_silhouette_values) if shillouette > silhouette_avg]
+        l = [latent for (latent, shillouette) in zip(l, sample_silhouette_values) if shillouette > silhouette_avg]
+        examples = [x for (x, shillouette) in zip(examples, sample_silhouette_values) > silhouette_avg]
     f, ax = plt.subplots(figsize=figsize)
     imscatter([a[0] for a in l], [a[1] for a in l], c, examples, ax, zoom=zoom)
     plt.savefig(img_path)

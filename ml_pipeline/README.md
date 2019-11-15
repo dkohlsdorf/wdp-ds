@@ -8,3 +8,4 @@
 + `pipeline.py`: the training pipeline for silence detector and embedder including evaluation
 + `sequence_embedder.py`: apply the model to larger files
 + `reporting_template.md`: template for reporting
++ `generate_report.py`: report generation tool

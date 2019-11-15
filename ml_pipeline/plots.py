@@ -121,4 +121,4 @@ def visualize_embedding(img_path, embeddings, examples, k=240, figsize=(80, 60),
     imscatter([a[0] for a in l], [a[1] for a in l], c, examples, ax, zoom=zoom)
     plt.savefig(img_path)
     plt.close()
-    return c
+    return c, km

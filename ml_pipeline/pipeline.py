@@ -2,7 +2,6 @@ import sys
 import yaml
 import pickle
 
-
 import subprocess  
 import os
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3' 
@@ -215,7 +214,7 @@ def run_embedder_gs(seq_embedder, folder, output, bucket_size = 1000):
         print("- Done on embedding n regions: {}".format(len(regions)))
 
 
-def evaluate_embedding(embedding_folder, params, k):
+def evaluate_embedding(embedding_folder, params, k, p_keep = 1.0):
     '''
     Evaluate a large embedding run
 
@@ -230,10 +229,11 @@ def evaluate_embedding(embedding_folder, params, k):
             path = "{}/{}".format(embedding_folder, filename)
             embeddings = pickle.load(open(path, "rb"))
             for (x, filename, start, stop) in embeddings:
-                if filename not in grouped_by_filename:
-                    grouped_by_filename[filename] = [(x, start, stop)]
-                else:
-                    grouped_by_filename[filename].append((x, start, stop))
+                if np.random.uniform() < p_keep():
+                    if filename not in grouped_by_filename:
+                        grouped_by_filename[filename] = [(x, start, stop)]
+                    else:
+                        grouped_by_filename[filename].append((x, start, stop))
     # collect all spectrograms, embeddings and regions
     spectrograms = []
     embeddings   = []

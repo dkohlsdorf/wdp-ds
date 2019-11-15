@@ -69,9 +69,6 @@ def pvl(encoding):
 def filename(encoding):    
     return ["{}/{}".format(row['year'], row['filename']) for row in run_query(filename_query(encoding))]
 
-def not_silent_regions(encoding):
-    return [run_query(nonsil_query(row['filename']))for row in run_query(filename_query(encoding))]
-
 def clusters(encoding, algorithm_name):
     return [
         run_query(clusters_query(row['filename'], algorithm_name)) 

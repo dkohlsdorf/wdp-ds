@@ -114,18 +114,18 @@ def visualize_embedding(img_path, embeddings, examples, k=240, figsize=(80, 60),
     :param sparse: sparsify clusters by shillouette 
     :returns: clusters    
     """
-    km   = KMeans(n_clusters=k, max_iter=1024)
+    km   = KMeans(n_clusters=k, max_iter=1024, n_jobs=-1)
     tsne = TSNE()
     c = km.fit_predict(embeddings)
     l = tsne.fit_transform(embeddings)
     if sparse:
-        silhouette_avg = silhouette_score(embeddings, c)
-        print("For n_clusters = {} The average silhouette_score is : {}".format(k, silhouette_avg))
         sample_silhouette_values = silhouette_samples(embeddings, c)
-        c = [cluster for cluster, shillouette in zip(c, sample_silhouette_values)   if shillouette > silhouette_avg]
-        l = [latent for latent, shillouette in zip(l, sample_silhouette_values)     if shillouette > silhouette_avg]
-        examples = np.stack([x for x, shillouette in zip(examples, sample_silhouette_values) if shillouette > silhouette_avg])
-        ids = [i for i in range(0, len(sample_silhouette_values)) if sample_silhouette_values[i] > silhouette_avg]
+        th = np.percentile(sample_silhouette_values, 95)
+        c = [cluster for cluster, shillouette in zip(c, sample_silhouette_values)   if shillouette > th]
+        l = [latent for latent, shillouette in zip(l, sample_silhouette_values)     if shillouette > th]
+        examples = np.stack([x for x, shillouette in zip(examples, sample_silhouette_values) if shillouette > th])
+        ids = [i for i in range(0, len(sample_silhouette_values)) if sample_silhouette_values[i] > th]
+        print("Shillouette TH: {} n_samples left {}".format(th, len(ids)))
     else:
         ids = [i for i in range(0, len(sample_silhouette_values))]
     f, ax = plt.subplots(figsize=figsize)

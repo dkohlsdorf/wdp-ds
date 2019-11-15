@@ -224,6 +224,7 @@ def clustering_audio(embedding_folder, wav_folder, k, cloud=True):
     :param k: number of clusters
     :param cloud: is the data coming from the cloud
     '''
+    print("Dump Clustering Audio")
     # group clusters by filename
     grouped_by_filename = {}
     for line in open('{}/clusters.csv'.format(embedding_folder)):
@@ -233,9 +234,9 @@ def clustering_audio(embedding_folder, wav_folder, k, cloud=True):
         start    = int(cmp[2])
         stop     = int(cmp[3])
         if filename not in grouped_by_filename:
-            grouped_by_filename[filename] = [(x, start, stop)]
+            grouped_by_filename[filename] = [(cluster, start, stop)]
         else:
-            grouped_by_filename[filename].append((x, start, stop))    
+            grouped_by_filename[filename].append((cluster, start, stop))    
     if cloud: 
         from google.cloud import storage
         cmp = wav_folder.replace("gs://", "").split('/')
@@ -243,7 +244,7 @@ def clustering_audio(embedding_folder, wav_folder, k, cloud=True):
         path = "/".join(cmp[1:])
         client = storage.Client.from_service_account_json('secret.json') 
         bucket = client.get_bucket(bucket_path)                                
-    audio_bank = [AudioSnippetCollection("{}/cluster_{}".format(embedding_folder, i)) for i in range(0, k)]
+    audio_bank = [AudioSnippetCollection("{}/cluster_{}.wav".format(embedding_folder, i)) for i in range(0, k)]
     for filename in grouped_by_filename:
         regions  = [(start, stop) for (_, start, stop) in grouped_by_filename[filename]]
         clusters = [c             for (c, _, _) in grouped_by_filename[filename]]
@@ -384,7 +385,7 @@ if __name__== "__main__":
         embedder     = SequenceEmbedder(enc, silence, params)
         if inp.startswith('gs://'):
             #run_embedder_gs(embedder, inp, output)
-            evaluate_embedding(output, inp, params, k, 0.1, True, True)
+            #evaluate_embedding(output, inp, params, k, 0.01, True, True)
             clustering_audio(output, inp, k, True)            
         else:
             #run_embedder_fs(embedder, inp, output)

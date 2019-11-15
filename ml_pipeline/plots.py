@@ -124,7 +124,7 @@ def visualize_embedding(img_path, embeddings, examples, k=240, figsize=(80, 60),
         sample_silhouette_values = silhouette_samples(embeddings, c)
         c = [cluster for cluster, shillouette in zip(c, sample_silhouette_values)   if shillouette > silhouette_avg]
         l = [latent for latent, shillouette in zip(l, sample_silhouette_values)     if shillouette > silhouette_avg]
-        examples = [x for x, shillouette in zip(examples, sample_silhouette_values) if shillouette > silhouette_avg]
+        examples = np.stack([x for x, shillouette in zip(examples, sample_silhouette_values) if shillouette > silhouette_avg])
         ids = [i for i in range(0, len(sample_silhouette_values)) if sample_silhouette_values[i] > silhouette_avg]
     else:
         ids = [i for i in range(0, len(sample_silhouette_values))]

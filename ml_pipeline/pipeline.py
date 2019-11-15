@@ -258,11 +258,11 @@ def clustering_audio(embedding_folder, wav_folder, k, cloud=True):
             subprocess.call(['ffmpeg', '-y', '-i', '/tmp/audio.m4a', '/tmp/audio.wav'], stdout=log, stderr=log)             
             for i, region in enumerate(audio_regions('/tmp/audio.wav', regions)):
                 cluster = clusters[i]
-                audio_bank[i].write(region)                
+                audio_bank[cluster].write(region)                
         else:
             for region in spectrogram_regions(filename, regions):            
                 cluster = clusters[i]
-                audio_bank[i].write(region)
+                audio_bank[cluster].write(region)
         
         
 def evaluate_embedding(embedding_folder, wav_folder, params, k, p_keep = 1.0, cloud=True, sparsify=False):
@@ -384,11 +384,11 @@ if __name__== "__main__":
         silence      = load_model("{}/sil.h5".format(output))
         embedder     = SequenceEmbedder(enc, silence, params)
         if inp.startswith('gs://'):
-            #run_embedder_gs(embedder, inp, output)
-            #evaluate_embedding(output, inp, params, k, 0.01, True, True)
+            run_embedder_gs(embedder, inp, output)
+            evaluate_embedding(output, inp, params, k, 0.1, True, True)
             clustering_audio(output, inp, k, True)            
         else:
-            #run_embedder_fs(embedder, inp, output)
+            run_embedder_fs(embedder, inp, output)
             evaluate_embedding(output, inp, params, k, 0.1, False, True)
             clustering_audio(output, inp, k, True)
     elif len(sys.argv) == 3 and sys.argv[1] == 'report':

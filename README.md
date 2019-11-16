@@ -9,3 +9,4 @@ and communicate the results with domain experts.
 + 1) `app`: "Wild Dolphin Project Data Science Platform" google cloud 
 + 2) `ml_pipeline`: Training and Evaluation of Machine Learning Models
 + 3) `db_scripts`: Collection of scripts to bootstrap the database
++ 4) `models`: The models and evaluations we generated

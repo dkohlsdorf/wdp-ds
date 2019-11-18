@@ -85,5 +85,5 @@ The parameters to extract the features from the audio files are listed in the ta
 ![confusion.png](confusion.png)
     
 ## 4) Clustering Experiment 
-![embeddings_test.png](embeddings_test.png)
+![embeddings_test.png](embeddings_test.png?)
         

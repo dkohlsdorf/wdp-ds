@@ -120,7 +120,7 @@ def visualize_embedding(img_path, embeddings, examples, k=240, figsize=(80, 60),
     l = tsne.fit_transform(embeddings)
     if sparse:
         sample_silhouette_values = silhouette_samples(embeddings, c)
-        th = np.percentile(sample_silhouette_values, 75)
+        th = np.percentile(sample_silhouette_values, 50)
         c = [cluster for cluster, shillouette in zip(c, sample_silhouette_values)   if shillouette > th]
         l = [latent for latent, shillouette in zip(l, sample_silhouette_values)     if shillouette > th]
         examples = np.stack([x for x, shillouette in zip(examples, sample_silhouette_values) if shillouette > th])

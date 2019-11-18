@@ -385,7 +385,7 @@ if __name__== "__main__":
         embedder     = SequenceEmbedder(enc, silence, params)
         if inp.startswith('gs://'):
             run_embedder_gs(embedder, inp, output)
-            evaluate_embedding(output, inp, params, k, 0.1, True, True)
+            evaluate_embedding(output, inp, params, k, 0.25, True, True)
             clustering_audio(output, inp, k, True)            
         else:
             run_embedder_fs(embedder, inp, output)

@@ -1,6 +1,6 @@
 # Models
 secret.json
-
+app/static/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

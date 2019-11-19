@@ -1,16 +1,16 @@
 <table border='1'>
-    <tr bgcolor='lightgray'>
-        <td> Encoding ID </td>
-        <td> Year </td>
-        <td> Activity Level </td>
-        <td> Behavior </td>
-        <td> Stenella Key </td>
-        <td> Spot ID </td>
+    <tr>
+        <th> Encoding ID </th>
+        <th> Year </th>
+        <th> Activity Level </th>
+        <th> Behavior </th>
+        <th> Stenella Key </th>
+        <th> Spot ID </th>        
     </tr>
     <tr *ngFor="let encoding of encodings">
-        <td>{{encoding.encoding}}</td>
-        <td>{{encoding.year}}</td>
-        <td>{{encoding.acivity_lvl}}</td>
+        <td><a href="https://wdp-ds.appspot.com/wdp/wav/{{encoding.encoding}}">{{encoding.encoding}}</a></td>
+        <td>{{encoding.YEAR}}</td>
+        <td>{{encoding.activity_lvl}}</td>
         <td>{{encoding.behavior}}</td>
         <td>{{encoding.stenella_key}}</td>
         <td>{{encoding.spot_id}}</td>

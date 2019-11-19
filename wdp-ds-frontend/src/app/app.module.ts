@@ -3,12 +3,14 @@ import { NgModule } from '@angular/core';
 
 import { AppComponent } from './app.component';
 import { EncodingComponent } from './encoding/encoding.component';
-import {HttpModule} from '@angular/http'
+import {HttpModule} from '@angular/http';
+import { ApptopComponent } from './apptop/apptop.component'
 
 @NgModule({
   declarations: [
     AppComponent,
-    EncodingComponent
+    EncodingComponent,
+    ApptopComponent
   ],
   imports: [
     BrowserModule,

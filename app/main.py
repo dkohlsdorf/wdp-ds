@@ -10,10 +10,6 @@ import base64
 from flask import Flask, jsonify, request, redirect
 app = Flask(__name__)
 
-@app.route('/')
-def landing_page():
-    return "Wild Dolphin Project Data Science"
-
 @app.route("/wdp/encodings")
 def encodings():
     response = app.response_class(

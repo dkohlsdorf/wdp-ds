@@ -22,6 +22,11 @@ db = sqlalchemy.create_engine(
     pool_recycle=1800,  # 30 minutes
 )
 
+def algorithms_query():
+    return """
+    SELECT distinct algorithm FROM clustering_results;
+    """
+
 def filename_query(encoding):
     return """
         SELECT year, filename FROM (
@@ -74,3 +79,7 @@ def clusters(encoding, algorithm_name):
         run_query(clusters_query(row['filename'], algorithm_name)) 
             for row in run_query(filename_query(encoding))
     ]
+
+def algorithms():
+    return run_query(algorithms_query())
+    

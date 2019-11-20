@@ -1,6 +1,6 @@
 import { Component, OnInit } from '@angular/core';
 import { Encoding } from '../entities/encoding';
-import {Http, Headers} from '@angular/http';
+import { Http, Headers } from '@angular/http';
 import { map } from "rxjs/operators";
 
 @Component({
@@ -9,10 +9,10 @@ import { map } from "rxjs/operators";
   styleUrls: ['./encoding.component.css']
 })
 
-
 export class EncodingComponent implements OnInit {
 
   encodings: Array<Encoding> = [];
+  displayedColumns: string[] = ['year', 'encoding', 'behavior', 'lvl', 'key', 'spot_id'];
 
   constructor(private http: Http) { }
 
@@ -21,7 +21,7 @@ export class EncodingComponent implements OnInit {
     let headers = new Headers();
     headers.set('Accept', 'text/json');
     this.http
-      .get(url, {headers})
+      .get(url, { headers })
       .pipe(map(resp => resp.json()))
       .subscribe(
         encodings => {

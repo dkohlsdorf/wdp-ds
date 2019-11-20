@@ -47,5 +47,13 @@ def clusters(enc_id, algorithm):
     )
     return response
 
+@app.route("/wdp/ds/algorithms")
+def algorithms():
+    response = app.response_class(
+        response=json.dumps(db.algorithms()),
+        mimetype='application/json'
+    )
+    return response
+    
 if __name__ == "__main__":
     app.run()

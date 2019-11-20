@@ -1,4 +1,15 @@
-<p>
-    <img src="assets/logo.png" width="68" height="68px" style="padding-right: 20px;" align="left"> 
-    <font size=7 color='white'>Wild Dolphin Project: Data Science</font>
-</p>
+<mat-toolbar color="primary">
+    <mat-toolbar-row>
+        <img src="assets/logo.png" width="68px" height="68px" style="padding-right: 20px; padding-top: 20px;" align="left"> 
+        <h1>Wild Dolphin Project / Data Science</h1>
+    </mat-toolbar-row>
+
+    <mat-toolbar-row>
+      <span class="menu-spacer"></span>
+      <div>
+            <a mat-button [routerLink]="'/wdp-app/encodings'">Encodings</a>
+            <app-algorithms></app-algorithms>
+      </div>
+    </mat-toolbar-row>
+
+  </mat-toolbar>

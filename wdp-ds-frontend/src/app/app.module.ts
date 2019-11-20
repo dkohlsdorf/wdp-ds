@@ -11,8 +11,10 @@ import { MatIconModule, MatMenuModule, MatToolbarModule, MatButtonModule, MatTab
 import { BrowserAnimationsModule } from '@angular/platform-browser/animations';
 import { ClusterComponent } from './cluster/cluster.component';
 import { MatListModule } from '@angular/material/list';
+import { SpectrogramComponent } from './spectrogram/spectrogram.component';
 
 const appRoutes: Routes = [
+  { path: 'wdp-app/spectrogram/:cluster_name/:asset_name', component: SpectrogramComponent},
   { path: 'wdp-app/algorithm/:cluster_name', component: ClusterComponent},
   { path: 'wdp-app/encodings', component: EncodingComponent},
   { path: '',
@@ -27,7 +29,8 @@ const appRoutes: Routes = [
     EncodingComponent,
     ApptopComponent,
     AlgorithmsComponent,
-    ClusterComponent    
+    ClusterComponent,
+    SpectrogramComponent    
   ],
   imports: [
     BrowserModule,

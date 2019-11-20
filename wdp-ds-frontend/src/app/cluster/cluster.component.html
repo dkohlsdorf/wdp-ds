@@ -20,7 +20,7 @@ Below is the list of clusters
     <div *ngFor="let file of files">   
         <mat-list-item>           
             <mat-icon matListIcon>folder</mat-icon>
-            <a href="https://wdp-ds.appspot.com/wdp/asset/{{cluster_name}}/{{file.name}}">{{cluster_name}}/{{file.name}}</a>
+            <a routerLink="/wdp-app/spectrogram/{{cluster_name}}/{{file.name}}">{{cluster_name}}/{{file.name}}</a>
         </mat-list-item>
     </div>
 </mat-list>

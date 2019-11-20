@@ -9,8 +9,10 @@ import { AlgorithmsComponent } from './algorithms/algorithms.component'
 import { RouterModule, Routes } from '@angular/router';
 import { MatMenuModule, MatToolbarModule, MatButtonModule, MatTableModule } from  '@angular/material';
 import { BrowserAnimationsModule } from '@angular/platform-browser/animations';
+import { ClusterComponent } from './cluster/cluster.component';
 
 const appRoutes: Routes = [
+  { path: 'wdp-app/algorithm/:cluster_name', component: ClusterComponent},
   { path: 'wdp-app/encodings', component: EncodingComponent},
   { path: '',
     redirectTo: '/wdp-app/encodings',
@@ -23,7 +25,8 @@ const appRoutes: Routes = [
     AppComponent,
     EncodingComponent,
     ApptopComponent,
-    AlgorithmsComponent    
+    AlgorithmsComponent,
+    ClusterComponent    
   ],
   imports: [
     BrowserModule,

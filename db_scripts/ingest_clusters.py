@@ -3,7 +3,7 @@ import pandas as pd
 import time
 import datetime
 
-NAME = "k_means_v2_lstm_v4"
+NAME = "v2_lstm_v4"
 
 if __name__ == "__main__":
     if len(sys.argv) <= 1:

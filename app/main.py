@@ -26,6 +26,18 @@ def encoding(enc_id):
     )
     return response
 
+@app.route("/wdp/asset/<algorithm>/<assetname>")
+def get_asset(algorithm,assetname):
+    path = "{}/{}".format(algorithm, assetname)
+    client = storage.Client.from_service_account_json('secret.json')
+    bucket = client.get_bucket('wdp-data')
+    blob   = bucket.blob(path)
+    url = blob.generate_signed_url(
+        version='v4',
+        expiration=datetime.timedelta(minutes=1),
+        method='GET')
+    return redirect(url, code=302)
+
 @app.route("/wdp/wav/<enc_id>")
 def read_file(enc_id):
     f    = db.filename(enc_id)[0]

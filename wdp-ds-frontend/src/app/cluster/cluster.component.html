@@ -2,15 +2,26 @@
 The results for a model run with the following output:
 
 <h2> Embedding </h2>
-<p>
 We embed the non silent snippets from the dataset. Then we cluster theresulting embeddings.
 The picture shows the clusters below (one color for each cluster) projected onto a 2d plane
-using t-sne
-<img src="https://wdp-ds.appspot.com/wdp/asset/{{cluster_name}}/embeddings_test.png">
-</p>
+using t-sne.
+<br/>
+<img src="https://wdp-ds.appspot.com/wdp/asset/{{cluster_name}}/embeddings_test.png" width="600"/>
 
 <h2> Filters </h2>
-<p>
-The convolutional layers of the model are visualized below
-<img src="https://wdp-ds.appspot.com/wdp/asset/{{cluster_name}}/filters1.png">
-</p>
+The convolutional layers of the model are visualized below.
+<br/>
+<img src="https://wdp-ds.appspot.com/wdp/asset/{{cluster_name}}/filters1.png"/>
+
+<h2> Clustering Files </h2>
+Below is the list of clusters
+
+<mat-list dense>
+    <div *ngFor="let file of files">   
+        <mat-list-item>           
+            <mat-icon matListIcon>folder</mat-icon>
+            <a href="https://wdp-ds.appspot.com/wdp/asset/{{cluster_name}}/{{file.name}}">{{cluster_name}}/{{file.name}}</a>
+        </mat-list-item>
+    </div>
+</mat-list>
+       

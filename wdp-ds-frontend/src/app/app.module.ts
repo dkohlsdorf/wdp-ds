@@ -7,9 +7,10 @@ import {HttpModule} from '@angular/http';
 import { ApptopComponent } from './apptop/apptop.component';
 import { AlgorithmsComponent } from './algorithms/algorithms.component'
 import { RouterModule, Routes } from '@angular/router';
-import { MatMenuModule, MatToolbarModule, MatButtonModule, MatTableModule } from  '@angular/material';
+import { MatIconModule, MatMenuModule, MatToolbarModule, MatButtonModule, MatTableModule } from  '@angular/material';
 import { BrowserAnimationsModule } from '@angular/platform-browser/animations';
 import { ClusterComponent } from './cluster/cluster.component';
+import { MatListModule } from '@angular/material/list';
 
 const appRoutes: Routes = [
   { path: 'wdp-app/algorithm/:cluster_name', component: ClusterComponent},
@@ -36,7 +37,9 @@ const appRoutes: Routes = [
     MatToolbarModule,
     MatButtonModule,
     MatTableModule,
-    MatMenuModule
+    MatMenuModule,
+    MatListModule,
+    MatIconModule
   ],
   providers: [],
   bootstrap: [AppComponent]

@@ -37,7 +37,7 @@ def cluster_files(algorithm):
     client = storage.Client.from_service_account_json('secret.json')
     bucket = client.get_bucket('wdp-data')
     blist  = bucket.list_blobs(prefix=algorithm)
-    assets = [to_dict(f) for f in blist if is_cluster(f)] 
+    assets = [to_dict(f.name) for f in blist if is_cluster(f.name)] 
     response = app.response_class(
         response=json.dumps(assets),
         mimetype='application/json'

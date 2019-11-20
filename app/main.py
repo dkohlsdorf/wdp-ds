@@ -26,6 +26,24 @@ def encoding(enc_id):
     )
     return response
 
+@app.route("/wdp/asset/cluster_files/<algorithm>")
+def cluster_files(algorithm):    
+    def is_cluster(path):
+        name = path.split("/")[-1]
+        return name.startswith('cluster') and name.endswith('.wav')
+    def to_dict(path):
+        name = path.split("/")[-1]
+        return {"name":name}            
+    client = storage.Client.from_service_account_json('secret.json')
+    bucket = client.get_bucket('wdp-data')
+    blist  = bucket.list_blobs(prefix=algorithm)
+    assets = [to_dict(f) for f in blist if is_cluster(f)] 
+    response = app.response_class(
+        response=json.dumps(assets),
+        mimetype='application/json'
+    )
+    return response
+
 @app.route("/wdp/asset/<algorithm>/<assetname>")
 def get_asset(algorithm,assetname):
     path = "{}/{}".format(algorithm, assetname)

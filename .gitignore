@@ -1,6 +1,7 @@
 # Models
 secret.json
 app/static/
+*.wav
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

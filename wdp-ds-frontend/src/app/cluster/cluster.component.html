@@ -1,46 +1,52 @@
-<h1> Algorithm Version: {{cluster_name}}</h1>
-The results for a model run with the following output:
-
-<h2> Embedding </h2>
-We embed the non silent snippets from the dataset. Then we cluster theresulting embeddings.
-The picture shows the clusters below (one color for each cluster) projected onto a 2d plane
-using t-sne.
-<br />
-<img src="https://wdp-ds.appspot.com/wdp/asset/{{cluster_name}}/embeddings_test.png" width="600" />
-
-<h2> Filters </h2>
-The convolutional layers of the model are visualized below.
-<br />
-<img src="https://wdp-ds.appspot.com/wdp/asset/{{cluster_name}}/filters1.png" />
-
-<h2> Models and Files </h2>
-<p>
-    You can inspect all clusters below.
-    All the files ending with <b>*.h5</b> we can load in python 3 and tensorflow 2.0 with <b>model =
-        tensorflow.keras.models.load_model(...)</b> <br />
-    All the other files that end on <b>*.p</b> we can load in python 3 and sklearn with <b>model = pickle.load(...)</b>
-    <br />
-</p>
-All the models used in the experiment:
-<mat-list dense>
-    <mat-list-item>
-        <mat-icon matListIcon>folder</mat-icon>
-        <a routerLink="/wdp-app/spectrogram/{{cluster_name}}/cluster_0.wav"> Cluster Files </a>
-    </mat-list-item>
-    <mat-list-item>
-        <mat-icon matListIcon>folder</mat-icon>
-        <a href="https://wdp-ds.appspot.com/wdp/asset/{{cluster_name}}/sil.h5">Silence Detector</a>
-    </mat-list-item>
-    <mat-list-item>
-        <mat-icon matListIcon>folder</mat-icon>
-        <a href="https://wdp-ds.appspot.com/wdp/asset/{{cluster_name}}/encoder.h5">Encoder</a>
-    </mat-list-item>
-    <mat-list-item>
-        <mat-icon matListIcon>folder</mat-icon>
-        <a href="https://wdp-ds.appspot.com/wdp/asset/{{cluster_name}}/auto_encoder.h5">Auto Encoder</a>
-    </mat-list-item>
-    <mat-list-item>
-        <mat-icon matListIcon>folder</mat-icon>
-        <a href="https://wdp-ds.appspot.com/wdp/asset/{{cluster_name}}/km.p">K-Means</a>
-    </mat-list-item>
-</mat-list>
+<mat-toolbar color="accent">
+    <mat-toolbar-row>
+        <button type="button" aria-label="Toggle sidenav" mat-icon-button (click)="drawer.toggle()" color="primary">
+            <mat-icon aria-label="Side nav toggle icon">menu</mat-icon>
+        </button>
+        <span>
+            <h1> Algorithm Version: {{cluster_name}} </h1>
+        </span>
+    </mat-toolbar-row>
+</mat-toolbar>
+<mat-sidenav-container class="example-container">
+    <mat-sidenav #drawer mode="side" closed role="navigation">
+        <mat-nav-list>
+            <mat-list-item>
+                <mat-icon matListIcon>folder</mat-icon>
+                <a routerLink="/wdp-app/correlation/{{cluster_name}}"> Correlation Heatmap </a>
+            </mat-list-item>
+            <mat-list-item>
+                <mat-icon matListIcon>folder</mat-icon>
+                <a routerLink="/wdp-app/spectrogram/{{cluster_name}}/cluster_0.wav"> Cluster Files </a>
+            </mat-list-item>
+            <mat-list-item>
+                <mat-icon matListIcon>folder</mat-icon>
+                <a href="https://wdp-ds.appspot.com/wdp/asset/{{cluster_name}}/sil.h5">Silence Detector</a>
+            </mat-list-item>
+            <mat-list-item>
+                <mat-icon matListIcon>folder</mat-icon>
+                <a href="https://wdp-ds.appspot.com/wdp/asset/{{cluster_name}}/encoder.h5">Encoder</a>
+            </mat-list-item>
+            <mat-list-item>
+                <mat-icon matListIcon>folder</mat-icon>
+                <a href="https://wdp-ds.appspot.com/wdp/asset/{{cluster_name}}/auto_encoder.h5">Auto Encoder</a>
+            </mat-list-item>
+            <mat-list-item>
+                <mat-icon matListIcon>folder</mat-icon>
+                <a href="https://wdp-ds.appspot.com/wdp/asset/{{cluster_name}}/km.p">K-Means</a>
+            </mat-list-item>
+        </mat-nav-list>
+    </mat-sidenav>
+    <mat-sidenav-content>
+        <h2> Embedding </h2>
+        We embed the non silent snippets from the dataset. Then we cluster theresulting embeddings.
+        The picture shows the clusters below (one color for each cluster) projected onto a 2d plane
+        using t-sne.
+        <br />
+        <img src="https://wdp-ds.appspot.com/wdp/asset/{{cluster_name}}/embeddings_test.png" width="600" />
+        <h2> Filters </h2>
+        The convolutional layers of the model are visualized below.
+        <br />
+        <img src="https://wdp-ds.appspot.com/wdp/asset/{{cluster_name}}/filters1.png" />
+    </mat-sidenav-content>
+</mat-sidenav-container>

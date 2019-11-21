@@ -12,8 +12,10 @@ import { BrowserAnimationsModule } from '@angular/platform-browser/animations';
 import { ClusterComponent } from './cluster/cluster.component';
 import { MatListModule } from '@angular/material/list';
 import { SpectrogramComponent } from './spectrogram/spectrogram.component';
+import { CorrelationClusterFilesComponent } from './correlation-cluster-files/correlation-cluster-files.component';
 
 const appRoutes: Routes = [
+  { path: 'wdp-app/correlation/:cluster_name', component: CorrelationClusterFilesComponent},
   { path: 'wdp-app/spectrogram/:cluster_name/:asset_name', component: SpectrogramComponent},
   { path: 'wdp-app/algorithm/:cluster_name', component: ClusterComponent},
   { path: 'wdp-app/encodings', component: EncodingComponent},
@@ -31,7 +33,8 @@ const appRoutes: Routes = [
     ApptopComponent,
     AlgorithmsComponent,
     ClusterComponent,
-    SpectrogramComponent 
+    SpectrogramComponent,
+    CorrelationClusterFilesComponent 
   ],
   imports: [
     BrowserModule,

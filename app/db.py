@@ -38,7 +38,7 @@ def correlate_cluster_file_query(algorithm_name):
         ON
 	        e.encoding = c.encoding
         WHERE
-	        c.algorithm = {}
+	        c.algorithm = '{}'
         GROUP BY 
             e.encoding, cluster_id
     ;""".format(algorithm_name)

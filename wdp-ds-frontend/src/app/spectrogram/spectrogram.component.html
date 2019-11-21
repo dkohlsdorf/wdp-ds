@@ -1,7 +1,29 @@
-<h1> {{cluster_name}} / {{asset_name}}</h1>
-
-<div id="wavcontainer"></div>
-<div id="spectrogram"></div>
-<br/>
-<button (click)="handleClick('play')"> Play</button>
-<button (click)="handleClick('pause')">Pause</button>
+<mat-toolbar color="accent">
+    <mat-toolbar-row>
+        <button type="button" aria-label="Toggle sidenav" mat-icon-button (click)="drawer.toggle()" color="primary">
+            <mat-icon aria-label="Side nav toggle icon">menu</mat-icon>
+        </button>
+        <span>
+            <h1> {{cluster_name}} / {{asset_name}}</h1>
+        </span>
+    </mat-toolbar-row>
+</mat-toolbar>
+<mat-sidenav-container class="example-container">
+    <mat-sidenav #drawer mode="side" closed role="navigation">
+        <mat-nav-list>
+            <div *ngFor="let file of other_files">
+                <mat-list-item>
+                    <mat-icon matListIcon>folder</mat-icon>
+                    <a href="https://wdp-ds.appspot.com/wdp-app/spectrogram/{{cluster_name}}/{{file.name}}">{{cluster_name}}/{{file.name}}</a>
+                </mat-list-item>
+            </div>
+        </mat-nav-list>
+    </mat-sidenav>
+    <mat-sidenav-content>
+        <div id="wavcontainer"></div>
+        <div id="spectrogram"></div>
+        <br />
+        <button (click)="handleClick('play')"> Play</button>
+        <button (click)="handleClick('pause')">Pause</button>
+    </mat-sidenav-content>
+</mat-sidenav-container>

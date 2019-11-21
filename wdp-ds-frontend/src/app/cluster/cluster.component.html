@@ -5,48 +5,42 @@ The results for a model run with the following output:
 We embed the non silent snippets from the dataset. Then we cluster theresulting embeddings.
 The picture shows the clusters below (one color for each cluster) projected onto a 2d plane
 using t-sne.
-<br/>
-<img src="https://wdp-ds.appspot.com/wdp/asset/{{cluster_name}}/embeddings_test.png" width="600"/>
+<br />
+<img src="https://wdp-ds.appspot.com/wdp/asset/{{cluster_name}}/embeddings_test.png" width="600" />
 
 <h2> Filters </h2>
 The convolutional layers of the model are visualized below.
-<br/>
-<img src="https://wdp-ds.appspot.com/wdp/asset/{{cluster_name}}/filters1.png"/>
+<br />
+<img src="https://wdp-ds.appspot.com/wdp/asset/{{cluster_name}}/filters1.png" />
 
-<h2> Models </h2>
+<h2> Models and Files </h2>
 <p>
-All the files ending with <b>*.h5</b> we can load in python 3 and tensorflow 2.0 with <b>model = tensorflow.keras.models.load_model(...)</b> <br/>
-All the other files that end on <b>*.p</b> we can load in python 3 and sklearn with <b>model = pickle.load(...)</b> <br/>
+    You can inspect all clusters below.
+    All the files ending with <b>*.h5</b> we can load in python 3 and tensorflow 2.0 with <b>model =
+        tensorflow.keras.models.load_model(...)</b> <br />
+    All the other files that end on <b>*.p</b> we can load in python 3 and sklearn with <b>model = pickle.load(...)</b>
+    <br />
 </p>
 All the models used in the experiment:
 <mat-list dense>
-    <mat-list-item>           
+    <mat-list-item>
+        <mat-icon matListIcon>folder</mat-icon>
+        <a routerLink="/wdp-app/spectrogram/{{cluster_name}}/cluster_0.wav"> Cluster Files </a>
+    </mat-list-item>
+    <mat-list-item>
         <mat-icon matListIcon>folder</mat-icon>
         <a href="https://wdp-ds.appspot.com/wdp/asset/{{cluster_name}}/sil.h5">Silence Detector</a>
     </mat-list-item>
-    <mat-list-item>           
+    <mat-list-item>
         <mat-icon matListIcon>folder</mat-icon>
         <a href="https://wdp-ds.appspot.com/wdp/asset/{{cluster_name}}/encoder.h5">Encoder</a>
     </mat-list-item>
-    <mat-list-item>           
+    <mat-list-item>
         <mat-icon matListIcon>folder</mat-icon>
         <a href="https://wdp-ds.appspot.com/wdp/asset/{{cluster_name}}/auto_encoder.h5">Auto Encoder</a>
-    </mat-list-item>    
-    <mat-list-item>           
+    </mat-list-item>
+    <mat-list-item>
         <mat-icon matListIcon>folder</mat-icon>
         <a href="https://wdp-ds.appspot.com/wdp/asset/{{cluster_name}}/km.p">K-Means</a>
-    </mat-list-item>    
+    </mat-list-item>
 </mat-list>
-
-<h2> Clustering Files </h2>
-Below is the list of clusters
-
-<mat-list dense>
-    <div *ngFor="let file of files">   
-        <mat-list-item>           
-            <mat-icon matListIcon>folder</mat-icon>
-            <a routerLink="/wdp-app/spectrogram/{{cluster_name}}/{{file.name}}">{{cluster_name}}/{{file.name}}</a>
-        </mat-list-item>
-    </div>
-</mat-list>
-       

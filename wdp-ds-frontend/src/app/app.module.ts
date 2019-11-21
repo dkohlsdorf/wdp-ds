@@ -7,7 +7,7 @@ import {HttpModule} from '@angular/http';
 import { ApptopComponent } from './apptop/apptop.component';
 import { AlgorithmsComponent } from './algorithms/algorithms.component'
 import { RouterModule, Routes } from '@angular/router';
-import { MatIconModule, MatMenuModule, MatToolbarModule, MatButtonModule, MatTableModule } from  '@angular/material';
+import { MatIconModule, MatSidenavModule, MatMenuModule, MatToolbarModule, MatButtonModule, MatTableModule } from  '@angular/material';
 import { BrowserAnimationsModule } from '@angular/platform-browser/animations';
 import { ClusterComponent } from './cluster/cluster.component';
 import { MatListModule } from '@angular/material/list';
@@ -23,6 +23,7 @@ const appRoutes: Routes = [
   },
 ];
 
+
 @NgModule({
   declarations: [
     AppComponent,
@@ -30,7 +31,7 @@ const appRoutes: Routes = [
     ApptopComponent,
     AlgorithmsComponent,
     ClusterComponent,
-    SpectrogramComponent    
+    SpectrogramComponent 
   ],
   imports: [
     BrowserModule,
@@ -42,7 +43,8 @@ const appRoutes: Routes = [
     MatTableModule,
     MatMenuModule,
     MatListModule,
-    MatIconModule
+    MatIconModule,
+    MatSidenavModule
   ],
   providers: [],
   bootstrap: [AppComponent]

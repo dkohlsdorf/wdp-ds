@@ -10,3 +10,6 @@ and communicate the results with domain experts.
 + 2) `ml_pipeline`: Training and Evaluation of Machine Learning Models
 + 3) `db_scripts`: Collection of scripts to bootstrap the database
 + 4) `models`: The models and evaluations we generated
++ 5) `wdp-ds-frontend`: The frontend code (angular)
++ 6) `deploy`: deployment scripts
++ 7) `config`: the configurations used for machine learning

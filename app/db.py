@@ -22,6 +22,27 @@ db = sqlalchemy.create_engine(
     pool_recycle=1800,  # 30 minutes
 )
 
+def algorithms_query():
+    return """
+    SELECT distinct algorithm FROM clustering_results;
+    """
+
+def correlate_cluster_file_query(algorithm_name):
+    return """
+        SELECT
+    	    e.encoding, cluster_id, count(*) as n
+        FROM 
+	        wdp_ds.clustering_results c
+        JOIN 
+	        wdp_ds.encoding e
+        ON
+	        e.encoding = c.encoding
+        WHERE
+	        c.algorithm = '{}'
+        GROUP BY 
+            e.encoding, cluster_id
+    ;""".format(algorithm_name)
+
 def filename_query(encoding):
     return """
         SELECT year, filename FROM (
@@ -60,6 +81,9 @@ def run_query(query):
             rows.append(dict(row.items()))
         return rows
 
+def correlate_cluster_file(algorithm_name):
+    return run_query(correlate_cluster_file_query(algorithm_name))
+
 def encodings():
     return run_query(encoding_query(2011))
 
@@ -74,3 +98,7 @@ def clusters(encoding, algorithm_name):
         run_query(clusters_query(row['filename'], algorithm_name)) 
             for row in run_query(filename_query(encoding))
     ]
+
+def algorithms():
+    return run_query(algorithms_query())
+    

@@ -69,6 +69,14 @@ def read_file(enc_id):
         method='GET')
     return redirect(url, code=302)
     
+@app.route("/wdp/ds/correlate/<algorithm>")
+def correlate(algorithm):
+    response = app.response_class(
+        response=json.dumps(db.correlate_cluster_file(algorithm)),
+        mimetype='application/json'
+    )
+    return response
+
 @app.route("/wdp/ds/<algorithm>/<enc_id>")
 def clusters(enc_id, algorithm):
     response = app.response_class(

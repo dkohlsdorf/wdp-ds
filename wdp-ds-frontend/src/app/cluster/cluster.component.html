@@ -13,6 +13,31 @@ The convolutional layers of the model are visualized below.
 <br/>
 <img src="https://wdp-ds.appspot.com/wdp/asset/{{cluster_name}}/filters1.png"/>
 
+<h2> Models </h2>
+<p>
+All the files ending with <b>*.h5</b> we can load in python 3 and tensorflow 2.0 with <b>model = tensorflow.keras.models.load_model(...)</b> <br/>
+All the other files that end on <b>*.p</b> we can load in python 3 and sklearn with <b>model = pickle.load(...)</b> <br/>
+</p>
+All the models used in the experiment:
+<mat-list dense>
+    <mat-list-item>           
+        <mat-icon matListIcon>folder</mat-icon>
+        <a href="https://wdp-ds.appspot.com/wdp/asset/{{cluster_name}}/sil.h5">Silence Detector</a>
+    </mat-list-item>
+    <mat-list-item>           
+        <mat-icon matListIcon>folder</mat-icon>
+        <a href="https://wdp-ds.appspot.com/wdp/asset/{{cluster_name}}/encoder.h5">Encoder</a>
+    </mat-list-item>
+    <mat-list-item>           
+        <mat-icon matListIcon>folder</mat-icon>
+        <a href="https://wdp-ds.appspot.com/wdp/asset/{{cluster_name}}/auto_encoder.h5">Auto Encoder</a>
+    </mat-list-item>    
+    <mat-list-item>           
+        <mat-icon matListIcon>folder</mat-icon>
+        <a href="https://wdp-ds.appspot.com/wdp/asset/{{cluster_name}}/km.p">K-Means</a>
+    </mat-list-item>    
+</mat-list>
+
 <h2> Clustering Files </h2>
 Below is the list of clusters
 

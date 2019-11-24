@@ -4,9 +4,9 @@ fft_win      : 512
 fft_step     : 64
 highpass     : 25
 latent       : 128 
-batch        : 10
+batch        : 50
 version      : "v2.0"
-epochs       : 128
+epochs       : 8
 viz_k        : 100
 sil          : 'data/classification_noise_large'
 unsupervised : 'data/unsupervised_large'

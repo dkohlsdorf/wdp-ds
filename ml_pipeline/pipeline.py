@@ -67,7 +67,7 @@ def train(folder, params, lable, model, batch_size=10, epochs=128):
                 else:
                     y = np.stack([y.reshape(y.shape[0], y.shape[1], 1) for _, y in batch])
                 loss = model.train_on_batch(x=x, y=y)
-                if isinstance(loss, np.float):
+                if isinstance(loss, np.float32):
                     total_loss += loss
                 else:
                     total_loss += loss[0]

@@ -5,9 +5,9 @@ fft_step     : 64
 highpass     : 25
 latent       : 128 
 batch        : 10
-version      : "v1.0"
+version      : "v2.0"
 epochs       : 128
 viz_k        : 100
-sil          : 'data/classification_noise'
-unsupervised : 'data/unsupervised'
-output       : 'models/v2_lstm_v4/'
+sil          : 'data/classification_noise_large'
+unsupervised : 'data/unsupervised_large'
+output       : 'models/v2_lstm_v5/'

@@ -166,7 +166,7 @@ def evaluate_encoder(version_tag, input_folder, output_folder, encoder_file, par
     x = np.stack([x.reshape(x.shape[0], x.shape[1], 1) for (x,_,_,_,_) in dataset(
         input_folder, params, no_label, False
     )])
-    h = encoder.predict(examples)
+    h = enc.predict(x)
     visualize_embedding("{}/embeddings.png".format(output_folder), h, x, k)
 
 

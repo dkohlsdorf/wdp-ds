@@ -123,7 +123,7 @@ export class AnnotatedSpectrogramComponent implements OnInit {
           color: 'rgba(0,255,0,0.2)',
           drag: false,
           data: {
-            annotation: `cluster_${cluster.cluster_id}`,
+            annotation: `cluster_${cluster.cluster_id}`, url: `https://wdp-ds.appspot.com/wdp-app/spectrogram/${this.cluster_name}/cluster_${cluster.cluster_id}.wav`
           },
         });
       });    

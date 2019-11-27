@@ -1,8 +1,9 @@
 <table mat-table [dataSource]="encodings" class="mat-elevation-z8">
     <ng-container matColumnDef="encoding">
         <th mat-header-cell *matHeaderCellDef> Encoding ID </th>
-        <td mat-cell *matCellDef="let element"> <a
-                href="https://wdp-ds.appspot.com/wdp/wav/{{element.encoding}}">{{element.encoding}}</a> </td>
+        <td mat-cell *matCellDef="let element"> 
+            <a routerLink="/wdp-app/encoding/{{element.encoding}}/v2_lstm_v4"> {{element.encoding}} </a>
+        </td>
     </ng-container>
     <ng-container matColumnDef="year">
         <th mat-header-cell *matHeaderCellDef> Year </th>

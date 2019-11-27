@@ -3,7 +3,7 @@ import * as WaveSurfer from 'wavesurfer.js';
 import SpectrogramPlugin from 'wavesurfer.js/src/plugin/spectrogram'
 import { Http, Headers } from '@angular/http'
 import { map } from "rxjs/operators";
-import { ActivatedRoute, NavigationEnd, Router } from '@angular/router';
+import { ActivatedRoute } from '@angular/router';
 
 @Component({
   selector: 'app-spectrogram',
@@ -16,7 +16,6 @@ export class SpectrogramComponent implements OnInit, OnDestroy {
   cluster_name: string;
   asset_name: string;
   wavesurfer: any;
-  navigationSubscription: any;
   other_files: Array<File> = [];
 
   constructor(private route: ActivatedRoute, private http: Http) {
@@ -59,7 +58,11 @@ export class SpectrogramComponent implements OnInit, OnDestroy {
     });
     let url = `https://wdp-ds.appspot.com/wdp/asset/${this.cluster_name}/${this.asset_name}`;
     this.wavesurfer.load(url);
-  }
+    this.wavesurfer.zoom(50);
+    this.wavesurfer.on('ready', () => {
+      document.getElementById('loading').style.display = 'none';
+    });
+  }  
 
   ngOnDestroy() {
     this.wavesurfer.stop();

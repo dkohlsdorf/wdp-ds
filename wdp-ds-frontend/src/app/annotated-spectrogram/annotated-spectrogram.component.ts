@@ -123,7 +123,7 @@ export class AnnotatedSpectrogramComponent implements OnInit {
           color: 'rgba(0,255,0,0.2)',
           drag: false,
           data: {
-            annotation: `cluster_${cluster.cluster_id}`,
+            annotation: `cluster_${cluster.cluster_id}`, url: `https://wdp-ds.appspot.com/wdp-app/spectrogram/${this.cluster_name}/cluster_${cluster.cluster_id}.wav`
           },
         });
       });    
@@ -164,7 +164,7 @@ export class AnnotatedSpectrogramComponent implements OnInit {
   });
   this.wavesurfer.on('region-in', region => {
     if (region.data.annotation.startsWith('cluster_')) {
-      (<HTMLInputElement>document.getElementById("cluster")).value = region.data.annotation;
+      (<HTMLInputElement>document.getElementById("cluster")).innerHTML = `<a href="${region.data.url}">${region.data.annotation}</a>`;
     } else {
       (<HTMLInputElement>document.getElementById("description")).value = region.data.annotation;
       (<HTMLInputElement>document.getElementById("soundtype")).value = region.data.soundtype;

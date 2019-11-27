@@ -127,7 +127,7 @@ def visualize_embedding(img_path, embeddings, examples, k=240, figsize=(80, 60),
         ids = [i for i in range(0, len(sample_silhouette_values)) if sample_silhouette_values[i] > th]
         print("Shillouette TH: {} n_samples left {}".format(th, len(ids)))
     else:
-        ids = [i for i in range(0, len(sample_silhouette_values))]
+        ids = [i for i in range(0, len(c))]
     f, ax = plt.subplots(figsize=figsize)
     imscatter([a[0] for a in l], [a[1] for a in l], c, examples, ax, zoom=zoom)
     plt.savefig(img_path)

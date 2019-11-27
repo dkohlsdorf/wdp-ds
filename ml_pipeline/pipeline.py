@@ -67,7 +67,7 @@ def train(folder, params, lable, model, batch_size=10, epochs=128):
                 else:
                     y = np.stack([y.reshape(y.shape[0], y.shape[1], 1) for _, y in batch])
                 loss = model.train_on_batch(x=x, y=y)
-                if isinstance(loss, np.float):
+                if isinstance(loss, np.float32):
                     total_loss += loss
                 else:
                     total_loss += loss[0]
@@ -166,7 +166,7 @@ def evaluate_encoder(version_tag, input_folder, output_folder, encoder_file, par
     x = np.stack([x.reshape(x.shape[0], x.shape[1], 1) for (x,_,_,_,_) in dataset(
         input_folder, params, no_label, False
     )])
-    h = encoder.predict(examples)
+    h = enc.predict(x)
     visualize_embedding("{}/embeddings.png".format(output_folder), h, x, k)
 
 

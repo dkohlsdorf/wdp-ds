@@ -62,7 +62,21 @@ def encoding_query(year = None):
         return "SELECT * FROM encoding WHERE year = {}".format(year)
 
 def pvl_query(encoding):
-    return "SELECT * FROM pvl WHERE encoding = {}".format(encoding)
+    return """
+    SELECT
+	    p.id, 
+    	p.YEAR, 
+    	p.encoding, 
+    	p.context, 
+    	p.sound_type, 
+    	p.species,
+    	p.spot_id,
+    	time_to_sec(timecode) - start as timecode,
+    	p.description
+    FROM wdp_ds.pvl as p
+    JOIN (SELECT encoding, min(time_to_sec(timecode)) as start FROM wdp_ds.pvl GROUP BY encoding) x
+    ON x.encoding = {} AND x.encoding = p.encoding 
+    ;""".format(encoding)
 
 def clusters_query(filename, algorithm_name):
     return """

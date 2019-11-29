@@ -2,6 +2,7 @@ import sys
 import yaml
 import pickle
 
+import numpy as np
 import subprocess  
 import os
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3' 
@@ -45,7 +46,7 @@ def auto_encode(f, x):
     return x
 
 
-def train(folder, params, lable, model, batch_size=10, epochs=128):
+def train(folder, params, lable, model, batch_size=10, epochs=128, keep=lambda x: True):
     """
     Train the model for some epochs with a specific batch size
 
@@ -53,29 +54,31 @@ def train(folder, params, lable, model, batch_size=10, epochs=128):
     :param model: a keras model
     :param batch_size: size of the mini batch
     :param epochs: number of runs over the complete dataset
+    :param keep: function from label to keep or not
     """
     n_processed = 0
     for epoch in range(epochs):
         batch = []
         for (x, y, _, _, _) in dataset(folder, params, lable, True):
-            batch.append((x,y))
-            total_loss = 0.0
-            if len(batch) == batch_size:
-                x = np.stack([x.reshape(x.shape[0], x.shape[1], 1) for x, _ in batch])
-                if isinstance(batch[0][1], float):
-                    y = np.array([y for _, y in batch])
-                else:
-                    y = np.stack([y.reshape(y.shape[0], y.shape[1], 1) for _, y in batch])
-                loss = model.train_on_batch(x=x, y=y)
-                if isinstance(loss, np.float32):
-                    total_loss += loss
-                else:
-                    total_loss += loss[0]
-                batch = []
-                if n_processed % 10 == 0:
-                    print("#: {} EPOCH: {} LOSS: {}".format(n_processed, epoch, total_loss))
-                    total_loss = 0.0
-                n_processed += 1
+            if keep(y):
+                batch.append((x,y))
+                total_loss = 0.0
+                if len(batch) == batch_size:
+                    x = np.stack([x.reshape(x.shape[0], x.shape[1], 1) for x, _ in batch])
+                    if isinstance(batch[0][1], float):
+                        y = np.array([y for _, y in batch])
+                    else:
+                        y = np.stack([y.reshape(y.shape[0], y.shape[1], 1) for _, y in batch])
+                    loss = model.train_on_batch(x=x, y=y)
+                    if isinstance(loss, np.float32):
+                        total_loss += loss
+                    else:
+                        total_loss += loss[0]
+                    batch = []
+                    if n_processed % 10 == 0:
+                        print("#: {} EPOCH: {} LOSS: {}".format(n_processed, epoch, total_loss))
+                        total_loss = 0.0
+                    n_processed += 1
 
 
 def train_silence(version_tag, input_folder, output_folder, params, encoder_file, batch, epoch):
@@ -93,7 +96,7 @@ def train_silence(version_tag, input_folder, output_folder, params, encoder_file
     print("Training Auto Encoder: {}".format(version_tag))
     enc = load_model(encoder_file)
     cls_sil = classifier(enc)
-    train(input_folder, params, sil, cls_sil, batch, epochs)
+    train(input_folder, params, sil, cls_sil, 10, 128)
     cls_sil.save('{}/sil.h5'.format(output_folder))
     
 
@@ -408,6 +411,6 @@ if __name__== "__main__":
         unsupervised = c['unsupervised']
         output       = c['output']        
         train_auto_encoder(version, unsupervised, output, params, latent, batch, epochs)
-        evaluate_encoder(version, silence, output, "{}/encoder.h5".format(output), params, viz_k)
+        evaluate_encoder(version, unsupervised, output, "{}/encoder.h5".format(output), params, viz_k)
         train_silence(version, silence, output, params, "{}/encoder.h5".format(output), batch, epochs)
         test_silence(version, silence, output, params, "{}/sil.h5".format(output))        

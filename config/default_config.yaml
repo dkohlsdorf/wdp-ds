@@ -6,8 +6,8 @@ highpass     : 25
 latent       : 256 
 batch        : 50
 version      : "v2.0"
-epochs       : 128
+epochs       : 12
 viz_k        : 100
 sil          : 'data/classification_noise'
 unsupervised : 'data/unsupervised'
-output       : 'models/v2_lstm_v4/'
+output       : 'models/v2_lstm_v5/'

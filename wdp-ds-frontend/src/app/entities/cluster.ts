@@ -5,6 +5,6 @@ export interface Cluster {
     start: number;
     stop: number;
     algorithm: string;
-    cluster_id: bigint;
+    cluster_id: number;
     created_at: string;
 }

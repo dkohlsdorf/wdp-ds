@@ -8,6 +8,7 @@ import SpectrogramPlugin from 'wavesurfer.js/src/plugin/spectrogram';
 import * as WaveSurfer from 'wavesurfer.js';
 import RegionPlugin from 'wavesurfer.js/src/plugin/regions'
 import { Cluster } from '../entities/cluster';
+import * as Colors from '../entities/colors';
 
 @Component({
   selector: 'app-annotated-spectrogram',
@@ -115,12 +116,11 @@ export class AnnotatedSpectrogramComponent implements OnInit {
 
   createRegionsFromClusters() {
     this.clusters.forEach(cluster => {
-        console.log(cluster);
-        
+        console.log(cluster);        
         this.wavesurfer.addRegion({
           start: cluster.start / 48000,
           end:   cluster.stop  / 48000,
-          color: 'rgba(0,255,0,0.2)',
+          color: Colors.COLORS[cluster.cluster_id],
           drag: false,
           data: {
             annotation: `cluster_${cluster.cluster_id}`, url: `https://wdp-ds.appspot.com/wdp-app/spectrogram/${this.cluster_name}/cluster_${cluster.cluster_id}.wav`

@@ -43,12 +43,12 @@ document.getElementById("play").onclick = function () {
     stopped = false;
     window.requestAnimationFrame(loop);
     start = context.currentTime;
-    audio_source.start();    
+    const t_start = (play_start * STEP) / rate + ((T - 1) * VIZ_WIN * STEP) / rate;
+    audio_source.start(0, t_start);    
   }
 }
 
 document.getElementById("stop").onclick = function () {  
-  T = 1;
   stopped = true;
   audio_source.stop();
 }
@@ -79,7 +79,6 @@ function setup_playback(offset) {
   audio_source = context.createBufferSource();
   audio_source.buffer = audio_buffer;
   audio_source.connect(context.destination);
-  // TODO:  seek to offset
 }
 
 function playback_head(t) { 
@@ -119,11 +118,10 @@ function plot(t) {
 }
 
 function loop() {
-  const t_start = (play_start * STEP) / rate + (T - 1) * VIZ_WIN;
-  console.log(t_start);
+  const t_start = (play_start * STEP) / rate;
   const t = context.currentTime - start + t_start;
+
   plot(t);
-  setTimeout(function(){}, 2000);
   if (t * rate >= T * VIZ_WIN * rate) {
     if ((T + 1) * VIZ_WIN * rate < end) {
       spectrogram_seek();
@@ -133,6 +131,7 @@ function loop() {
     stopped = true;
   }
   if(!stopped) {
+    setTimeout(function(){}, 2000);
     window.requestAnimationFrame(loop);
   } else {
     play_start = ((t * rate) / STEP) - (((T - 1) * VIZ_WIN * rate) / STEP);

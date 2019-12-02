@@ -1,26 +1,33 @@
 import { Spectrogram } from "wdp-ds-spectrogram";
 
+// audio plaback
 window.AudioContext = window.AudioContext || window.webkitAudioContext;
 var context = new AudioContext();
-var source = null;
+var audio_source = null;
 var audio_buffer = null;
+
+// double buffered spectrograms
 var spectrogram = null;
 var spectrogram_tmp = null;
-var end = null;
-var rate = null;
+
+// playback logic
 var T = 1;
+var end  = null;
+var rate = null;
 var start = null;
 var stopped = true;
 var play_start = 0;
 
+// spectrogram constants
 const WIN  = 512;
 const STEP = 256;
 const VIZ_WIN = 8.5;
 
-document.getElementById("drawing").width = screen.width;
-document.getElementById("drawing").height = WIN / 2;
+// spectrogram canvas
 const canvas = document.getElementById('drawing');
 const ctx = canvas.getContext('2d');
+document.getElementById("drawing").width = screen.width;
+document.getElementById("drawing").height = WIN / 2;
 
 document.getElementById("next").onclick = function () { 
   if ((T + 1) * VIZ_WIN * rate < end) {
@@ -36,14 +43,14 @@ document.getElementById("play").onclick = function () {
     stopped = false;
     window.requestAnimationFrame(loop);
     start = context.currentTime;
-    source.start();    
+    audio_source.start();    
   }
 }
 
 document.getElementById("stop").onclick = function () {  
   T = 1;
   stopped = true;
-  source.stop();
+  audio_source.stop();
 }
 
 document.getElementById("drawing").onclick = function (e) {
@@ -69,10 +76,10 @@ function ticks(offset) {
 }
 
 function setup_playback(offset) {
-  source = context.createBufferSource();
-  source.buffer = audio_buffer;
-  source.connect(context.destination);
-  // seek to offset
+  audio_source = context.createBufferSource();
+  audio_source.buffer = audio_buffer;
+  audio_source.connect(context.destination);
+  // TODO:  seek to offset
 }
 
 function playback_head(t) { 
@@ -147,4 +154,4 @@ function loadSound(url) {
   request.send();
 }
 
-loadSound("222.wav");
+loadSound("demo2.wav");

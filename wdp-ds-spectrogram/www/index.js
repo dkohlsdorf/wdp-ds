@@ -11,6 +11,7 @@ var rate = null;
 var T = 1;
 var start = null;
 var stopped = true;
+var play_start = 0;
 
 const WIN  = 512;
 const STEP = 256;
@@ -22,29 +23,34 @@ const canvas = document.getElementById('drawing');
 const ctx = canvas.getContext('2d');
 
 document.getElementById("next").onclick = function () { 
-  T += 1;
-  spectrogram_tmp = Spectrogram.from_audio(audio_buffer.getChannelData(0), T * VIZ_WIN * rate, (T + 1) * VIZ_WIN * rate, WIN, STEP);    
-  setTimeout(function() {
-    spectrogram_tmp = Spectrogram.from_audio(audio_buffer.getChannelData(0), (T + 1) * VIZ_WIN * rate, (T + 2) * VIZ_WIN * rate, WIN, STEP);    
-  }, 1);
-  stopped = true;
+  if ((T + 1) * VIZ_WIN * rate < end) {
+    spectrogram_seek();
+    stopped = true;
+  }
   window.requestAnimationFrame(loop);
 }
 
 document.getElementById("play").onclick = function () {
   if(stopped) { 
-    setup_playback();
-    T = 1;
+    setup_playback(play_start);
     stopped = false;
     window.requestAnimationFrame(loop);
     start = context.currentTime;
-    source.start();
+    source.start();    
   }
 }
 
-document.getElementById("stop").onclick = function () {
+document.getElementById("stop").onclick = function () {  
+  T = 1;
   stopped = true;
   source.stop();
+}
+
+document.getElementById("drawing").onclick = function (e) {
+  if(stopped) {  
+    play_start = e.x;
+    window.requestAnimationFrame(loop);
+  }
 }
 
 function fmtMSS(s){return(s-(s%=60))/60+(9<s?':':':0')+s}
@@ -52,8 +58,8 @@ function fmtMSS(s){return(s-(s%=60))/60+(9<s?':':':0')+s}
 function ticks(offset) {
   const len = audio_buffer.getChannelData(0).length;
   const n = Math.min(len - 1, VIZ_WIN * rate);
-  const LEN   = (n * rate) / STEP - WIN;
-  const TICK  = LEN / VIZ_WIN;   
+  const LEN = (n * rate) / STEP - WIN;
+  const TICK = LEN / VIZ_WIN;   
   const N_SEC = n / VIZ_WIN;
   for(var i = 0; i < VIZ_WIN; i++) {
     const sec = fmtMSS(Math.round((offset + i * N_SEC) / rate));
@@ -62,14 +68,18 @@ function ticks(offset) {
   }
 }
 
-function setup_playback() {
+function setup_playback(offset) {
   source = context.createBufferSource();
   source.buffer = audio_buffer;
   source.connect(context.destination);
+  // seek to offset
 }
 
 function playback_head(t) { 
-  const n = ((t * rate) / STEP) - (((T - 1) * VIZ_WIN * rate) / STEP);
+  var n = Math.min(play_start, end / STEP );
+  if(!stopped) {
+    n = ((t * rate) / STEP) - (((T - 1) * VIZ_WIN * rate) / STEP);
+  }
   ctx.beginPath();
   ctx.moveTo(n, 0);
   ctx.lineTo(n, 256);
@@ -102,17 +112,23 @@ function plot(t) {
 }
 
 function loop() {
-  const t = context.currentTime - start;
+  const t_start = (play_start * STEP) / rate + (T - 1) * VIZ_WIN;
+  console.log(t_start);
+  const t = context.currentTime - start + t_start;
   plot(t);
   setTimeout(function(){}, 2000);
   if (t * rate >= T * VIZ_WIN * rate) {
-    spectrogram_seek();
+    if ((T + 1) * VIZ_WIN * rate < end) {
+      spectrogram_seek();
+    }
   } 
   if (t * rate >= end) {
     stopped = true;
   }
   if(!stopped) {
     window.requestAnimationFrame(loop);
+  } else {
+    play_start = ((t * rate) / STEP) - (((T - 1) * VIZ_WIN * rate) / STEP);
   }
 }
 
@@ -131,4 +147,4 @@ function loadSound(url) {
   request.send();
 }
 
-loadSound("demo2.wav");
+loadSound("222.wav");

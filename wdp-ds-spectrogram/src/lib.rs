@@ -20,7 +20,7 @@ pub struct Spectrogram {
 #[wasm_bindgen]
 impl Spectrogram {
 
-    pub fn plot(&mut self, ctx: &CanvasRenderingContext2d) -> Result<(), JsValue> {
+    pub fn plot(&mut self, ctx: &CanvasRenderingContext2d) -> Result<(), JsValue> {        
         let height = self.win_size / 2;
         let width  = self.spectrogram.len() / (4 * height);
         let data = ImageData::new_with_u8_clamped_array_and_sh(Clamped(&mut self.spectrogram), width as u32, height as u32)?;

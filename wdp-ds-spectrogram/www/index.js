@@ -5,6 +5,7 @@ window.AudioContext = window.AudioContext || window.webkitAudioContext;
 var context = new AudioContext();
 var audio_source = null;
 var audio_buffer = null;
+var rate = null;
 
 // double buffered spectrograms
 var spectrogram = null;
@@ -13,7 +14,6 @@ var spectrogram_tmp = null;
 // playback logic
 var T = 1;
 var end  = null;
-var rate = null;
 var start = null;
 var stopped = true;
 var play_start = 0;
@@ -33,7 +33,8 @@ document.getElementById("next").onclick = function () {
   if ((T + 1) * VIZ_WIN * rate < end) {
     spectrogram_seek();
     stopped = true;
-  }
+    play_start = 0;
+  }  
   window.requestAnimationFrame(loop);
 }
 
@@ -43,14 +44,15 @@ document.getElementById("play").onclick = function () {
     stopped = false;
     window.requestAnimationFrame(loop);
     start = context.currentTime;
-    const t_start = (play_start * STEP) / rate + ((T - 1) * VIZ_WIN * STEP) / rate;
+    const t_start = (play_start * STEP) / rate +  (T - 1) * VIZ_WIN;
     audio_source.start(0, t_start);    
   }
 }
 
-document.getElementById("stop").onclick = function () {  
+document.getElementById("pause").onclick = function () {  
   stopped = true;
   audio_source.stop();
+  window.requestAnimationFrame(loop);
 }
 
 document.getElementById("drawing").onclick = function (e) {
@@ -84,12 +86,13 @@ function setup_playback(offset) {
 function playback_head(t) { 
   var n = Math.min(play_start, end / STEP );
   if(!stopped) {
-    n = ((t * rate) / STEP) - (((T - 1) * VIZ_WIN * rate) / STEP);
-  }
+    n = ((t * rate) / STEP);
+  }  
   ctx.beginPath();
   ctx.moveTo(n, 0);
   ctx.lineTo(n, 256);
   ctx.stroke();
+  return n;
 }
 
 function spectrogram_seek() {
@@ -114,17 +117,18 @@ function plot(t) {
   ctx.strokeStyle = "#FF0000";     
   ctx.lineWidth = 5;
   ticks((T - 1) * VIZ_WIN * rate);
-  playback_head(t);
+  return playback_head(t);
 }
 
 function loop() {
   const t_start = (play_start * STEP) / rate;
   const t = context.currentTime - start + t_start;
-
+  console.log(t, t_start + (T - 1) * VIZ_WIN);
   plot(t);
-  if (t * rate >= T * VIZ_WIN * rate) {
+  if (t >= VIZ_WIN) {
     if ((T + 1) * VIZ_WIN * rate < end) {
       spectrogram_seek();
+      play_start = 0;
     }
   } 
   if (t * rate >= end) {
@@ -134,7 +138,7 @@ function loop() {
     setTimeout(function(){}, 2000);
     window.requestAnimationFrame(loop);
   } else {
-    play_start = ((t * rate) / STEP) - (((T - 1) * VIZ_WIN * rate) / STEP);
+    play_start = ((t * rate) / STEP);
   }
 }
 

@@ -27,8 +27,7 @@ impl Spectrogram {
         ctx.put_image_data(&data, 0.0, 0.0)    
     }
 
-    pub fn from_audio(audio: &[f32], begin_sample: usize, end_sample: usize, win_size: usize, win_step: usize) -> Result<Spectrogram, JsValue> {            
-        let raw_audio = &audio[begin_sample..end_sample];
+    pub fn from_audio(raw_audio: &[f32], win_size: usize, win_step: usize) -> Result<Spectrogram, JsValue> {            
         let hamming = Spectrogram::hamming(win_size);
         let samples: Vec<Complex<f32>> = raw_audio
             .iter()

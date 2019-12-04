@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy } from '@angular/core';
+import { Component, OnInit, OnDestroy, ViewChild, ElementRef } from '@angular/core';
 import { Http, Headers } from '@angular/http'
 import { map } from "rxjs/operators";
 import { ActivatedRoute } from '@angular/router';
@@ -17,6 +17,7 @@ const N_TICKS   = 10;
 })
 
 export class SpectrogramComponent implements OnInit, OnDestroy {
+  @ViewChild('drawing', {static: false} ) canvas: ElementRef;
 
   // app
   cluster_name: string;
@@ -68,18 +69,17 @@ export class SpectrogramComponent implements OnInit, OnDestroy {
 
   ngOnInit() {
     this.get();
-    /*
-    TODO
-    let canvas = document.getElementById('drawing');
-    this.ctx = canvas.getContext('2d');
-    document.getElementById("drawing").width = screen.width;
-    document.getElementById("drawing").height = SPEC_WIN / 2;*/  
+    this.ctx = (<HTMLCanvasElement>this.canvas.nativeElement).getContext('2d');
+    this.canvas.nativeElement.width = screen.width;
+    this.canvas.nativeElement.height = SPEC_WIN / 2;
     let url = `https://wdp-ds.appspot.com/wdp/asset/${this.cluster_name}/${this.asset_name}`;
     this.loadSound(url);  
   }  
 
   ngOnDestroy() {  }
   
+  log(s) {}
+
   setup_playback() {
     this.audioSource = this.audioContext.createBufferSource();
     this.audioSource.buffer = this.audioBuffer;
@@ -90,18 +90,18 @@ export class SpectrogramComponent implements OnInit, OnDestroy {
     const start  = Timing.slice2raw(slice_i,     this.window_size, fft_step, end);
     const mid    = Timing.slice2raw(slice_i + 1, this.window_size, fft_step, end); 
     const stop   = Timing.slice2raw(slice_i + 2, this.window_size, fft_step, end);
-    if (this.spectrogram == null) {    
-      this.spectrogram = Spectrogram.from_audio(this.audioBuffer.getChannelData(0), start, mid, fft_win, fft_step);
+    if (this.spectrogram == null) {   
+      this.spectrogram = Spectrogram.from_audio(this.audioBuffer.getChannelData(0).slice(start, mid), fft_win, fft_step); 
     } else {
       this.spectrogram = this.spectrogram_tmp;
     }
     if (stop > mid) {
       setTimeout(function() {
-        this.spectrogram_tmp = Spectrogram.from_audio(this.audioBuffer.getChannelData(0), mid, end, fft_win, fft_step);    
+        this.spectrogram_tmp = Spectrogram.from_audio(this.audioBuffer.getChannelData(0).slice(mid, stop), fft_win, fft_step);    
       }, 1);
     }
   }
-  
+    
   ticks(slice_i) {
     const start_raw = Timing.slice2raw(slice_i, this.window_size, SPEC_STEP, this.end);
     const start  = Timing.spec_frame(start_raw, SPEC_STEP);
@@ -132,7 +132,7 @@ export class SpectrogramComponent implements OnInit, OnDestroy {
   }
   
   plot(slice, in_slice) {
-    //TODO this.ctx.clearRect(0, 0, canvas.width, canvas.height);
+    this.ctx.clearRect(0, 0, this.canvas.nativeElement.width, this.canvas.nativeElement.height);
     this.spectrogram.plot(this.ctx);     
     this.ctx.strokeStyle = "#FF0000";     
     this.ctx.lineWidth = 5;
@@ -164,21 +164,23 @@ export class SpectrogramComponent implements OnInit, OnDestroy {
     requestAnimationFrame(loop)
   }
   
+  onLoad(request) {
+    this.audioContext.decodeAudioData(request.response, function(buffer) {    
+      this.audio_buffer = buffer;
+      this.end  = this.audio_buffer.getChannelData(0).length;
+      this.rate = this.audio_buffer.sampleRate;
+      this.window_size = Timing.sec2frames(WIN_SIZE, this.rate, SPEC_STEP);
+      this.spectrogram_seek(0, SPEC_WIN, SPEC_STEP, this.end);
+      this.animate(function(s) {console.log(s)});
+    }, function(e) {console.log(e);})
+  }
+
   loadSound(url) {
     var request = new XMLHttpRequest();
-    request.open('GET', url, true);
+    request.open('GET', url, false);
     request.responseType = 'arraybuffer';
-    request.onload = function() {      
-      /*this.audioContext.decodeAudioData(request.response, function(buffer) {    
-          this.audio_buffer = buffer;
-          this.end  = this.audio_buffer.getChannelData(0).length;
-          this.rate = this.audio_buffer.sampleRate;
-          this.window_size = Timing.sec2frames(WIN_SIZE, this.rate, SPEC_STEP);
-          this.spectrogram_seek(0, SPEC_WIN, SPEC_STEP, this.end);
-          this.animate(function(s) {console.log(s)});
-      }, function(e) {console.log(e);});*/
-    }
     request.send();
+    this.onLoad(request);
   }
   
   handleClick(value: string) {
@@ -190,7 +192,7 @@ export class SpectrogramComponent implements OnInit, OnDestroy {
         this.last_slice = Timing.slice_i(Timing.spec_frame(Timing.raw_samples(this.offset, this.rate), SPEC_STEP), this.window_size);
         this.started = this.audioContext.currentTime;
         this.audioSource.start(0, this.offset);  
-        //TODO animate(callback_func);
+        this.animate(this.log);
       }    
     }
     if (value === "pause") {
@@ -206,7 +208,7 @@ export class SpectrogramComponent implements OnInit, OnDestroy {
       this.spectrogram = null;
       this.stopped = true;  
       this.spectrogram_seek(slice, SPEC_WIN, SPEC_STEP, this.end);
-      //TODO animate(callback_func);
+      this.animate(this.log);
     }
   }
 }

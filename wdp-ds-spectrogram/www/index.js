@@ -98,13 +98,13 @@ function spectrogram_seek(slice_i, fft_win, fft_step, end) {
   const mid    = slice2raw(slice_i + 1, window_size, spec_step, end); 
   const stop   = slice2raw(slice_i + 2, window_size, spec_step, end);
   if (spectrogram == null) {    
-    spectrogram = Spectrogram.from_audio(audio_buffer.getChannelData(0), start, mid, fft_win, fft_step);
+    spectrogram = Spectrogram.from_audio(audio_buffer.getChannelData(0).slice(start, mid), fft_win, fft_step);
   } else {
     spectrogram = spectrogram_tmp;
   }
   if (stop > mid) {
     setTimeout(function() {
-      spectrogram_tmp = Spectrogram.from_audio(audio_buffer.getChannelData(0), mid, end, fft_win, fft_step);    
+      spectrogram_tmp = Spectrogram.from_audio(audio_buffer.getChannelData(0).slice(mid, stop), fft_win, fft_step);    
     }, 1);
   }
 }
@@ -190,4 +190,4 @@ function loadSound(url) {
   request.send();
 }
 
-loadSound("demo_small.wav");
+loadSound("demo.wav");

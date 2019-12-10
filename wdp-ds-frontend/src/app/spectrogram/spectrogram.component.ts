@@ -1,9 +1,9 @@
-import { Component, OnInit, OnDestroy, ViewChild, ElementRef } from '@angular/core';
-import { Http, Headers } from '@angular/http'
+import { Component, OnInit, AfterContentInit, OnDestroy, ViewChild, ElementRef } from '@angular/core';
+import { Http, Headers, ResponseContentType } from '@angular/http'
 import { map } from "rxjs/operators";
 import { ActivatedRoute } from '@angular/router';
-import { Spectrogram } from "wdp-ds-spectrogram";
 import * as Timing from "./timing_utils";
+import { Spectrogram } from "wdp-ds-spectrogram";
 
 const SPEC_STEP = 256;
 const SPEC_WIN  = 512;
@@ -16,8 +16,8 @@ const N_TICKS   = 10;
   styleUrls: ['./spectrogram.component.css']
 })
 
-export class SpectrogramComponent implements OnInit, OnDestroy {
-  @ViewChild('drawing', {static: false} ) canvas: ElementRef;
+export class SpectrogramComponent implements OnInit, OnDestroy, AfterContentInit {
+  @ViewChild('drawing', {static: true} ) canvas: ElementRef;
 
   // app
   cluster_name: string;
@@ -41,6 +41,9 @@ export class SpectrogramComponent implements OnInit, OnDestroy {
   last_slice = 0;
   offset = 0;
 
+  // wasm
+  module = null;
+
   constructor(private route: ActivatedRoute, private http: Http) {
     route.params.subscribe(
       params => {
@@ -49,6 +52,25 @@ export class SpectrogramComponent implements OnInit, OnDestroy {
       });
     this.audioContext = new AudioContext();
   }
+
+  ngOnInit() {
+    const imports = {
+      env: {
+        memory: new WebAssembly.Memory({ initial: 256, maximum: 256 })
+      }
+    };
+    this.get();
+  }  
+
+  ngAfterContentInit(): void {
+    this.ctx = (<HTMLCanvasElement>this.canvas.nativeElement).getContext('2d');
+    this.canvas.nativeElement.width = screen.width;
+    this.canvas.nativeElement.height = SPEC_WIN / 2;
+    let url = `https://wdp-ds.appspot.com/wdp/asset/${this.cluster_name}/${this.asset_name}`;
+    this.loadSound(url);  
+  }
+  
+  ngOnDestroy() {  }
 
   get() {
     let url = `/wdp/asset/cluster_files/${this.cluster_name}`;
@@ -67,17 +89,6 @@ export class SpectrogramComponent implements OnInit, OnDestroy {
       );
   }
 
-  ngOnInit() {
-    this.get();
-    this.ctx = (<HTMLCanvasElement>this.canvas.nativeElement).getContext('2d');
-    this.canvas.nativeElement.width = screen.width;
-    this.canvas.nativeElement.height = SPEC_WIN / 2;
-    let url = `https://wdp-ds.appspot.com/wdp/asset/${this.cluster_name}/${this.asset_name}`;
-    this.loadSound(url);  
-  }  
-
-  ngOnDestroy() {  }
-  
   log(s) {}
 
   setup_playback() {
@@ -90,8 +101,8 @@ export class SpectrogramComponent implements OnInit, OnDestroy {
     const start  = Timing.slice2raw(slice_i,     this.window_size, fft_step, end);
     const mid    = Timing.slice2raw(slice_i + 1, this.window_size, fft_step, end); 
     const stop   = Timing.slice2raw(slice_i + 2, this.window_size, fft_step, end);
-    if (this.spectrogram == null) {   
-      this.spectrogram = Spectrogram.from_audio(this.audioBuffer.getChannelData(0).slice(start, mid), fft_win, fft_step); 
+    if (this.spectrogram == null) {  
+       this.spectrogram = Spectrogram.from_audio(this.audioBuffer.getChannelData(0).slice(start, mid), fft_win, fft_step); 
     } else {
       this.spectrogram = this.spectrogram_tmp;
     }
@@ -176,11 +187,25 @@ export class SpectrogramComponent implements OnInit, OnDestroy {
   }
 
   loadSound(url) {
-    var request = new XMLHttpRequest();
+    let headers = new Headers();
+    headers.set('Accept', 'arraybuffer');
+    this.http
+      .get(url, { headers })
+      .subscribe(
+        request => {
+          this.onLoad(request);
+          ;
+        },
+        err => {
+          console.error(err);
+        }
+      );
+
+    /**var request = new XMLHttpRequest();
     request.open('GET', url, false);
     request.responseType = 'arraybuffer';
     request.send();
-    this.onLoad(request);
+    this.onLoad(request);**/
   }
   
   handleClick(value: string) {

@@ -7,8 +7,12 @@ import datetime
 from google.cloud import storage
 import base64
 
-from flask import Flask, jsonify, request, redirect
+from flask import Flask, jsonify, request, redirect, send_file
 app = Flask(__name__)
+
+@app.route("/<wasm_file>")
+def wasm(wasm_file):
+        return send_file('static/' + wasm_file, mimetype='application/wasm')
 
 @app.route("/wdp/encodings")
 def encodings():

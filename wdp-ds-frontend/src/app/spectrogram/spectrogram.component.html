@@ -14,21 +14,17 @@
             <div *ngFor="let file of other_files">
                 <mat-list-item>
                     <mat-icon matListIcon>folder</mat-icon>
-                    <a
-                        href="https://wdp-ds.appspot.com/wdp-app/spectrogram/{{cluster_name}}/{{file.name}}">{{cluster_name}}/{{file.name}}</a>
+                    <a href="https://wdp-ds.appspot.com/wdp-app/spectrogram/{{cluster_name}}/{{file.name}}">{{cluster_name}}/{{file.name}}</a>
                 </mat-list-item>
             </div>
         </mat-nav-list>
     </mat-sidenav>
     <mat-sidenav-content>
-        <div id="wavcontainer">
-            <div id="loading">
-                <img src="assets/loading.gif" alt="dolphin" />
-            </div>
-        </div>
-        <div id="spectrogram"></div>
-        <br />
-        <button (click)="handleClick('play')"> Play</button>
-        <button (click)="handleClick('pause')">Pause</button>
+        <canvas #drawing></canvas>
+        <br />    
+        <button (click)="handleClick('play')">&gt;</button>
+        <button (click)="handleClick('pause')">||</button>
+        <button (click)="handleClick('next')">&gt;&gt;&gt;</button>
+
     </mat-sidenav-content>
 </mat-sidenav-container>

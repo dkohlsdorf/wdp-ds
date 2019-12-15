@@ -20,17 +20,10 @@
         </mat-nav-list>
     </mat-sidenav>
     <mat-sidenav-content>
-        <div id="wavcontainer">
-                <div id="loading">
-                    <img src="assets/loading.gif" alt="dolphin" />
-                </div>
-        </div>
-        <div id="spectrogram"></div>
+        <canvas #drawing></canvas>
         <br />
         <button (click)="handleClick('play')"> Play</button>
         <button (click)="handleClick('pause')">Pause</button>
-        <input type="text" id='description'/>
-        <input type="text" id='soundtype'/>
-        <div id='cluster'> </div>
+        <button (click)="handleClick('next')">&gt;&gt;&gt;</button>
     </mat-sidenav-content>
 </mat-sidenav-container>

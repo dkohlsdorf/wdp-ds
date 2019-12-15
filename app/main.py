@@ -60,6 +60,18 @@ def get_asset(algorithm,assetname):
         method='GET')
     return redirect(url, code=302)
 
+@app.route("/wdp/asset_url/<algorithm>/<assetname>")
+def get_asset_url(algorithm,assetname):
+    path = "{}/{}".format(algorithm, assetname)
+    client = storage.Client.from_service_account_json('secret.json')
+    bucket = client.get_bucket('wdp-data')
+    blob   = bucket.blob(path)
+    url = blob.generate_signed_url(
+        version='v4',
+        expiration=datetime.timedelta(minutes=1),
+        method='GET')
+    return url
+
 @app.route("/wdp/wav/<enc_id>")
 def read_file(enc_id):
     f    = db.filename(enc_id)[0]
@@ -71,7 +83,8 @@ def read_file(enc_id):
         version='v4',
         expiration=datetime.timedelta(minutes=1),
         method='GET')
-    return redirect(url, code=302)
+    return url
+
     
 @app.route("/wdp/ds/correlate/<algorithm>")
 def correlate(algorithm):

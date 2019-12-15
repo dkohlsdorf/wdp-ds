@@ -37,7 +37,7 @@ const appRoutes: Routes = [
     ClusterComponent,
     SpectrogramComponent,
     CorrelationClusterFilesComponent,
-    AnnotatedSpectrogramComponent 
+    AnnotatedSpectrogramComponent,
   ],
   imports: [
     BrowserModule,

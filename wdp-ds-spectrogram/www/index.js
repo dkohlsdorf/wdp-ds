@@ -178,6 +178,7 @@ function loadSound(url) {
   request.open('GET', url, true);
   request.responseType = 'arraybuffer';
   request.onload = function() {      
+    console.log(request.response);
     context.decodeAudioData(request.response, function(buffer) {    
         audio_buffer = buffer;
         end  = audio_buffer.getChannelData(0).length;
@@ -190,4 +191,4 @@ function loadSound(url) {
   request.send();
 }
 
-loadSound("demo.wav");
+loadSound("demo_compare.wav");

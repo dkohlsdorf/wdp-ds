@@ -1,8 +1,10 @@
 [
-    {
-      "origin": ["https://wdp-ds.appspot.com/"],
-      "responseHeader": ["Content-Type"],
-      "method": ["GET", "HEAD", "DELETE"],
-      "maxAgeSeconds": 3600
-    }
+  {
+    "origin": ["https://wdp-ds.appspot.com"],
+    "responseHeader": [
+      "Content-Type",
+      "Access-Control-Allow-Origin"],
+    "method": ["GET", "HEAD", "DELETE", "POST", "OPTIONS"],
+    "maxAgeSeconds": 3600
+  }
 ]

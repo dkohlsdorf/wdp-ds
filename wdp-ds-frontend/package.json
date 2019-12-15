@@ -11,7 +11,6 @@
   },
   "private": true,
   "dependencies": {
-    "wdp-ds-spectrogram": "file:../wdp-ds-spectrogram/pkg",
     "@angular/animations": "~8.2.14",
     "@angular/cdk": "~8.2.3",
     "@angular/common": "~8.2.14",
@@ -29,6 +28,7 @@
     "rxjs": "~6.4.0",
     "tslib": "^1.10.0",
     "wavesurfer.js": "^3.2.0",
+    "wdp-ds-spectrogram": "file:../wdp-ds-spectrogram/pkg",
     "zone.js": "~0.9.1"
   },
   "devDependencies": {

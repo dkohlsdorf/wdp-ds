@@ -144,6 +144,13 @@ def train_auto_encoder(version_tag, input_folder, output_folder, params, latent,
         (params.spec_win, params.n_fft_bins, 1), latent
     )
     enc.summary()
+    if os.path.exists('{}/encoder.h5'.format(output_folder)) and os.path.exists('{}/auto_encoder.h5'.format(output_folder)):
+        print("\tloading previous weights")
+        _enc = load_model('{}/encoder.h5'.format(output_folder))
+        _enc.summary()
+        _ae  = load_model('{}/auto_encoder.h5'.format(output_folder))
+        enc.set_weights(_enc.get_weights())
+        ae.set_weights(_ae.get_weights())
     w_before = enc.layers[1].get_weights()[0].flatten()
     train(input_folder, params, auto_encode, ae, batch, epochs)
     w_after = enc.layers[1].get_weights()[0].flatten()
@@ -364,9 +371,9 @@ def header():
         - Clustering Image
         - Write audio clusters
         
-    usage for training: python ml_pipeline/pipeline.py train default_config.yaml
-    usage for testing:  python ml_pipeline/pipeline.py run application_config.yaml
-    usage for report:   python ml_pipeline/pipeline.py report application_config.yaml
+    usage for training: python ml_pipeline/pipeline.py train config/default_config.yaml
+    usage for testing:  python ml_pipeline/pipeline.py run config/application_config.yaml
+    usage for report:   python ml_pipeline/pipeline.py report config/application_config.yaml
     
     
     by Daniel Kyu Hwa Kohlsdorf

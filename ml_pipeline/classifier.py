@@ -18,8 +18,8 @@ def classifier(encoder, n_labels=1):
     inp = Input(shape)
     x   = encoder(inp)
     x   = BatchNormalization()(x)    
-    x   = Dense(64)(x)
-    x   = Dense(32)(x)
+    x   = Dense(64, activation='relu')(x)
+    x   = Dense(32, activation='relu')(x)
     x   = Dropout(0.5)(x) 
     if n_labels == 1:
         x = Dense(1, activation='sigmoid')(x)

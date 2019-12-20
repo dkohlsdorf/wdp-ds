@@ -4,13 +4,11 @@ import { Encoding } from '../entities/encoding';
 import { Http, Headers, ResponseContentType } from '@angular/http';
 import { map, switchMap, flatMap } from "rxjs/operators";
 import { ActivatedRoute } from '@angular/router';
-import SpectrogramPlugin from 'wavesurfer.js/src/plugin/spectrogram';
-import * as WaveSurfer from 'wavesurfer.js';
-import RegionPlugin from 'wavesurfer.js/src/plugin/regions'
 import { Cluster } from '../entities/cluster';
-import * as Colors from '../entities/colors';
 import * as Timing from "../spectrogram/timing_utils";
 import { Spectrogram } from "wdp-ds-spectrogram";
+import {TimelineModel, RegionModel} from '../entities/timeline-model';
+import * as Helpers from './timeline-helpers';
 
 const SPEC_STEP = 256;
 const SPEC_WIN = 512;
@@ -20,7 +18,7 @@ const N_TICKS = 10;
 @Component({
   selector: 'app-annotated-spectrogram',
   templateUrl: './annotated-spectrogram.component.html',
-  styleUrls: ['./annotated-spectrogram.component.css']
+  styleUrls: ['./annotated-spectrogram.component.scss']
 })
 export class AnnotatedSpectrogramComponent implements OnInit, AfterContentInit {
   @ViewChild('drawing', { static: true }) canvas: ElementRef;
@@ -47,11 +45,16 @@ export class AnnotatedSpectrogramComponent implements OnInit, AfterContentInit {
   last_slice = 0;
   offset = 0;
 
+  // data
   clusters: Array<Cluster> = [];
   pvls: Array<PVL> = [];
   encodings: Array<Encoding> = [];
   encoding: string;
   wavesurfer: any;
+
+  // timeline model
+  timelines: Array<TimelineModel> = []
+  manualAnnotations: any = []
 
   constructor(private route: ActivatedRoute, private http: Http) { 
     route.params.subscribe(
@@ -180,6 +183,7 @@ export class AnnotatedSpectrogramComponent implements OnInit, AfterContentInit {
       .subscribe(
         clusters => {
           this.clusters = clusters[0];
+          this.generateLearningAlgorithmTimelines();
         },
         err => {
           console.error(err);
@@ -196,7 +200,7 @@ export class AnnotatedSpectrogramComponent implements OnInit, AfterContentInit {
       .pipe(map(resp => resp.json()))
       .subscribe(
         encodings => {
-          this.encodings = encodings;
+          this.encodings = encodings;          
         },
         err => {
           console.error(err);
@@ -214,6 +218,7 @@ export class AnnotatedSpectrogramComponent implements OnInit, AfterContentInit {
       .subscribe(
         pvls => {
           this.pvls = pvls;
+          this.generateManualAnnotationTimeline();
         },
         err => {
           console.error(err);
@@ -250,34 +255,34 @@ export class AnnotatedSpectrogramComponent implements OnInit, AfterContentInit {
     }
   }
 
-  /**
-  createRegionsFromClusters() {
+  generateLearningAlgorithmTimelines() {
     this.clusters.forEach(cluster => {
-        console.log(cluster);        
-        this.wavesurfer.addRegion({
+      let timeline = new TimelineModel(this.cluster_name);
+      timeline.addRegion(
+        new RegionModel({
           start: cluster.start / 48000,
-          end:   cluster.stop  / 48000,
-          color: Colors.COLORS[cluster.cluster_id],
-          drag: false,
-          data: {
-            annotation: `cluster_${cluster.cluster_id}`, url: `https://wdp-ds.appspot.com/wdp-app/spectrogram/${this.cluster_name}/cluster_${cluster.cluster_id}.wav`
-          },
-        });
-      });    
+          end: cluster.stop    / 48000,
+          label: cluster.cluster_id,
+        })
+      );
+      Helpers.assignColorsToTimelineRegions(timeline, this.end / 48000);
+      this.timelines.push(timeline);
+    });
   }
 
-  createRegionsFromAnnotations() {
+  generateManualAnnotationTimeline() {
     this.pvls.forEach(pvl => {
-      console.log(pvl);
-        this.wavesurfer.addRegion({
-          start: pvl.timecode,
-          end:   pvl.timecode + 1,
-          color: 'rgba(255,0,0,0.2)',
-          drag: false,
-          data: { annotation: pvl.description, soundtype: pvl.sound_type },
-        });
-    });
-  } */
+      this.manualAnnotations.push({
+        time: pvl.timecode / 48000,
+        description: pvl.description,
+      })
+    })
+    this.manualAnnotations = Helpers.assignPositionsToAnnotations(
+      this.manualAnnotations,
+      this.end / 48000
+    )
+  }
+
 
   ngAfterContentInit(): void {
     this.ctx = (<HTMLCanvasElement>this.canvas.nativeElement).getContext('2d');

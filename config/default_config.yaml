@@ -4,10 +4,10 @@ fft_win      : 512
 fft_step     : 64
 highpass     : 25
 latent       : 256 
-batch        : 10
+batch        : 50
 version      : "v2.0"
 epochs       : 128
-epochs_sup   : 25
+epochs_sup   : 5
 viz_k        : 100
 sil          : 'data/classification_noise'
 type_class   : 'data/classification'

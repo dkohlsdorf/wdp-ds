@@ -167,15 +167,16 @@ def train_silence(version_tag, input_folder, output_folder, params, encoder_file
     x_train = np.stack(x_train)
     y_train = np.stack(y_train) 
     cls_sil.fit(x=x_train, y=y_train, batch_size=50, epochs=epoch)
+    cls_sil.save('{}/sil.h5'.format(output_folder))
+
     confusion = np.zeros((2,2))
     for x, y in zip(x_test, y_test):
-            _y = np.argmax(cls_type.predict(x.reshape(1, x.shape[0], x.shape[1], 1)), axis=1)[0]
+            _y = int(np.round(silence.predict(x.reshape(1, x.shape[0], x.shape[1], 1))[0]))
             confusion[y][_y] += 1
     np.savetxt('{}/confusion.csv'.format(output_folder), confusion)
     accuracy = np.sum(confusion * np.eye(2)) / np.sum(confusion)
     print(accuracy)
     print(confusion)
-    cls_sil.save('{}/sil.h5'.format(output_folder))
     plot_confusion_matrix(confusion, ["noise", "dolphin"], 'Noise Classification')
     plt.savefig('{}/confusion.png'.format(output_folder))
     plt.close()
@@ -473,7 +474,7 @@ if __name__== "__main__":
         type_class   = c['type_class']
         unsupervised = c['unsupervised']
         output       = c['output']        
-        train_auto_encoder(version, unsupervised, output, params, latent, batch, epochs)
-        evaluate_encoder(version, unsupervised, output, "{}/encoder.h5".format(output), params, viz_k)
+        #train_auto_encoder(version, unsupervised, output, params, latent, batch, epochs)
+        #evaluate_encoder(version, unsupervised, output, "{}/encoder.h5".format(output), params, viz_k)
         train_silence(version, silence, output, params, "{}/encoder.h5".format(output), batch, epochs_sup)
-        train_type(version, type_class, output, params, "{}/encoder.h5".format(output), batch, epochs_sup)
+        #train_type(version, type_class, output, params, "{}/encoder.h5".format(output), batch, epochs_sup)

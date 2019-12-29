@@ -171,8 +171,9 @@ def train_silence(version_tag, input_folder, output_folder, params, encoder_file
 
     confusion = np.zeros((2,2))
     for x, y in zip(x_test, y_test):
-            _y = int(np.round(silence.predict(x.reshape(1, x.shape[0], x.shape[1], 1))[0]))
-            confusion[y][_y] += 1
+        y = int(y)
+        _y = int(np.round(cls_sil.predict(x.reshape(1, x.shape[0], x.shape[1], 1))[0]))
+        confusion[y][_y] += 1
     np.savetxt('{}/confusion.csv'.format(output_folder), confusion)
     accuracy = np.sum(confusion * np.eye(2)) / np.sum(confusion)
     print(accuracy)

@@ -6,6 +6,7 @@ import numpy as np
 import subprocess  
 import os
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3' 
+from tensorflow.keras.backend import set_learning_phase
 
 from tensorflow.keras.models import load_model
 from feature_extractor import *
@@ -93,10 +94,10 @@ def train_silence(version_tag, input_folder, output_folder, params, encoder_file
     :param batch: batch size
     :param epochs: number of training epochs
     """
-    print("Training Auto Encoder: {}".format(version_tag))
+    print("Training Silence Detector: {} {}".format(version_tag, epoch))
     enc = load_model(encoder_file)
     cls_sil = classifier(enc)
-    train(input_folder, params, sil, cls_sil, 10, 128)
+    train(input_folder, params, sil, cls_sil, batch, epoch)
     cls_sil.save('{}/sil.h5'.format(output_folder))
     
 
@@ -110,13 +111,24 @@ def test_silence(version_tag, input_folder, output_folder, params, sil_file):
     :param params: window parameters
     :param sil_file: saved silence detector
     """
+    set_learning_phase(0)
     print("Evaluate silence model {}".format(version_tag))
     silence = load_model(sil_file)
     confusion = np.zeros((2,2))
-    for (x, y,_,_,_) in dataset(input_folder, params, sil, False):
-        _y = int(np.round(silence.predict(x.reshape(1, x.shape[0], x.shape[1], 1))[0]))
-        y = int(y)
-        confusion[y][_y] += 1
+    last_f = ""
+    processed = 0
+    with open("error_log.txt", "w") as fp:
+        for (x, y, f, a, b) in dataset(input_folder, params, sil, False):
+            _y = int(np.round(silence.predict(x.reshape(1, x.shape[0], x.shape[1], 1))[0]))
+            y = int(y)
+            if y == _y and y == 0:                
+                fp.write("{} {} {}\n".format(f, a, b))
+                fp.flush()
+            confusion[y][_y] += 1
+            if f != last_f:
+                print(processed)
+                processed += 1
+            last_f = f
     np.savetxt('{}/confusion.csv'.format(output_folder), confusion)
     accuracy = np.sum(confusion * np.eye(2)) / np.sum(confusion)
     print("Accuracy: {}".format(accuracy))
@@ -413,11 +425,13 @@ if __name__== "__main__":
         batch        = c['batch']
         version      = c['version']
         epochs       = c['epochs']
+        epochs_sup   = c['epochs_sup']
         viz_k        = c['viz_k']
         silence      = c['sil']
+        silence_test = c['sil_test']
         unsupervised = c['unsupervised']
         output       = c['output']        
-        train_auto_encoder(version, unsupervised, output, params, latent, batch, epochs)
-        evaluate_encoder(version, unsupervised, output, "{}/encoder.h5".format(output), params, viz_k)
-        train_silence(version, silence, output, params, "{}/encoder.h5".format(output), batch, epochs)
-        test_silence(version, silence, output, params, "{}/sil.h5".format(output))        
+        #train_auto_encoder(version, unsupervised, output, params, latent, batch, epochs)
+        #evaluate_encoder(version, unsupervised, output, "{}/encoder.h5".format(output), params, viz_k)
+        #train_silence(version, silence, output, params, "{}/encoder.h5".format(output), batch, epochs_sup)
+        test_silence(version, silence_test, output, params, "{}/sil.h5".format(output))        

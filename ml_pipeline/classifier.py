@@ -1,6 +1,6 @@
 from tensorflow.keras.layers import *
 from tensorflow.keras.models import *
-
+from tensorflow.keras.regularizers import l2
 
 def classifier(encoder, n_labels=1):
     """
@@ -12,7 +12,7 @@ def classifier(encoder, n_labels=1):
 
     :returns: a keras model
     """
-    for layer in encoder.layers[:-1]:
+    for layer in encoder.layers:
         layer.trainable = False
     shape = encoder.layers[0].input_shape[0][1:]
     inp = Input(shape)
@@ -20,7 +20,7 @@ def classifier(encoder, n_labels=1):
     x   = BatchNormalization()(x)    
     x   = Dense(64, activation='relu')(x)
     x   = Dense(32, activation='relu')(x)
-    x   = Dropout(0.5)(x) 
+    x   = Dropout(0.5)(x)
     if n_labels == 1:
         x = Dense(1, activation='sigmoid')(x)
         model = Model(inputs = [inp], outputs = [x])

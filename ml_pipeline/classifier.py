@@ -12,8 +12,6 @@ def classifier(encoder, n_labels=1):
 
     :returns: a keras model
     """
-    #for layer in encoder.layers:
-    #    layer.trainable = False
     shape = encoder.layers[0].input_shape[0][1:]
     inp = Input(shape)
     x   = encoder(inp)

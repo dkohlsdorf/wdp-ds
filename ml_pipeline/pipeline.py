@@ -153,44 +153,30 @@ def train_silence(version_tag, input_folder, output_folder, params, encoder_file
     print("Training Silence Detector: {} {}".format(version_tag, epoch))
     enc = load_model(encoder_file)
     cls_sil = classifier(enc)
-    train(input_folder, params, sil, cls_sil, batch, epoch)
-    cls_sil.save('{}/sil.h5'.format(output_folder))
-    
-
-def test_silence(version_tag, input_folder, output_folder, params, sil_file):
-    """
-    Evaluation of the accuracy as confusion matrix
-
-    :param version_tag: basically the model name
-    :param input_folder: the folder with the training data
-    :param output_folder: the folder to save the model
-    :param params: window parameters
-    :param sil_file: saved silence detector
-    """
-    set_learning_phase(0)
-    print("Evaluate silence model {}".format(version_tag))
-    silence = load_model(sil_file)
+    x_train = []
+    x_test = []
+    y_train = []
+    y_test = []
+    for (x, y, _, _, _) in dataset(input_folder, params, sil, True):
+        if np.random.uniform() > 0.6:
+            x_test.append(x)
+            y_test.append(y)
+        else:
+            x_train.append(x.reshape(x.shape[0], x.shape[1], 1))
+            y_train.append(y)
+    x_train = np.stack(x_train)
+    y_train = np.stack(y_train) 
+    cls_sil.fit(x=x_train, y=y_train, batch_size=50, epochs=epoch)
     confusion = np.zeros((2,2))
-    last_f = ""
-    processed = 0
-    with open("error_log.txt", "w") as fp:
-        for (x, y, f, a, b) in dataset(input_folder, params, sil, False):
-            _y = int(np.round(silence.predict(x.reshape(1, x.shape[0], x.shape[1], 1))[0]))
-            y = int(y)
-            if y == _y and y == 0:                
-                fp.write("{} {} {}\n".format(f, a, b))
-                fp.flush()
+    for x, y in zip(x_test, y_test):
+            _y = np.argmax(cls_type.predict(x.reshape(1, x.shape[0], x.shape[1], 1)), axis=1)[0]
             confusion[y][_y] += 1
-            if f != last_f:
-                print(processed)
-                processed += 1
-            last_f = f
     np.savetxt('{}/confusion.csv'.format(output_folder), confusion)
     accuracy = np.sum(confusion * np.eye(2)) / np.sum(confusion)
-    print("Accuracy: {}".format(accuracy))
-    print("Confusion")
+    print(accuracy)
     print(confusion)
-    plot_confusion_matrix(confusion, ['not silence', 'silence'], 'Silence Classification')
+    cls_sil.save('{}/sil.h5'.format(output_folder))
+    plot_confusion_matrix(confusion, ["noise", "dolphin"], 'Noise Classification')
     plt.savefig('{}/confusion.png'.format(output_folder))
     plt.close()
 
@@ -484,11 +470,10 @@ if __name__== "__main__":
         epochs_sup   = c['epochs_sup']
         viz_k        = c['viz_k']
         silence      = c['sil']
-        silence_test = c['sil_test']
+        type_class   = c['type_class']
         unsupervised = c['unsupervised']
         output       = c['output']        
-        #train_auto_encoder(version, unsupervised, output, params, latent, batch, epochs)
-        #evaluate_encoder(version, unsupervised, output, "{}/encoder.h5".format(output), params, viz_k)
-        #train_silence(version, silence, output, params, "{}/encoder.h5".format(output), batch, epochs_sup)
-        #test_silence(version, silence_test, output, params, "{}/sil.h5".format(output))        
-        train_type(version, "data/classification", output, params, "{}/encoder.h5".format(output), batch, epochs_sup)
+        train_auto_encoder(version, unsupervised, output, params, latent, batch, epochs)
+        evaluate_encoder(version, unsupervised, output, "{}/encoder.h5".format(output), params, viz_k)
+        train_silence(version, silence, output, params, "{}/encoder.h5".format(output), batch, epochs_sup)
+        train_type(version, type_class, output, params, "{}/encoder.h5".format(output), batch, epochs_sup)

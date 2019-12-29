@@ -433,5 +433,5 @@ if __name__== "__main__":
         output       = c['output']        
         #train_auto_encoder(version, unsupervised, output, params, latent, batch, epochs)
         #evaluate_encoder(version, unsupervised, output, "{}/encoder.h5".format(output), params, viz_k)
-        #train_silence(version, silence, output, params, "{}/encoder.h5".format(output), batch, epochs_sup)
+        train_silence(version, silence, output, params, "{}/encoder.h5".format(output), batch, epochs_sup)
         test_silence(version, silence_test, output, params, "{}/sil.h5".format(output))        

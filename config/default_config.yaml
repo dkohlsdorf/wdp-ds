@@ -7,7 +7,7 @@ latent       : 256
 batch        : 50
 version      : "v2.0"
 epochs       : 128
-epochs_sup   : 5
+epochs_sup   : 25
 viz_k        : 100
 sil          : 'data/classification_noise'
 sil_test     : 'data/classification'

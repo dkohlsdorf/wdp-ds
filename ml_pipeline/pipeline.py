@@ -24,6 +24,21 @@ def no_label(f,x):
     """
     return None
 
+def lable(f, x):
+    """
+    Return label based on filename
+
+    :returns: number for each filename 
+    """
+    if f.split('/')[-1][0] == 'n':
+        return 0 # noise
+    elif f.split('/')[-1][0] == 'e':
+        return 1 # echo
+    elif f.split('/')[-1][0] == 'b':
+        return 2 # burst
+    elif f.split('/')[-1][0] == 'w':
+        return 3 # whistle
+
 
 def sil(f, x):
     """
@@ -82,6 +97,47 @@ def train(folder, params, lable, model, batch_size=10, epochs=128, keep=lambda x
                     n_processed += 1
 
 
+def train_type(version_tag, input_folder, output_folder, params, encoder_file, batch, epoch):
+    """
+    Train a multiclass type classifier
+    :param version_tag: basically the model name
+    :param input_folder: the folder with the training data
+    :param output_folder: the folder to save the model
+    :param params: window parameters
+    :param encoder_file: a saved encoder
+    :param batch: batch size
+    :param epochs: number of training epochs
+    """
+    enc = load_model(encoder_file)
+    cls_type = classifier(enc, n_labels=4)
+    x_train = []
+    x_test = []
+    y_train = []
+    y_test = []
+    for (x, y, _, _, _) in dataset(input_folder, params, lable, True):
+        if np.random.uniform() > 0.6:
+            x_test.append(x)
+            y_test.append(y)
+        else:
+            x_train.append(x.reshape(x.shape[0], x.shape[1], 1))
+            y_train.append(y)
+    x_train = np.stack(x_train)
+    y_train = np.stack(y_train) 
+    cls_type.fit(x=x_train, y=y_train, batch_size=50, epochs=epoch)
+    confusion = np.zeros((4,4))
+    for x, y in zip(x_test, y_test):
+            _y = np.argmax(cls_type.predict(x.reshape(1, x.shape[0], x.shape[1], 1)), axis=1)[0]
+            confusion[y][_y] += 1
+    np.savetxt('{}/confusion_type.csv'.format(output_folder), confusion)
+    accuracy = np.sum(confusion * np.eye(4)) / np.sum(confusion)
+    print(accuracy)
+    print(confusion)
+    cls_type.save('{}/type.h5'.format(output_folder))
+    plot_confusion_matrix(confusion, ["noise", "echo", "burst", "whistle"], 'Type Classification')
+    plt.savefig('{}/confusion_type.png'.format(output_folder))
+    plt.close()
+
+
 def train_silence(version_tag, input_folder, output_folder, params, encoder_file, batch, epoch):
     """
     Train a silence dectector on top of an encoder
@@ -137,7 +193,7 @@ def test_silence(version_tag, input_folder, output_folder, params, sil_file):
     plot_confusion_matrix(confusion, ['not silence', 'silence'], 'Silence Classification')
     plt.savefig('{}/confusion.png'.format(output_folder))
     plt.close()
-    
+
     
 def train_auto_encoder(version_tag, input_folder, output_folder, params, latent, batch, epochs):
     """
@@ -433,5 +489,6 @@ if __name__== "__main__":
         output       = c['output']        
         #train_auto_encoder(version, unsupervised, output, params, latent, batch, epochs)
         #evaluate_encoder(version, unsupervised, output, "{}/encoder.h5".format(output), params, viz_k)
-        train_silence(version, silence, output, params, "{}/encoder.h5".format(output), batch, epochs_sup)
-        test_silence(version, silence_test, output, params, "{}/sil.h5".format(output))        
+        #train_silence(version, silence, output, params, "{}/encoder.h5".format(output), batch, epochs_sup)
+        #test_silence(version, silence_test, output, params, "{}/sil.h5".format(output))        
+        train_type(version, "data/classification", output, params, "{}/encoder.h5".format(output), batch, epochs_sup)

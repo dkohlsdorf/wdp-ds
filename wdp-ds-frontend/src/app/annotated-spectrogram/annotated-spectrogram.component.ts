@@ -256,8 +256,8 @@ export class AnnotatedSpectrogramComponent implements OnInit, AfterContentInit {
   }
 
   generateLearningAlgorithmTimelines() {
+    let timeline = new TimelineModel(this.cluster_name);
     this.clusters.forEach(cluster => {
-      let timeline = new TimelineModel(this.cluster_name);
       timeline.addRegion(
         new RegionModel({
           start: cluster.start / 48000,
@@ -266,8 +266,8 @@ export class AnnotatedSpectrogramComponent implements OnInit, AfterContentInit {
         })
       );
       Helpers.assignColorsToTimelineRegions(timeline, this.end / 48000);
-      this.timelines.push(timeline);
     });
+    this.timelines.push(timeline);
   }
 
   generateManualAnnotationTimeline() {

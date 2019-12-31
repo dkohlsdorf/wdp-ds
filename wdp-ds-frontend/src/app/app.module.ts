@@ -14,6 +14,8 @@ import { MatListModule } from '@angular/material/list';
 import { SpectrogramComponent } from './spectrogram/spectrogram.component';
 import { CorrelationClusterFilesComponent } from './correlation-cluster-files/correlation-cluster-files.component';
 import { AnnotatedSpectrogramComponent } from './annotated-spectrogram/annotated-spectrogram.component';
+import { Ng5SliderModule } from 'ng5-slider'
+import { TooltipModule } from 'ng2-tooltip-directive'
 
 const appRoutes: Routes = [
   { path: 'wdp-app/encoding/:encoding/:cluster_name', component: AnnotatedSpectrogramComponent},
@@ -39,6 +41,7 @@ const appRoutes: Routes = [
     CorrelationClusterFilesComponent,
     AnnotatedSpectrogramComponent,
   ],
+
   imports: [
     BrowserModule,
     HttpModule,
@@ -50,7 +53,9 @@ const appRoutes: Routes = [
     MatMenuModule,
     MatListModule,
     MatIconModule,
-    MatSidenavModule
+    MatSidenavModule,
+    Ng5SliderModule,
+    TooltipModule
   ],
   providers: [],
   bootstrap: [AppComponent]

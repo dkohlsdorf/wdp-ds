@@ -29,7 +29,10 @@
     "tslib": "^1.10.0",
     "wavesurfer.js": "^3.2.0",
     "wdp-ds-spectrogram": "file:../wdp-ds-spectrogram/pkg",
-    "zone.js": "~0.9.1"
+    "zone.js": "~0.9.1",
+    "ng2-tooltip-directive": "^2.8.17",
+    "ng5-slider": "^1.2.4",
+    "ngx-tooltip": "0.0.9"
   },
   "devDependencies": {
     "@angular-devkit/build-angular": "~0.803.19",

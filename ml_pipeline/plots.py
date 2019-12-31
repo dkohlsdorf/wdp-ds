@@ -11,6 +11,7 @@ from sklearn.cluster import KMeans
 from sklearn.manifold.t_sne import TSNE
 from sklearn.metrics import silhouette_samples, silhouette_score
 
+
 COLORS = list(
     pd.read_csv('ml_pipeline/colors.txt', sep='\t', header=None)[1])
 

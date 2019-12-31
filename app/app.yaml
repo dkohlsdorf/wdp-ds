@@ -10,6 +10,9 @@ handlers:
   static_files: static/index.html
   upload: static/index.html
 
+- url: /(.+).wasm
+  script: auto
+
 - url: /(.+)
   static_files: static/\1
   upload: static/.*
@@ -23,4 +26,4 @@ handlers:
 #    CLOUDSQL_CONNECTION_NAME: your-connection-name
 #    CLOUDSQL_USER: root
 #    CLOUDSQL_PASSWORD: your-cloudsql-user-password
-# [END gae_python_mysql_env]
+# [END gae_python_mysql_env]  

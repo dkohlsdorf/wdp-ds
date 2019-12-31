@@ -6,6 +6,7 @@ import numpy as np
 import subprocess  
 import os
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3' 
+from tensorflow.keras.backend import set_learning_phase
 
 from tensorflow.keras.models import load_model
 from feature_extractor import *
@@ -22,6 +23,21 @@ def no_label(f,x):
     :returns: None
     """
     return None
+
+def lable(f, x):
+    """
+    Return label based on filename
+
+    :returns: number for each filename 
+    """
+    if f.split('/')[-1][0] == 'n':
+        return 0 # noise
+    elif f.split('/')[-1][0] == 'e':
+        return 1 # echo
+    elif f.split('/')[-1][0] == 'b':
+        return 2 # burst
+    elif f.split('/')[-1][0] == 'w':
+        return 3 # whistle
 
 
 def sil(f, x):
@@ -81,6 +97,47 @@ def train(folder, params, lable, model, batch_size=10, epochs=128, keep=lambda x
                     n_processed += 1
 
 
+def train_type(version_tag, input_folder, output_folder, params, encoder_file, batch, epoch):
+    """
+    Train a multiclass type classifier
+    :param version_tag: basically the model name
+    :param input_folder: the folder with the training data
+    :param output_folder: the folder to save the model
+    :param params: window parameters
+    :param encoder_file: a saved encoder
+    :param batch: batch size
+    :param epochs: number of training epochs
+    """
+    enc = load_model(encoder_file)
+    cls_type = classifier(enc, n_labels=4)
+    x_train = []
+    x_test = []
+    y_train = []
+    y_test = []
+    for (x, y, _, _, _) in dataset(input_folder, params, lable, True):
+        if np.random.uniform() > 0.6:
+            x_test.append(x)
+            y_test.append(y)
+        else:
+            x_train.append(x.reshape(x.shape[0], x.shape[1], 1))
+            y_train.append(y)
+    x_train = np.stack(x_train)
+    y_train = np.stack(y_train) 
+    cls_type.fit(x=x_train, y=y_train, batch_size=50, epochs=epoch)
+    confusion = np.zeros((4,4))
+    for x, y in zip(x_test, y_test):
+            _y = np.argmax(cls_type.predict(x.reshape(1, x.shape[0], x.shape[1], 1)), axis=1)[0]
+            confusion[y][_y] += 1
+    np.savetxt('{}/confusion_type.csv'.format(output_folder), confusion)
+    accuracy = np.sum(confusion * np.eye(4)) / np.sum(confusion)
+    print(accuracy)
+    print(confusion)
+    cls_type.save('{}/type.h5'.format(output_folder))
+    plot_confusion_matrix(confusion, ["noise", "echo", "burst", "whistle"], 'Type Classification')
+    plt.savefig('{}/confusion_type.png'.format(output_folder))
+    plt.close()
+
+
 def train_silence(version_tag, input_folder, output_folder, params, encoder_file, batch, epoch):
     """
     Train a silence dectector on top of an encoder
@@ -93,39 +150,38 @@ def train_silence(version_tag, input_folder, output_folder, params, encoder_file
     :param batch: batch size
     :param epochs: number of training epochs
     """
-    print("Training Auto Encoder: {}".format(version_tag))
+    print("Training Silence Detector: {} {}".format(version_tag, epoch))
     enc = load_model(encoder_file)
     cls_sil = classifier(enc)
-    train(input_folder, params, sil, cls_sil, 10, 128)
+    x_train = []
+    x_test = []
+    y_train = []
+    y_test = []
+    for (x, y, _, _, _) in dataset(input_folder, params, sil, True):
+        if np.random.uniform() > 0.6:
+            x_test.append(x)
+            y_test.append(y)
+        else:
+            x_train.append(x.reshape(x.shape[0], x.shape[1], 1))
+            y_train.append(y)
+    x_train = np.stack(x_train)
+    y_train = np.stack(y_train) 
+    cls_sil.fit(x=x_train, y=y_train, batch_size=50, epochs=epoch)
     cls_sil.save('{}/sil.h5'.format(output_folder))
-    
 
-def test_silence(version_tag, input_folder, output_folder, params, sil_file):
-    """
-    Evaluation of the accuracy as confusion matrix
-
-    :param version_tag: basically the model name
-    :param input_folder: the folder with the training data
-    :param output_folder: the folder to save the model
-    :param params: window parameters
-    :param sil_file: saved silence detector
-    """
-    print("Evaluate silence model {}".format(version_tag))
-    silence = load_model(sil_file)
     confusion = np.zeros((2,2))
-    for (x, y,_,_,_) in dataset(input_folder, params, sil, False):
-        _y = int(np.round(silence.predict(x.reshape(1, x.shape[0], x.shape[1], 1))[0]))
+    for x, y in zip(x_test, y_test):
         y = int(y)
+        _y = int(np.round(cls_sil.predict(x.reshape(1, x.shape[0], x.shape[1], 1))[0]))
         confusion[y][_y] += 1
     np.savetxt('{}/confusion.csv'.format(output_folder), confusion)
     accuracy = np.sum(confusion * np.eye(2)) / np.sum(confusion)
-    print("Accuracy: {}".format(accuracy))
-    print("Confusion")
+    print(accuracy)
     print(confusion)
-    plot_confusion_matrix(confusion, ['not silence', 'silence'], 'Silence Classification')
+    plot_confusion_matrix(confusion, ["noise", "dolphin"], 'Noise Classification')
     plt.savefig('{}/confusion.png'.format(output_folder))
     plt.close()
-    
+
     
 def train_auto_encoder(version_tag, input_folder, output_folder, params, latent, batch, epochs):
     """
@@ -144,6 +200,13 @@ def train_auto_encoder(version_tag, input_folder, output_folder, params, latent,
         (params.spec_win, params.n_fft_bins, 1), latent
     )
     enc.summary()
+    if os.path.exists('{}/encoder.h5'.format(output_folder)) and os.path.exists('{}/auto_encoder.h5'.format(output_folder)):
+        print("\tloading previous weights")
+        _enc = load_model('{}/encoder.h5'.format(output_folder))
+        _enc.summary()
+        _ae  = load_model('{}/auto_encoder.h5'.format(output_folder))
+        enc.set_weights(_enc.get_weights())
+        ae.set_weights(_ae.get_weights())
     w_before = enc.layers[1].get_weights()[0].flatten()
     train(input_folder, params, auto_encode, ae, batch, epochs)
     w_after = enc.layers[1].get_weights()[0].flatten()
@@ -338,7 +401,29 @@ def evaluate_embedding(embedding_folder, wav_folder, params, k, p_keep = 1.0, cl
             cluster = clusters[i]
             fp.write("{},{},{},{}\n".format(cluster, filename, start, stop))
     
-            
+
+def test_reconstruction(folder, out, params):
+    '''
+    Reconstruct 100 examples using the auto encoder
+    '''
+    ae = load_model('{}/auto_encoder.h5'.format(out))
+    gen = pipe.dataset(folder, params, no_label, True)
+    i = 0
+    plt.figure(figsize=(40, 40))
+    for (x, _, f, _, _) in gen:
+        name = f.split('/')[-1]
+        plt.subplot(10, 10, i + 1)
+        plt.axis('off')
+        plt.imshow(1.0 - ae.predict(x.reshape(1, 128, 256, 1))[0, :, :, 0].T, cmap='gray')
+        i += 1
+        if i % 10 == 0:        
+            print(i)
+        if i == 100:
+            break
+    plt.savefig('{}/reconstructions.png'.format(out))
+    plt.close()
+
+
 def header():
     return """
     =================================================================
@@ -364,9 +449,9 @@ def header():
         - Clustering Image
         - Write audio clusters
         
-    usage for training: python ml_pipeline/pipeline.py train default_config.yaml
-    usage for testing:  python ml_pipeline/pipeline.py run application_config.yaml
-    usage for report:   python ml_pipeline/pipeline.py report application_config.yaml
+    usage for training: python ml_pipeline/pipeline.py train config/default_config.yaml
+    usage for testing:  python ml_pipeline/pipeline.py run config/application_config.yaml
+    usage for report:   python ml_pipeline/pipeline.py report config/application_config.yaml
     
     
     by Daniel Kyu Hwa Kohlsdorf
@@ -406,11 +491,15 @@ if __name__== "__main__":
         batch        = c['batch']
         version      = c['version']
         epochs       = c['epochs']
+        epochs_sup   = c['epochs_sup']
         viz_k        = c['viz_k']
         silence      = c['sil']
+        type_class   = c['type_class']
         unsupervised = c['unsupervised']
+        reconstruct  = c['reconstruct'] 
         output       = c['output']        
         train_auto_encoder(version, unsupervised, output, params, latent, batch, epochs)
         evaluate_encoder(version, unsupervised, output, "{}/encoder.h5".format(output), params, viz_k)
-        train_silence(version, silence, output, params, "{}/encoder.h5".format(output), batch, epochs)
-        test_silence(version, silence, output, params, "{}/sil.h5".format(output))        
+        train_silence(version, silence, output, params, "{}/encoder.h5".format(output), batch, epochs_sup)
+        train_type(version, type_class, output, params, "{}/encoder.h5".format(output), batch, epochs_sup)
+        test_reconstruction(reconstruct, output, params)

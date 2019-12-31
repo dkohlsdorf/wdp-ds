@@ -4,10 +4,13 @@ fft_win      : 512
 fft_step     : 64
 highpass     : 25
 latent       : 256 
-batch        : 50
+batch        : 10
 version      : "v2.0"
-epochs       : 12
+epochs       : 128
+epochs_sup   : 25
 viz_k        : 100
 sil          : 'data/classification_noise'
+type_class   : 'data/classification'
 unsupervised : 'data/unsupervised'
+reconstruct  : 'data/reconstruction'
 output       : 'models/v2_lstm_v5/'

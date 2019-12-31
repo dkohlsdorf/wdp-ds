@@ -12,4 +12,5 @@ viz_k        : 100
 sil          : 'data/classification_noise'
 type_class   : 'data/classification'
 unsupervised : 'data/unsupervised'
+reconstruct  : 'data/reconstruction'
 output       : 'models/v2_lstm_v5/'

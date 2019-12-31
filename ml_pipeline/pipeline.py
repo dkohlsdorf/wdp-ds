@@ -401,7 +401,29 @@ def evaluate_embedding(embedding_folder, wav_folder, params, k, p_keep = 1.0, cl
             cluster = clusters[i]
             fp.write("{},{},{},{}\n".format(cluster, filename, start, stop))
     
-            
+
+def test_reconstruction(folder, out, params):
+    '''
+    Reconstruct 100 examples using the auto encoder
+    '''
+    ae = load_model('{}/auto_encoder.h5'.format(out))
+    gen = pipe.dataset(folder, params, no_label, True)
+    i = 0
+    plt.figure(figsize=(40, 40))
+    for (x, _, f, _, _) in gen:
+        name = f.split('/')[-1]
+        plt.subplot(10, 10, i + 1)
+        plt.axis('off')
+        plt.imshow(1.0 - ae.predict(x.reshape(1, 128, 256, 1))[0, :, :, 0].T, cmap='gray')
+        i += 1
+        if i % 10 == 0:        
+            print(i)
+        if i == 100:
+            break
+    plt.savefig('{}/reconstructions.png'.format(out))
+    plt.close()
+
+
 def header():
     return """
     =================================================================
@@ -474,8 +496,10 @@ if __name__== "__main__":
         silence      = c['sil']
         type_class   = c['type_class']
         unsupervised = c['unsupervised']
+        reconstruct  = c['reconstruct'] 
         output       = c['output']        
-        #train_auto_encoder(version, unsupervised, output, params, latent, batch, epochs)
-        #evaluate_encoder(version, unsupervised, output, "{}/encoder.h5".format(output), params, viz_k)
+        train_auto_encoder(version, unsupervised, output, params, latent, batch, epochs)
+        evaluate_encoder(version, unsupervised, output, "{}/encoder.h5".format(output), params, viz_k)
         train_silence(version, silence, output, params, "{}/encoder.h5".format(output), batch, epochs_sup)
-        #train_type(version, type_class, output, params, "{}/encoder.h5".format(output), batch, epochs_sup)
+        train_type(version, type_class, output, params, "{}/encoder.h5".format(output), batch, epochs_sup)
+        test_reconstruction(reconstruct, output, params)

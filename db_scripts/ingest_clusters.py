@@ -3,7 +3,7 @@ import pandas as pd
 import time
 import datetime
 
-NAME = "v2_lstm_v4"
+NAME = "v2_lstm_v5"
 
 if __name__ == "__main__":
     if len(sys.argv) <= 1:

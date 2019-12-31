@@ -1,0 +1,164 @@
+section.timeline-scrollbox {
+    overflow-x: hidden;
+    flex: 1;
+  
+    .background-container {
+      position: absolute;
+      border-radius: inherit;
+      bottom: 1px;
+      left: 0;
+      width: 100%;
+      height: 3px;
+      z-index: 2;
+      // for showing timeline tallies (draws a gray line at each second mark)
+      background: linear-gradient(
+        270deg,
+        rgba(0, 0, 0, 0.3) 3px,
+        transparent 2px
+      );
+    }
+  
+    .timeline {
+      margin-bottom: 30px;
+    }
+  
+    .annotation-content,
+    .cluster {
+      white-space: nowrap;
+      overflow: hidden;
+      cursor: pointer;
+    }
+  
+    .annotations.timeline {
+      height: 50px;
+      min-width: calc(100% - 50px);
+      margin-left: 25px;
+      margin-top: 10px;
+      z-index: 2;
+  
+      .annotation {
+        position: absolute;
+        width: 200px;
+        transition: width 0.2s;
+        top: 0;
+        left: auto;
+        right: 0;
+        transition-property: transform;
+        transition-duration: 0.2s;
+  
+        .annotation-content {
+          width: inherit;
+          color: #10309a;
+          background: #dfeeff;
+          border: 3px solid #10309a;
+          text-align: left;
+          transition-property: box-shadow;
+          transition-duration: inherit;
+          border-radius: 5px;
+          padding: 10px;
+          text-overflow: ellipsis;
+  
+          .annotation-cta {
+            display: none;
+            font-weight: bold;
+            text-align: center;
+            margin-top: 10px;
+          }
+        }
+  
+        .triangle-icon {
+          width: 10px;
+          height: 13px;
+          margin-bottom: -3px;
+        }
+  
+        .triangle-icon.left-align {
+          background: linear-gradient(45deg, #10309a 50%, rgba(0, 0, 0, 0) 50%);
+        }
+        .triangle-icon.right-align {
+          margin-left: auto;
+          background: linear-gradient(-45deg, #10309a 50%, rgba(0, 0, 0, 0) 50%);
+        }
+      }
+  
+      .annotation:hover,
+      .annotation:focus-within {
+        transform: translateY(-10px);
+        z-index: 999;
+        .annotation-content {
+          height: auto;
+          white-space: normal;
+          text-overflow: initial;
+          overflow: visible;
+          box-shadow: 0 5px 15px rgba(100, 100, 100, 0.5);
+  
+          .annotation-cta {
+            display: block;
+          }
+        }
+      }
+    }
+  
+    .clusters.timeline {
+      border: 10px solid white;
+      box-sizing: border-box;
+      height: 120px;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+  
+      h2 {
+        margin: 0;
+        padding: 10px 15px;
+        font-size: 18px;
+      }
+      .timeline-container {
+        border-radius: 5px;
+        margin-bottom: 15px;
+        transform: translateX(0);
+        background: #f8f8fa;
+        flex: 1;
+        box-shadow: inset rgba(51, 46, 84, 0.15) 0 0 10px;
+        min-width: 100%;
+  
+        .cluster {
+          background: white;
+          position: absolute;
+          border-radius: 5px;
+          top: 0;
+          left: 0;
+          bottom: 0;
+          height: 100%;
+          padding: 10px 10px;
+          font-size: 14px;
+          border: 1px solid rgb(237, 237, 240);
+  
+          transition-property: transform, box-shadow;
+          transition-duration: 0.3s;
+        }
+  
+        .cluster::before {
+          content: '';
+          position: absolute;
+          top: 0;
+          left: 0;
+          right: 0;
+          height: 150px;
+          background: linear-gradient(30deg, rgba(0, 0, 0, 0.2), transparent 60%);
+          transition: transform 0.4s;
+        }
+  
+        .cluster.highlighted {
+          opacity: 1;
+          font-weight: bold;
+          transform: scaleY(1.1);
+          border: none;
+          box-shadow: rgba(51, 46, 84, 0.3) 0 0 10px;
+          z-index: 1;
+        }
+        .cluster.highlighted::before {
+          transform: translateY(-80px);
+        }
+      }
+    }
+}

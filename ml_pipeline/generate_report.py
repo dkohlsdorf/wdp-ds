@@ -70,6 +70,10 @@ def from_template(filename, config):
     template = template.replace("<VERSION>", config['version'])
     template = template.replace("<PARAMS>", parameter_table(config))
     template = template.replace("<CONFUSION>", image(config, "confusion.png"))
-    template = template.replace("<CLUSTERING>", image(config, "embeddings_test.png"))
+    template = template.replace("<CONFUSION_TYPE>", image(config, "confusion_type.png"))
+    template = template.replace("<CLUSTERING_2011>", image(config, "embeddings_test.png"))
+    template = template.replace("<CLUSTERING_TRAIN>", image(config, "embeddings.png"))
+    template = template.replace("<RECONSTRUCTION>", image(config, "reconstructions.png"))
+
     with open('{}/Readme.md'.format(config['output']), "w") as fp:
         fp.write(template)

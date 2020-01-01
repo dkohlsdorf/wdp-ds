@@ -498,8 +498,8 @@ if __name__== "__main__":
         unsupervised = c['unsupervised']
         reconstruct  = c['reconstruct'] 
         output       = c['output']        
-        train_auto_encoder(version, unsupervised, output, params, latent, batch, epochs)
-        evaluate_encoder(version, unsupervised, output, "{}/encoder.h5".format(output), params, viz_k)
-        train_silence(version, silence, output, params, "{}/encoder.h5".format(output), batch, epochs_sup)
+        #train_auto_encoder(version, unsupervised, output, params, latent, batch, epochs)
+        #evaluate_encoder(version, unsupervised, output, "{}/encoder.h5".format(output), params, viz_k)
+        #train_silence(version, silence, output, params, "{}/encoder.h5".format(output), batch, epochs_sup)
         train_type(version, type_class, output, params, "{}/encoder.h5".format(output), batch, epochs_sup)
-        test_reconstruction(reconstruct, output, params)
+        #test_reconstruction(reconstruct, output, params)

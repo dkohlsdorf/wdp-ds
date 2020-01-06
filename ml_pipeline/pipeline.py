@@ -489,7 +489,7 @@ if __name__== "__main__":
             clustering_audio(output, inp, k, True)            
         else:
             run_embedder_fs(embedder, inp, output)
-            evaluate_embedding(output, inp, params, k, 0.1, False, True)
+            evaluate_embedding(output, inp, params, k, 0.25, False, True)
             clustering_audio(output, inp, k, True)
     elif len(sys.argv) == 3 and sys.argv[1] == 'report':
         c = yaml.load(open(sys.argv[2]))

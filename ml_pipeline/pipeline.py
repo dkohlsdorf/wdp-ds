@@ -16,6 +16,7 @@ from sequence_embedder import *
 from generate_report import *
 from audio_collection import *
 
+
 def no_label(f,x):
     """
     Return none for no label
@@ -23,6 +24,7 @@ def no_label(f,x):
     :returns: None
     """
     return None
+
 
 def lable(f, x):
     """
@@ -97,7 +99,7 @@ def train(folder, params, lable, model, batch_size=10, epochs=128, keep=lambda x
                     n_processed += 1
 
 
-def train_type(version_tag, input_folder, output_folder, params, encoder_file, batch, epoch):
+def train_type(version_tag, input_folder, output_folder, params, encoder_file, batch, epoch, latent, transfer=True):
     """
     Train a multiclass type classifier
     :param version_tag: basically the model name
@@ -108,7 +110,12 @@ def train_type(version_tag, input_folder, output_folder, params, encoder_file, b
     :param batch: batch size
     :param epochs: number of training epochs
     """
-    enc = load_model(encoder_file)
+    if transfer:
+        enc = load_model(encoder_file)
+    else:
+        _, enc = auto_encoder(
+            (params.spec_win, params.n_fft_bins, 1), latent
+        )
     cls_type = classifier(enc, n_labels=4)
     x_train = []
     x_test = []
@@ -138,7 +145,7 @@ def train_type(version_tag, input_folder, output_folder, params, encoder_file, b
     plt.close()
 
 
-def train_silence(version_tag, input_folder, output_folder, params, encoder_file, batch, epoch):
+def train_silence(version_tag, input_folder, output_folder, params, encoder_file, batch, epoch, latent, transfer=True):
     """
     Train a silence dectector on top of an encoder
 
@@ -151,7 +158,12 @@ def train_silence(version_tag, input_folder, output_folder, params, encoder_file
     :param epochs: number of training epochs
     """
     print("Training Silence Detector: {} {}".format(version_tag, epoch))
-    enc = load_model(encoder_file)
+    if transfer:
+        enc = load_model(encoder_file)
+    else:
+        _, enc = auto_encoder(
+            (params.spec_win, params.n_fft_bins, 1), latent
+        )    
     cls_sil = classifier(enc)
     x_train = []
     x_test = []
@@ -497,9 +509,10 @@ if __name__== "__main__":
         type_class   = c['type_class']
         unsupervised = c['unsupervised']
         reconstruct  = c['reconstruct'] 
-        output       = c['output']        
+        output       = c['output']
+        transfer     = c['transfer'] 
         #train_auto_encoder(version, unsupervised, output, params, latent, batch, epochs)
         #evaluate_encoder(version, unsupervised, output, "{}/encoder.h5".format(output), params, viz_k)
-        #train_silence(version, silence, output, params, "{}/encoder.h5".format(output), batch, epochs_sup)
-        train_type(version, type_class, output, params, "{}/encoder.h5".format(output), batch, epochs_sup)
+        train_silence(version, silence, output, params, "{}/encoder.h5".format(output), batch, epochs_sup, latent, transfer)
+        train_type(version, type_class, output, params, "{}/encoder.h5".format(output), batch, epochs_sup, latent, transfer)
         #test_reconstruction(reconstruct, output, params)

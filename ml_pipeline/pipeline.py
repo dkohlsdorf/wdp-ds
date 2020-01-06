@@ -99,7 +99,7 @@ def train(folder, params, lable, model, batch_size=10, epochs=128, keep=lambda x
                     n_processed += 1
 
 
-def train_type(version_tag, input_folder, output_folder, params, encoder_file, batch, epoch, latent, transfer=True):
+def train_type(version_tag, input_folder, output_folder, params, encoder_file, batch, epoch, latent, freeze, transfer=True):
     """
     Train a multiclass type classifier
     :param version_tag: basically the model name
@@ -116,7 +116,7 @@ def train_type(version_tag, input_folder, output_folder, params, encoder_file, b
         _, enc = auto_encoder(
             (params.spec_win, params.n_fft_bins, 1), latent
         )
-    cls_type = classifier(enc, n_labels=4)
+    cls_type = classifier(enc, 4, freeze)
     x_train = []
     x_test = []
     y_train = []
@@ -145,7 +145,7 @@ def train_type(version_tag, input_folder, output_folder, params, encoder_file, b
     plt.close()
 
 
-def train_silence(version_tag, input_folder, output_folder, params, encoder_file, batch, epoch, latent, transfer=True):
+def train_silence(version_tag, input_folder, output_folder, params, encoder_file, batch, epoch, latent, freeze, transfer=True):
     """
     Train a silence dectector on top of an encoder
 
@@ -164,7 +164,7 @@ def train_silence(version_tag, input_folder, output_folder, params, encoder_file
         _, enc = auto_encoder(
             (params.spec_win, params.n_fft_bins, 1), latent
         )    
-    cls_sil = classifier(enc)
+    cls_sil = classifier(enc, 1, freeze)
     x_train = []
     x_test = []
     y_train = []
@@ -510,7 +510,8 @@ if __name__== "__main__":
         unsupervised = c['unsupervised']
         reconstruct  = c['reconstruct'] 
         output       = c['output']
-        transfer     = c['transfer'] 
+        transfer     = c['transfer']
+        freeze       = c['freeze'] 
         #train_auto_encoder(version, unsupervised, output, params, latent, batch, epochs)
         #evaluate_encoder(version, unsupervised, output, "{}/encoder.h5".format(output), params, viz_k)
         train_silence(version, silence, output, params, "{}/encoder.h5".format(output), batch, epochs_sup, latent, transfer)

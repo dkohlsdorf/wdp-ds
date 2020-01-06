@@ -2,7 +2,7 @@ from tensorflow.keras.layers import *
 from tensorflow.keras.models import *
 from tensorflow.keras.regularizers import l2
 
-def classifier(encoder, n_labels=1):
+def classifier(encoder, n_labels=1, freeze=True):
     """
     A classifier stacked on top of an encoder.
     All layers except the last are frozen.
@@ -12,6 +12,9 @@ def classifier(encoder, n_labels=1):
 
     :returns: a keras model
     """
+    if freeze:
+        for layer in encoder.layers:
+            layer.trainable = False        
     shape = encoder.layers[0].input_shape[0][1:]
     inp = Input(shape)
     x   = encoder(inp)

@@ -85,6 +85,31 @@ class GeneticMSA:
             tmp_border = next_borders[i]
             next_borders[i] = next_borders[j]
             next_borders[j] = tmp_border
-            return Alignment(self.data, next, next_borders)
-            
-alignment = GeneticMSA([np.zeros((100, 5)) for i in range(0, 10)], None, None)
+            return Alignment(self.data, next, next_borders)               
+
+def initial_population(data, population_size):
+    pass
+
+def select(population, n_offspring):
+    pass
+
+def mutate(mutants):
+    pass
+
+def crossover(selection):
+    pass
+
+def kill(population, population_size):
+    pass
+
+def best(population):
+    pass
+
+def evolve(data, n_epochs, population_size, n_offspring):
+    population = initial_population(data, population_size)
+    for i in range(0, n_epochs):
+        selection = select(population, n_offspring)
+        mutants = mutate(crossover(selection))
+        population.extend(mutants)
+        population = kill(population, population_size)
+    return best(population) 

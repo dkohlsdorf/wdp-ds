@@ -15,7 +15,7 @@ from plots import *
 from sequence_embedder import *
 from generate_report import *
 from audio_collection import *
-
+from msa import *
 
 def no_label(f,x):
     """
@@ -261,7 +261,7 @@ def run_embedder_fs(seq_embedder, folder, output, bucket_size = 1000):
             print("- Working on embedding {}".format(path))
             regions = seq_embedder.embed(path)
             f = filename.replace('.wav', '.p')
-            pickle.dump(regions, open('{}/regions_{}.p'.format(output, filename), 'wb'))
+            pickle.dump(regions, open('{}/regions_{}.p'.format(output, f), 'wb'))
             print("- Done on embedding n regions: {}".format(len(regions)))
             
 
@@ -436,6 +436,43 @@ def test_reconstruction(folder, out, params):
     plt.close()
 
 
+def alignment(folder, out, params, enc, type_classifier):
+    '''
+    Align all sequences in the input folder
+    '''
+    sequences = []
+    for file in os.listdir(folder):
+        if file.endswith('wav'):
+            path = "{}/{}".format(folder, file)
+            print("Processing: {}".format(path))
+            base_name = file.replace(".wav", "")
+            output    = AudioSnippetCollection("{}/non_sil_{}.wav".format(out, base_name))
+            spec_iter = labeled_spectrogram_windows(path, params, no_label, shuffle=False)
+            starts   = []
+            stops    = []
+            filename = None
+            types    = []
+            embeddings = []
+            for region, y, f, start, stop in spec_iter:
+                print("\tregion {}:{} [{}]".format(start, stop, t))
+                x = region.reshape(1, region.shape[0], region.shape[1], 1)
+                h = enc.predict(x)
+                t = np.argmax(type_classifier.predict(x), axis=1)[0]
+                starts.append(start)
+                stops.append(stop)
+                types.append(t)
+                embeddings.append(h)
+                filename = f
+            regions = [(start, stop) for start, stop in zip(starts, stops)]
+            for region in audio_regions(path, regions):
+                output.write(region)
+            output.close()
+            sequences.append(DolphinSequence(filename, starts, stops, types, embeddings))
+        if len(sequences) == 2:
+            break
+    sequences[0].align(sequences[1])
+
+
 def header():
     return """
     =================================================================
@@ -461,10 +498,10 @@ def header():
         - Clustering Image
         - Write audio clusters
         
-    usage for training: python ml_pipeline/pipeline.py train config/default_config.yaml
-    usage for testing:  python ml_pipeline/pipeline.py run config/application_config.yaml
-    usage for report:   python ml_pipeline/pipeline.py report config/application_config.yaml
-    
+    usage for training:  python ml_pipeline/pipeline.py train config/default_config.yaml
+    usage for testing:   python ml_pipeline/pipeline.py run config/application_config.yaml
+    usage for report:    python ml_pipeline/pipeline.py report config/application_config.yaml
+    usage for alignment: python ml_pipeline/pipeline.py align config/alignment_config.yaml
     
     by Daniel Kyu Hwa Kohlsdorf
     =================================================================
@@ -512,8 +549,19 @@ if __name__== "__main__":
         output       = c['output']
         transfer     = c['transfer']
         freeze       = c['freeze'] 
-        #train_auto_encoder(version, unsupervised, output, params, latent, batch, epochs)
-        #evaluate_encoder(version, unsupervised, output, "{}/encoder.h5".format(output), params, viz_k)
+        train_auto_encoder(version, unsupervised, output, params, latent, batch, epochs)
+        evaluate_encoder(version, unsupervised, output, "{}/encoder.h5".format(output), params, viz_k)
         train_silence(version, silence, output, params, "{}/encoder.h5".format(output), batch, epochs_sup, latent, transfer)
         train_type(version, type_class, output, params, "{}/encoder.h5".format(output), batch, epochs_sup, latent, transfer)
-        #test_reconstruction(reconstruct, output, params)
+        test_reconstruction(reconstruct, output, params)
+    elif len(sys.argv) == 3 and sys.argv[1] == 'align':
+        c = yaml.load(open(sys.argv[2]))
+        print("Parameters: {}".format(c))
+        params       = WindowParams(c['spec_win'], c['spec_step'], c['fft_win'], c['fft_step'], c['highpass'])
+        k            = c['k']
+        inp          = c['input']
+        output       = c['output']        
+        enc          = load_model("{}/encoder.h5".format(output))
+        silence      = load_model("{}/sil.h5".format(output))
+        types        = load_model("{}/type.h5".format(output))
+        alignment(inp, output, params, silence, enc, types)

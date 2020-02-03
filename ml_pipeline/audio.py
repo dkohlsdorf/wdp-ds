@@ -112,6 +112,7 @@ def spectrogram_windows(filename, params, shuffle=False):
         data = np.mean(data, axis=1) 
     n = len(data)
     n_windows = params.len(n)
+    print("Reading: {} spectrogram windows".format(n_windows))
     ordered   = [i for i in range(0, n_windows)]
     if shuffle:
         random.shuffle(ordered)

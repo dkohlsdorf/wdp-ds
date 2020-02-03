@@ -24,7 +24,7 @@ class AudioSnippetCollection:
         :param data: some data to attach
         '''
         for i in range(0, len(data)):
-            b = struct.pack('<h', data[i])
+            b = struct.pack('<h', int(data[i]))
             self.obj.writeframesraw(b)
         for i in range(48000 // 10):
             b = struct.pack('<h', 0)

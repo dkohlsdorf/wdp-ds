@@ -11,6 +11,7 @@ __pycache__/
 
 # C extensions
 *.so
+ml_pipeline/*.c
 
 # Distribution / packaging
 .Python

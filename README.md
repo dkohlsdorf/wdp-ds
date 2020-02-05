@@ -16,3 +16,8 @@ and communicate the results with domain experts.
 + 6) `deploy`: deployment scripts
 + 7) `config`: the configurations used for machine learning
 + 8) `wdp-ds-spectrogran`: Rust-WASM web spectrogram.
+
+## Important Branches:
+
++ `feature/alignments`: Working on multiple sequence alignments
+

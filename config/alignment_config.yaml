@@ -5,5 +5,5 @@ fft_step     : 64
 highpass     : 25
 k            : 100
 output       : 'models/v2_lstm_v5/'
-input        : 'data/alignment/juvenile_aggression'
+input        : 'data/alignment/alignment_mvp_pairwise'
 version      : "v2.0"

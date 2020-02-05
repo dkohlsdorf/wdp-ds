@@ -441,12 +441,13 @@ def alignment(folder, out, params, enc, type_classifier):
     Align all sequences in the input folder
     '''
     sequences = []
+    filenames = []
     for file in os.listdir(folder):
         if file.endswith('wav'):
             path = "{}/{}".format(folder, file)
+            filenames.append(path)
             print("Processing: {}".format(path))
             base_name = file.replace(".wav", "")
-            output    = AudioSnippetCollection("{}/non_sil_{}.wav".format(out, base_name))
             spec_iter = labeled_spectrogram_windows(path, params, no_label, shuffle=False)
             starts   = []
             stops    = []
@@ -454,7 +455,6 @@ def alignment(folder, out, params, enc, type_classifier):
             types    = []
             embeddings = []
             for region, y, f, start, stop in spec_iter:
-                print("\tregion {}:{} [{}]".format(start, stop, t))
                 x = region.reshape(1, region.shape[0], region.shape[1], 1)
                 h = enc.predict(x)
                 t = np.argmax(type_classifier.predict(x), axis=1)[0]
@@ -462,15 +462,28 @@ def alignment(folder, out, params, enc, type_classifier):
                 stops.append(stop)
                 types.append(t)
                 embeddings.append(h)
+                print("\tregion {}:{} [{}] {}".format(start, stop, t, h.shape))
                 filename = f
-            regions = [(start, stop) for start, stop in zip(starts, stops)]
-            for region in audio_regions(path, regions):
-                output.write(region)
-            output.close()
-            sequences.append(DolphinSequence(filename, starts, stops, types, embeddings))
-        if len(sequences) == 2:
-            break
-    sequences[0].align(sequences[1])
+            sequences.append(DolphinSequence(filename, starts, stops, types, np.vstack(embeddings).astype(np.double)))
+    score, ungapped_x, ungapped_y, xt, yt = sequences[0].align(sequences[1])  
+    aligned_x = AudioSnippetCollection("{}/aligned_x.wav".format(out))
+    aligned_y = AudioSnippetCollection("{}/aligned_y.wav".format(out))
+    
+    gap_size  = params.win_len 
+    regions_x = [(x.start, x.stop) for x in ungapped_x]
+    gaps_x    = [x.n_gaps * gap_size for x in ungapped_x]
+    for i, region in enumerate(audio_regions(filenames[0], regions_x)):    
+        aligned_x.write(region, gaps_x[i])
+    aligned_x.close()
+
+    regions_y = [(y.start, y.stop) for y in ungapped_y]
+    gaps_y    = [y.n_gaps * gap_size for y in ungapped_y]
+    for i, region in enumerate(audio_regions(filenames[1], regions_y)):    
+        aligned_y.write(region, gaps_y[i])
+    aligned_y.close()
+    print("SCORE: {}".format(score))
+    print("{}".format("".join(xt)))
+    print("{}".format("".join(yt)))
 
 
 def header():
@@ -564,4 +577,4 @@ if __name__== "__main__":
         enc          = load_model("{}/encoder.h5".format(output))
         silence      = load_model("{}/sil.h5".format(output))
         types        = load_model("{}/type.h5".format(output))
-        alignment(inp, output, params, silence, enc, types)
+        alignment(inp, output, params, enc, types)

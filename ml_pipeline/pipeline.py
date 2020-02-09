@@ -443,8 +443,9 @@ def induction(inp, embedder):
     n = len(inducer.starts)
     with open("induction_str.csv", "w") as fp:
         for i in range(n):
-            print("{},{},{},{}".format(inducer.starts[i], inducer.stops[i], inducer.types[i], inducer.clusters[i]))
-            fp.write("{},{},{},{}\n".format(inducer.starts[i], inducer.stops[i], inducer.types[i], inducer.clusters[i]))
+            print("{}\t{}\t{}\t{}\t{}".format(inducer.starts[i], inducer.stops[i], inducer.types[i], inducer.clusters[i],  ','.join(['%.5f' % f for f in inducer.embeddings[i]])))
+            fp.write("{}\t{}\t{}\t{}\t{}\n".format(inducer.starts[i], inducer.stops[i], inducer.types[i], inducer.clusters[i],  ','.join(['%.5f' % f for f in inducer.embeddings[i]])))
+
 
 def header():
     return """

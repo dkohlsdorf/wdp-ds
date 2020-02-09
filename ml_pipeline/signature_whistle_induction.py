@@ -34,4 +34,4 @@ class SignatureWhistleInduction(namedtuple("SignatureWhistleInduction", "embeddi
                     types.append(t)
                     files.append(f)
                     clusters.append(c)
-        return cls(embeddings, types, clusters, starts, stops, files) 
+        return cls(embeddings, starts, stops, types, clusters, files) 

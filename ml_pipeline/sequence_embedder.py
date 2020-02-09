@@ -42,8 +42,8 @@ class SequenceEmbedder:
                 clusters   = self.km.predict(embedding)
                 for i in range(0, len(batch)):
                     if int(round(is_silence[i][0])) == 0:
-                        c = np.clusters[i]
-                        t = np.argmax(types[i], axis=1)[0]                    
+                        c = clusters[i]
+                        t = np.argmax(types[i])                    
                         filename  = batch[i][1]
                         start     = batch[i][2]
                         stop      = batch[i][3]

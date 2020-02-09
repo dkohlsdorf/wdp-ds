@@ -15,7 +15,8 @@ from plots import *
 from sequence_embedder import *
 from generate_report import *
 from audio_collection import *
-
+from signature_whistle_induction import *
+from utils import * 
 
 def no_label(f,x):
     """
@@ -361,7 +362,7 @@ def evaluate_embedding(embedding_folder, wav_folder, params, k, p_keep = 1.0, cl
         if filename.startswith('region') and filename.endswith('.p'):
             path = "{}/{}".format(embedding_folder, filename)
             embeddings = pickle.load(open(path, "rb"))
-            for (x, f, start, stop) in embeddings:
+            for (x, f, start, stop, t, c) in embeddings:
                 if not cloud:
                     filename = f
                 if np.random.uniform() < p_keep:
@@ -380,6 +381,7 @@ def evaluate_embedding(embedding_folder, wav_folder, params, k, p_keep = 1.0, cl
     spectrograms = []
     embeddings   = []
     all_regions  = []
+
     for filename in grouped_by_filename:
         regions = [(start, stop) for (_, start, stop) in grouped_by_filename[filename]]
         x       = [x for x, _, _ in  grouped_by_filename[filename]] 
@@ -436,6 +438,14 @@ def test_reconstruction(folder, out, params):
     plt.close()
 
 
+def induction(inp, embedder):
+    inducer = SignatureWhistleInduction.from_embedding(inp, embedder)
+    n = len(inducer.starts)
+    with open("induction_str.csv", "w") as fp:
+        for i in range(n):
+            print("{},{},{},{}".format(inducer.starts[i], inducer.stops[i], inducer.types[i], inducer.clusters[i]))
+            fp.write("{},{},{},{}\n".format(inducer.starts[i], inducer.stops[i], inducer.types[i], inducer.clusters[i]))
+
 def header():
     return """
     =================================================================
@@ -461,10 +471,10 @@ def header():
         - Clustering Image
         - Write audio clusters
         
-    usage for training: python ml_pipeline/pipeline.py train config/default_config.yaml
-    usage for testing:  python ml_pipeline/pipeline.py run config/application_config.yaml
-    usage for report:   python ml_pipeline/pipeline.py report config/application_config.yaml
-    
+    usage for training:  python ml_pipeline/pipeline.py train config/default_config.yaml
+    usage for testing:   python ml_pipeline/pipeline.py run config/application_config.yaml
+    usage for report:    python ml_pipeline/pipeline.py report config/application_config.yaml
+    usage for induction: python ml_pipeline/pipeline.py induction config/induction_config.yaml
     
     by Daniel Kyu Hwa Kohlsdorf
     =================================================================
@@ -479,10 +489,11 @@ if __name__== "__main__":
         params       = WindowParams(c['spec_win'], c['spec_step'], c['fft_win'], c['fft_step'], c['highpass'])
         k            = c['k']
         inp          = c['input']
-        output       = c['output']        
+        output       = c['output'] 
         enc          = load_model("{}/encoder.h5".format(output))
         silence      = load_model("{}/sil.h5".format(output))
-        embedder     = SequenceEmbedder(enc, silence, params)
+        type_classifier = load_model("{}/type.h5".format(output))
+        embedder     = SequenceEmbedder(enc, silence, type_classifier, params)
         if inp.startswith('gs://'):
             run_embedder_gs(embedder, inp, output)
             evaluate_embedding(output, inp, params, k, 0.25, True, True)
@@ -506,14 +517,25 @@ if __name__== "__main__":
         epochs_sup   = c['epochs_sup']
         viz_k        = c['viz_k']
         silence      = c['sil']
-        type_class   = c['type_class']
         unsupervised = c['unsupervised']
         reconstruct  = c['reconstruct'] 
         output       = c['output']
         transfer     = c['transfer']
         freeze       = c['freeze'] 
-        #train_auto_encoder(version, unsupervised, output, params, latent, batch, epochs)
-        #evaluate_encoder(version, unsupervised, output, "{}/encoder.h5".format(output), params, viz_k)
+        train_auto_encoder(version, unsupervised, output, params, latent, batch, epochs)
+        evaluate_encoder(version, unsupervised, output, "{}/encoder.h5".format(output), params, viz_k)
         train_silence(version, silence, output, params, "{}/encoder.h5".format(output), batch, epochs_sup, latent, transfer)
         train_type(version, type_class, output, params, "{}/encoder.h5".format(output), batch, epochs_sup, latent, transfer)
-        #test_reconstruction(reconstruct, output, params)
+        test_reconstruction(reconstruct, output, params)
+    elif len(sys.argv) == 3 and sys.argv[1] == 'induction':
+        c = yaml.load(open(sys.argv[2]))
+        print("Parameters: {}".format(c))
+        params       = WindowParams(c['spec_win'], c['spec_step'], c['fft_win'], c['fft_step'], c['highpass'])
+        inp          = c['input']
+        output       = c['output'] 
+        enc             = load_model("{}/encoder.h5".format(output))
+        silence         = load_model("{}/sil.h5".format(output))
+        type_classifier = load_model("{}/type.h5".format(output))
+        km              = unpickle("{}/km.p".format(output))
+        embedder     = SequenceEmbedder(enc, silence, type_classifier, km, params)
+        induction(inp, embedder) 

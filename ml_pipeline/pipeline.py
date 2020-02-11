@@ -15,7 +15,7 @@ from plots import *
 from sequence_embedder import *
 from generate_report import *
 from audio_collection import *
-from signature_whistle_induction import *
+from structured import *
 from utils import * 
 
 def no_label(f,x):
@@ -438,14 +438,10 @@ def test_reconstruction(folder, out, params):
     plt.close()
 
 
-def induction(inp, embedder):
-    inducer = SignatureWhistleInduction.from_embedding(inp, embedder)
-    n = len(inducer.starts)
-    with open("induction_str.csv", "w") as fp:
-        for i in range(n):
-            print("{}\t{}\t{}\t{}\t{}".format(inducer.starts[i], inducer.stops[i], inducer.types[i], inducer.clusters[i],  ','.join(['%.5f' % f for f in inducer.embeddings[i]])))
-            fp.write("{}\t{}\t{}\t{}\t{}\n".format(inducer.starts[i], inducer.stops[i], inducer.types[i], inducer.clusters[i],  ','.join(['%.5f' % f for f in inducer.embeddings[i]])))
-
+def induction(inp, out, embedder):
+    inducer = TypeExtraction.from_audiofiles(inp, embedder)
+    inducer.save("{}/induction_str.csv".format(out))
+    
 
 def header():
     return """
@@ -538,5 +534,5 @@ if __name__== "__main__":
         silence         = load_model("{}/sil.h5".format(output))
         type_classifier = load_model("{}/type.h5".format(output))
         km              = unpickle("{}/km.p".format(output))
-        embedder     = SequenceEmbedder(enc, silence, type_classifier, km, params)
-        induction(inp, embedder) 
+        embedder        = SequenceEmbedder(enc, silence, type_classifier, km, params)
+        induction(inp, output, embedder) 

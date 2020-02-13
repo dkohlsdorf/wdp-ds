@@ -7,6 +7,7 @@ import subprocess
 import os
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3' 
 from tensorflow.keras.backend import set_learning_phase
+import datetime
 
 from tensorflow.keras.models import load_model
 from feature_extractor import *
@@ -17,6 +18,7 @@ from generate_report import *
 from audio_collection import *
 from structured import *
 from utils import * 
+
 
 def no_label(f,x):
     """
@@ -439,10 +441,22 @@ def test_reconstruction(folder, out, params):
 
 
 def induction(inp, out, embedder):
-    inducer = TypeExtraction.from_audiofiles(inp, embedder)
-    inducer.save("{}/induction_str.csv".format(out))
+    path    = "{}/induction_str.csv".format(out)
+    #inducer = TypeExtraction.from_audiofiles(inp, embedder)
+    #inducer.save(path)      
+    for start, stop, dist, f in signature_whistles(path):
+        print("{} - {} {} {}".format(str(datetime.timedelta(seconds=start/48000)), str(datetime.timedelta(seconds=stop/48000)), dist, f))
+    for i, (gaps, f) in enumerate(signature_whistle_gaps(path, signature_whistles(path))):
+        for start, stop in gaps:
+            print("{} - {} [{}] {} {}".format(
+                str(datetime.timedelta(seconds=start/48000)), 
+                str(datetime.timedelta(seconds=stop/48000)),
+                str(datetime.timedelta(seconds=(stop - start)/48000)),
+                f, 
+                i
+            ))
+    # TODO Export audio snippets to disk
     
-
 def header():
     return """
     =================================================================

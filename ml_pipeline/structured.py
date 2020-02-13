@@ -3,7 +3,7 @@ import pandas as pd
 import os 
 
 from collections import namedtuple
-
+from dtw import DTW
 
 class TypeExtraction(namedtuple("Induction", "embeddings starts stops types files")):
     """
@@ -12,13 +12,13 @@ class TypeExtraction(namedtuple("Induction", "embeddings starts stops types file
 
     @property
     def len(self):
-        return len(starts)
+        return len(self.starts)
 
     def items(self):        
         """
         Iterate annotated tuples (filename, start, stop, type, embedding vector)
         """
-        n = self.len()
+        n = self.len
         for i in range(n):
             yield self.files[i], self.starts[i], self.stops[i], self.types[i], self.embeddings[i]
 
@@ -58,10 +58,10 @@ class TypeExtraction(namedtuple("Induction", "embeddings starts stops types file
 
 class RegionExtractors:
 
-    def __init__(self, threshold):
+    def __init__(self, threshold = 0):
         self.threshold = threshold
 
-    def overlap(x1, x2):
+    def overlap(self, x1, x2):
         '''
         Do two regions (x1_start, x1_stop, file) and (x2_start, x2_stop, file) overlap?
 
@@ -70,14 +70,14 @@ class RegionExtractors:
         '''
         return max(x1[0],x2[0]) <= min(x1[1],x2[1]) and x1[2] == x2[2]
 
-    def close(x1, x2):
+    def close(self, x1, x2):
         '''
         Are two regions (x1_start, x1_stop, file) and (x2_start, x2_stop, file) close in time?
 
         :param x1: first region tuple 
         :param x2: second reggion tuple
         '''
-        (x2[2] - x1[1]) < self.threshold and x1[3] == x2[3]
+        return (x2[1] - x1[0]) < self.threshold and x1[2] == x2[2]
 
 
 def mk_region(sequences):
@@ -95,10 +95,10 @@ def mk_region(sequences):
         start = x[0][0]
         stop  = x[-1][1]
         f     = x[-1][2] 
-        yield items, start, stop, f
+        yield start, stop, f, items
 
 
-def groupBy(sequences, grouping_cond):
+def groupBy(sequences, grouping_cond, window_size=None):
     '''
     Extract groups of signals
 
@@ -114,10 +114,14 @@ def groupBy(sequences, grouping_cond):
         else:
             if grouping_cond(current[-1], x):
                 current.append(x)
+                if window_size is not None and window_size == len(current):
+                    groups.append(current)
+                    current = current[1:]
             else:
-                groups.append(current)
-                current = [x]
-    return mk_region(groups)
+                if window_size is None:
+                    groups.append(current)
+                    current = [x]
+    return [x for x in mk_region(groups)]
 
 
 def interset_distance(x):
@@ -126,16 +130,18 @@ def interset_distance(x):
 
     :param x: numpy array (Instances, Time, Dimension)
     '''
+    dtw = DTW(max([len(a) for a in x]))
     sum = 0
     n   = 0
     for i in range(len(x)):
         for j in range(i + 1, len(x)):
-            sum += dtw(x[i], x[j]) / (len(x[i]) * len(x[j]))
+            dist, _ = dtw.align(x[i], x[j])
+            sum += dist / (len(x[i]) * len(x[j]))
             n   += 1
     return sum / n
 
 
-def signature_whistles(annotation_path, min_group = 3, max_samples_appart=48000 * 15, max_dist = 10.0):
+def signature_whistles(annotation_path, min_group = 3, max_samples_appart=48000 * 30, max_dist = 5.0):
     '''
     Extract signature whistles
 
@@ -144,22 +150,44 @@ def signature_whistles(annotation_path, min_group = 3, max_samples_appart=48000 
     :param max_samples_appart: maximum number of samples between whistles to form a group
     :param max_dist: maximum distance allowed 
     '''
-    header                = ["filname", "start", "stop", "type", "embedding"]
+    print(annotation_path)
+    header                = ["filename", "start", "stop", "type", "embedding"]
     df                    = pd.read_csv(annotation_path, sep="\t", header = None, names=header)
     whistles              = df[df['type'] == 3]
     whistles['embedding'] = whistles['embedding'].apply(lambda x: np.array([float(i) for i in x.split(",")]))
     re                    = RegionExtractors(max_samples_appart)
-    annotated             = [(row['start'], row['stop'], row['file'], row['embedding']) for _ , row in annotation_df.iterrows()]
+    annotated             = [(row['start'], row['stop'], row['filename'], row['embedding']) for _ , row in whistles.iterrows()]
     overlapping           = groupBy(annotated, re.overlap)
-    signal_groups         = groupBy(overlapping, re.close)
-    for embeddings, start, stop, f in signal_groups:
-        embed_set  = np.stack(embeddings)
+    signal_groups         = groupBy(overlapping, re.close, min_group)
+    for start, stop, f, embeddings in signal_groups:
+        embed_set  = [np.stack(e) for e in embeddings]
         inter_dist = interset_distance(embed_set)
-        if len(embeddings) >= min_group and inter_dist < max_dist:        
-           yield start, stop, f
+        if inter_dist < max_dist:        
+            yield start, stop, inter_dist, f
 
 
+def signature_whistle_gaps(annotation_path, groups):
+    '''
+    Extract gaps from signature whistles
 
-    
-
-
+    :param annotation_path: path to an annotation csv file
+    :param groups: sequence of (start, stop, distance, filename) representing signature whistles
+    '''
+    header = ["filename", "start", "stop", "type", "embedding"]
+    df     = pd.read_csv(annotation_path, sep="\t", header = None, names=header)
+    re     = RegionExtractors()
+    gaps_whistle = []
+    for start, stop, _, f in groups:
+        signature_whistle = df[df["start"] >= start]
+        signature_whistle = signature_whistle[signature_whistle["stop"] <= stop]
+        signature_whistle = signature_whistle[signature_whistle["type"] == 3]
+        gaps = []
+        last = None
+        for i, row in signature_whistle.iterrows():
+            x = (row["start"], row["stop"], row["filename"])
+            if last is not None:
+                if not re.overlap(last, x):
+                    gaps.append((last[1], x[0]))
+            last = x
+        gaps_whistle.append((gaps, f))
+    return gaps_whistle

@@ -164,30 +164,3 @@ def signature_whistles(annotation_path, min_group = 3, max_samples_appart=48000 
         inter_dist = interset_distance(embed_set)
         if inter_dist < max_dist:        
             yield start, stop, inter_dist, f
-
-
-def signature_whistle_gaps(annotation_path, groups):
-    '''
-    Extract gaps from signature whistles
-
-    :param annotation_path: path to an annotation csv file
-    :param groups: sequence of (start, stop, distance, filename) representing signature whistles
-    '''
-    header = ["filename", "start", "stop", "type", "embedding"]
-    df     = pd.read_csv(annotation_path, sep="\t", header = None, names=header)
-    re     = RegionExtractors()
-    gaps_whistle = []
-    for start, stop, _, f in groups:
-        signature_whistle = df[df["start"] >= start]
-        signature_whistle = signature_whistle[signature_whistle["stop"] <= stop]
-        signature_whistle = signature_whistle[signature_whistle["type"] == 3]
-        gaps = []
-        last = None
-        for i, row in signature_whistle.iterrows():
-            x = (row["start"], row["stop"], row["filename"])
-            if last is not None:
-                if not re.overlap(last, x):
-                    gaps.append((last[1], x[0]))
-            last = x
-        gaps_whistle.append((gaps, f))
-    return gaps_whistle

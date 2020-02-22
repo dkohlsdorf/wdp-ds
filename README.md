@@ -20,4 +20,4 @@ and communicate the results with domain experts.
 ## Important Branches:
 
 + `feature/alignments`: Working on multiple sequence alignments
-
++ `feature/signature_whistle_anchor`: Finding signature whistles

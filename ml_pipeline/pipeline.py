@@ -441,10 +441,12 @@ def test_reconstruction(folder, out, params):
 
 
 def induction(inp, out, embedder):
-    path    = "{}/induction_str.csv".format(out)
-    inducer = TypeExtraction.from_audiofiles(inp, embedder)
-    inducer.save(path)
-    
+    path = "{}/induction_str.csv".format(out)
+    for filename in os.listdir(inp):
+        if filename.endswith('.wav'):
+            path = "{}/{}".format(inp, filename)
+            inducer = TypeExtraction.from_audiofiles(inp, embedder)
+            inducer.save(path, append=True)                
     snippets   = [(start, stop, f) for start, stop, _, f in signature_whistles(path)]
     gaps = []
     for g, f in signature_whistle_gaps(path, signature_whistles(path)):
@@ -457,7 +459,9 @@ def induction(inp, out, embedder):
     audio_bank.close()
     
     for start, stop, dist, f in signature_whistles(path):
-        print("{} - {} {} {}".format(str(datetime.timedelta(seconds=start/48000)), str(datetime.timedelta(seconds=stop/48000)), dist, f))        
+        print("{} - {} {} {}".format(
+            str(datetime.timedelta(seconds=start/48000)),
+            str(datetime.timedelta(seconds=stop/48000)), dist, f))        
 
         
 def header():

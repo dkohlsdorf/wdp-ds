@@ -2,12 +2,15 @@ import numpy as np
 import pandas as pd
 import os 
 
+
+from sklearn.cluster import AgglomerativeClustering
 from collections import namedtuple
 from dtw import DTW
 
+
 class TypeExtraction(namedtuple("Induction", "embeddings starts stops types files")):
     """
-    Type annotations for dolphin communication
+    Type annotations for dolphin communication   
     """
 
     @property
@@ -23,7 +26,7 @@ class TypeExtraction(namedtuple("Induction", "embeddings starts stops types file
             yield self.files[i], self.starts[i], self.stops[i], self.types[i], self.embeddings[i]
 
     @classmethod
-    def from_audiofiles(cls, folder, embedder):
+    def from_audiofile(cls, path, embedder):
         """
         Construct type annotations from folder with audio files
 
@@ -36,21 +39,21 @@ class TypeExtraction(namedtuple("Induction", "embeddings starts stops types file
         stops      = []
         types      = []
         files      = [] 
-        for filename in os.listdir(folder):
-            if filename.endswith('.wav'):
-                path = "{}/{}".format(folder, filename)
-                print("- Working on embedding {}".format(path))
-                regions = embedder.embed(path)
-                for x, f, start, stop, t, c in regions:
-                    embeddings.append(x)
-                    starts.append(start)
-                    stops.append(stop)
-                    types.append(t)
-                    files.append(f)
+        print("- Working on embedding {}".format(path))
+        regions = embedder.embed(path)
+        for x, f, start, stop, t, c in regions:
+            embeddings.append(x)
+            starts.append(start)
+            stops.append(stop)
+            types.append(t)
+            files.append(f)
         return cls(embeddings, starts, stops, types, files) 
 
-    def save(self, path):
-        with open(path, "w") as fp:
+    def save(self, path, append=False):
+        mode = "w"
+        if append:
+            mode += "+"
+        with open(path, mode) as fp:
             for filename, start, stop, t, embedding in self.items():
                 csv = ','.join(['%.5f' % f for f in embedding])
                 fp.write("{}\t{}\t{}\t{}\t{}\n".format(filename, start, stop, t, csv))
@@ -91,10 +94,10 @@ def mk_region(sequences):
     :returns: [([x, x], start, stop), ([x], start, stop),([x, x], start, stop)]
     '''
     for x in sequences:
-        items = [item for _, _, _, item in x]
+        items = [item for _, _, _, item, _ in x]
         start = x[0][0]
         stop  = x[-1][1]
-        f     = x[-1][2] 
+        f     = x[-1][2]
         yield start, stop, f, items
 
 
@@ -129,6 +132,7 @@ def interset_distance(x):
     Compute average distane in set of sequences
 
     :param x: numpy array (Instances, Time, Dimension)
+    :returns: average distance
     '''
     dtw = DTW(max([len(a) for a in x]))
     sum = 0
@@ -141,6 +145,51 @@ def interset_distance(x):
     return sum / n
 
 
+def braket_dist(x, y):
+    '''
+    Braketed distance for two sequences 
+    compute the distance between their first elements and 
+    last elements
+
+    
+    '''
+    dtw = DTW(max([len(a) for a in x] + [len(b) for b in y]))
+    dist_start = dtw(x[0],  y[0])
+    dist_end   = dtw(x[-1], y[-1])
+    return (dist_start + dist_end) / 2
+
+
+def onion_peeler(annotation_path, min_group = 7, max_samples_appart=48000 * 30, max_dist = 5.0):
+    '''
+    Hierarchical clustering under braketing distance.
+      - hierarchical clustering based on only the outer braket with distance threshold.
+      - repeat for each cluster without the outer braket.
+    
+    TODO: Clustering by ID
+    '''
+    agg                   = AgglomerativeClustering(distance_threshold=max_dist,
+                                                    metri='precomputed')
+    header                = ["filename", "start", "stop", "type", "embedding"]
+    df                    = pd.read_csv(annotation_path, sep="\t", header = None, names=header)
+    signals               = df[df['type'] >= 2]
+    signals['embedding']  = whistles['embedding'].apply(
+        lambda x: np.array([float(i) for i in x.split(",")]))
+    re                    = RegionExtractors(max_samples_appart)
+    annotated             = [(row['start'], row['stop'], row['filename'], row['embedding'])
+                             for _ , row in signals.iterrows()]
+    overlapping           = groupBy(annotated, re.overlap)
+    signal_groups         = groupBy(overlapping, re.close, min_group)
+    for border in range(0, min_group // 2):
+        dist = np.zeros(n, n)
+        for i, (start_x, stop_x, f_x, embeddings_x) in enumerate(signal_groups):
+            for j, (start_y, stop_y, f_y, embeddings_y) in enumerate(signal_groups):
+                if i < j:
+                    d = braket_dist(embedding_x[border:-border], embedding_y[border:-border])
+                    dist[i, j] = d
+                    dist[j, i] = d
+        clustering = fit_predict = agg.fit(dist)
+        
+    
 def signature_whistles(annotation_path, min_group = 3, max_samples_appart=48000 * 30, max_dist = 5.0):
     '''
     Extract signature whistles
@@ -164,3 +213,4 @@ def signature_whistles(annotation_path, min_group = 3, max_samples_appart=48000 
         inter_dist = interset_distance(embed_set)
         if inter_dist < max_dist:        
             yield start, stop, inter_dist, f
+            

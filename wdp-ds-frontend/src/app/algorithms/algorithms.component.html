@@ -1,6 +1,0 @@
-<button mat-button [matMenuTriggerFor]="menu">Algorithms</button>
-<mat-menu #menu="matMenu">
-    <div *ngFor="let algorithm of algorithms">            
-        <a mat-menu-item routerLink="/wdp-app/algorithm/{{algorithm.algorithm}}">{{algorithm.algorithm}}</a>
-    </div>
-</mat-menu>

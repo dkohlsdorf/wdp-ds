@@ -39,9 +39,6 @@ The parameters to extract the features from the audio files are listed in the ta
 ## 5) Clustering Experiment 
 Clustering Training Data
 <CLUSTERING_TRAIN>
-
-Clustering 2011 All Non Silent Regions
-<CLUSTERING_2011>
         
 ## 6) Reconstruction
 <RECONSTRUCTION>  

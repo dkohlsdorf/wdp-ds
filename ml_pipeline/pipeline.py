@@ -251,177 +251,6 @@ def evaluate_encoder(version_tag, input_folder, output_folder, encoder_file, par
     visualize_embedding("{}/embeddings.png".format(output_folder), h, x, k)
 
 
-# TODO Delete
-def run_embedder_fs(seq_embedder, folder, output, bucket_size = 1000):
-    """
-    Run sequence embedding on all files in a folder
-
-    :param seq_embedder: a sequence embedder
-    :param folder: folder containing wav files
-    """
-    for filename in os.listdir(folder):
-        if filename.endswith('.wav'):
-            path = "{}/{}".format(folder, filename)
-            print("- Working on embedding {}".format(path))
-            regions = seq_embedder.embed(path)
-            f = filename.replace('.wav', '.p')
-            pickle.dump(regions, open('{}/regions_{}.p'.format(output, filename), 'wb'))
-            print("- Done on embedding n regions: {}".format(len(regions)))
-            
-
-# TODO: Delete
-def run_embedder_gs(seq_embedder, folder, output, bucket_size = 1000):
-    """
-    Run sequence embedding on all files in a bucket from google cloud
-
-    :param seq_embedder: a sequence embedder
-    :param folder: folder containing wav files on google cloud
-    """
-    from google.cloud import storage
-    print("Apply sequence embedder to {}".format(folder))
-    cmp = folder.replace("gs://", "").split('/')
-    bucket_path = cmp[0]
-    folder = "/".join(cmp[1:])
-    log = open('audio_log.txt', 'w')
-    client = storage.Client.from_service_account_json('secret.json') 
-    bucket = client.get_bucket(bucket_path)
-    paths = [f.name for f in bucket.list_blobs(prefix=folder) if f.name.endswith('.m4a')] 
-    for path in paths:
-        print("- Working on embedding {}".format(path))
-        with open("/tmp/audio.m4a", "wb") as file_obj: 
-            blob = bucket.blob(path) 
-            blob.download_to_file(file_obj)   
-        subprocess.call(['ffmpeg', '-y', '-i', '/tmp/audio.m4a', '/tmp/audio.wav'], stdout=log, stderr=log) 
-        regions = seq_embedder.embed('/tmp/audio.wav')
-        f = path.split('/')[-1].replace('.wav', '.p')
-        pickle.dump(regions, open('{}/regions_{}.p'.format(output, f), 'wb'))
-        print("- Done on embedding n regions: {}".format(len(regions)))
-
-
-# TODO: delete
-def clustering_audio(embedding_folder, wav_folder, k, cloud=True):
-    '''
-    Write clusters into audio files
-    
-    :param embedding_folder: where the embeddings are coming from
-    :param folder: folder containing wav files on google cloud
-    :param k: number of clusters
-    :param cloud: is the data coming from the cloud
-    '''
-    print("Dump Clustering Audio")
-    # group clusters by filename
-    grouped_by_filename = {}
-    for line in open('{}/clusters.csv'.format(embedding_folder)):
-        cmp      = line.split(',')
-        cluster  = int(cmp[0])
-        filename = cmp[1]
-        start    = int(cmp[2])
-        stop     = int(cmp[3])
-        if filename not in grouped_by_filename:
-            grouped_by_filename[filename] = [(cluster, start, stop)]
-        else:
-            grouped_by_filename[filename].append((cluster, start, stop))    
-    if cloud: 
-        from google.cloud import storage
-        cmp = wav_folder.replace("gs://", "").split('/')
-        bucket_path = cmp[0]
-        path = "/".join(cmp[1:])
-        client = storage.Client.from_service_account_json('secret.json') 
-        bucket = client.get_bucket(bucket_path)                                
-    audio_bank = [AudioSnippetCollection("{}/cluster_{}.wav".format(embedding_folder, i)) for i in range(0, k)]
-    for filename in grouped_by_filename:
-        regions  = [(start, stop) for (_, start, stop) in grouped_by_filename[filename]]
-        clusters = [c             for (c, _, _) in grouped_by_filename[filename]]
-        if cloud:
-            fname = filename.replace(".p", "").replace("regions_", "")            
-            log = open('audio_log.txt', 'w')
-            with open("/tmp/audio.m4a", "wb") as file_obj: 
-                print("- Process: {}{}".format(path, fname))
-                blob = bucket.blob("{}{}".format(path, fname))
-                blob.download_to_file(file_obj)   
-            subprocess.call(['ffmpeg', '-y', '-i', '/tmp/audio.m4a', '/tmp/audio.wav'], stdout=log, stderr=log)             
-            for i, region in enumerate(audio_regions('/tmp/audio.wav', regions)):
-                cluster = clusters[i]
-                audio_bank[cluster].write(region)                
-        else:
-            for region in spectrogram_regions(filename, regions):            
-                cluster = clusters[i]
-                audio_bank[cluster].write(region)
-        
-
-# TODO: remove cloud
-def evaluate_embedding(embedding_folder, wav_folder, params, k, p_keep = 1.0, cloud=True, sparsify=False):
-    '''
-    Evaluate a large embedding run
-
-    :param embedding_folder: where the embeddings are coming from
-    :param params: windowing parameters
-    :param k: number of clusters
-    :param p_keep: probability of keeping a sample
-    :param cloud: is the data coming from the cloud
-    :param sparsify: sparsify clusters by shillouette 
-    '''
-    print("Evaluate embeddings: Clustering and Scatter Plot Experiment")
-    # group all embeddings found by file
-    grouped_by_filename = {}
-    for filename in os.listdir(embedding_folder):
-        if filename.startswith('region') and filename.endswith('.p'):
-            path = "{}/{}".format(embedding_folder, filename)
-            embeddings = pickle.load(open(path, "rb"))
-            for (x, f, start, stop, t, c) in embeddings:
-                if not cloud:
-                    filename = f
-                if np.random.uniform() < p_keep:
-                    if filename not in grouped_by_filename:
-                        grouped_by_filename[filename] = [(x, start, stop)]
-                    else:
-                        grouped_by_filename[filename].append((x, start, stop))
-    if cloud: 
-        from google.cloud import storage
-        cmp = wav_folder.replace("gs://", "").split('/')
-        bucket_path = cmp[0]
-        path = "/".join(cmp[1:])
-        client = storage.Client.from_service_account_json('secret.json') 
-        bucket = client.get_bucket(bucket_path)                        
-    # collect all spectrograms, embeddings and regions
-    spectrograms = []
-    embeddings   = []
-    all_regions  = []
-
-    for filename in grouped_by_filename:
-        regions = [(start, stop) for (_, start, stop) in grouped_by_filename[filename]]
-        x       = [x for x, _, _ in  grouped_by_filename[filename]] 
-        if cloud:
-            fname = filename.replace(".p", "").replace("regions_", "")            
-            log = open('audio_log.txt', 'w')
-            with open("/tmp/audio.m4a", "wb") as file_obj: 
-                print("- Process: {}{}".format(path, fname))
-                blob = bucket.blob("{}{}".format(path, fname))
-                blob.download_to_file(file_obj)   
-            subprocess.call(['ffmpeg', '-y', '-i', '/tmp/audio.m4a', '/tmp/audio.wav'], stdout=log, stderr=log) 
-            for region in spectrogram_regions('/tmp/audio.wav', params, regions):            
-                spectrograms.append(region.reshape(region.shape[0], region.shape[1], 1))
-            embeddings.extend(x)
-            all_regions.extend([(filename, start, stop) for (_, start, stop) in grouped_by_filename[filename]])
-        else:
-            regions = [(start, stop) for (_, start, stop) in grouped_by_filename[filename]]
-            x       = [x for x, _, _ in  grouped_by_filename[filename]] 
-            for region in spectrogram_regions(filename, params, regions):            
-                spectrograms.append(region.reshape(region.shape[0], region.shape[1], 1))
-            embeddings.extend(x)
-            all_regions.extend([(filename, start, stop) for (_, start, stop) in grouped_by_filename[filename]])            
-    spectrograms = np.stack(spectrograms)
-    embeddings   = np.stack(embeddings)
-    # visualize the results and save the clustering
-    clusters, km, ids = visualize_embedding("{}/embeddings_test.png".format(embedding_folder), embeddings, spectrograms, k, sparse=sparsify)
-    pickle.dump(km, open("{}/km.p".format(embedding_folder), "wb"))
-    with open("{}/clusters.csv".format(embedding_folder), "w") as fp:
-        for i, x_id in enumerate(ids):
-            filename, start, stop = all_regions[x_id]
-            cluster = clusters[i]
-            fp.write("{},{},{},{}\n".format(cluster, filename, start, stop))
-    
-
 def test_reconstruction(folder, out, params):
     '''
     Reconstruct 100 examples using the auto encoder
@@ -532,7 +361,6 @@ def header():
         - Write audio clusters
         
     usage for training:  python ml_pipeline/pipeline.py train config/default_config.yaml
-    usage for testing:   python ml_pipeline/pipeline.py run config/application_config.yaml
     usage for report:    python ml_pipeline/pipeline.py report config/application_config.yaml
     usage for induction: python ml_pipeline/pipeline.py induction config/induction_config.yaml
     
@@ -543,30 +371,10 @@ def header():
     
 if __name__== "__main__":
     print(header())
-    if  len(sys.argv) == 3 and sys.argv[1] == 'run':
-        # kill this
+    if len(sys.argv) == 3 and sys.argv[1] == 'report':
         c = yaml.load(open(sys.argv[2]))
         print("Parameters: {}".format(c))
-        params       = WindowParams(c['spec_win'], c['spec_step'], c['fft_win'], c['fft_step'], c['highpass'])
-        k            = c['k']
-        inp          = c['input']
-        output       = c['output'] 
-        enc          = load_model("{}/encoder.h5".format(output))
-        silence      = load_model("{}/sil.h5".format(output))
-        type_classifier = load_model("{}/type.h5".format(output))
-        embedder     = SequenceEmbedder(enc, silence, type_classifier, params)
-        if inp.startswith('gs://'): 
-            run_embedder_gs(embedder, inp, output)
-            evaluate_embedding(output, inp, params, k, 0.25, True, True)
-            clustering_audio(output, inp, k, True)            
-        else:
-            run_embedder_fs(embedder, inp, output)
-            evaluate_embedding(output, inp, params, k, 0.25, False, True)
-            clustering_audio(output, inp, k, True)
-    elif len(sys.argv) == 3 and sys.argv[1] == 'report':
-        c = yaml.load(open(sys.argv[2]))
-        print("Parameters: {}".format(c))
-        from_template('ml_pipeline/reporting_template.md', c) # Add signature whistle and induction
+        from_template('ml_pipeline/reporting_template.md', c) # Add signature whistle and induction, delete eval
     elif len(sys.argv) == 3 and sys.argv[1] == 'train':
         c = yaml.load(open(sys.argv[2]))
         print("Parameters: {}".format(c))

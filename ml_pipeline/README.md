@@ -10,3 +10,5 @@
 + `sequence_embedder.py`: apply the model to larger files
 + `reporting_template.md`: template for reporting
 + `generate_report.py`: report generation tool
++ `dtw.pyx`: cython implementation of dynamic programming
++ `structured.py`: structuring dolphin communication 

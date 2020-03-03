@@ -157,14 +157,18 @@ def audio_snippets(snippets):
     snippets: (start, stop, filename)
     '''
     files = {}
-    for start, stop, filename in snippets:
+    for snippet in snippets:
+        start = snippet[0]
+        stop  = snippet[1]
+        filename = snippet[2]
         if filename not in files:
             files[filename] = []
         files[filename].append((start, stop))
     for f, regions in files.items():
         for region in audio_regions(f, regions):
             yield region
-    
+
+            
 def audio_regions(filename, regions):
     '''
     Audio Region Extraction

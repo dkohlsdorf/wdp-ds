@@ -251,6 +251,7 @@ def evaluate_encoder(version_tag, input_folder, output_folder, encoder_file, par
     visualize_embedding("{}/embeddings.png".format(output_folder), h, x, k)
 
 
+# TODO Delete
 def run_embedder_fs(seq_embedder, folder, output, bucket_size = 1000):
     """
     Run sequence embedding on all files in a folder
@@ -268,6 +269,7 @@ def run_embedder_fs(seq_embedder, folder, output, bucket_size = 1000):
             print("- Done on embedding n regions: {}".format(len(regions)))
             
 
+# TODO: Delete
 def run_embedder_gs(seq_embedder, folder, output, bucket_size = 1000):
     """
     Run sequence embedding on all files in a bucket from google cloud
@@ -295,7 +297,8 @@ def run_embedder_gs(seq_embedder, folder, output, bucket_size = 1000):
         pickle.dump(regions, open('{}/regions_{}.p'.format(output, f), 'wb'))
         print("- Done on embedding n regions: {}".format(len(regions)))
 
-        
+
+# TODO: delete
 def clustering_audio(embedding_folder, wav_folder, k, cloud=True):
     '''
     Write clusters into audio files
@@ -345,7 +348,8 @@ def clustering_audio(embedding_folder, wav_folder, k, cloud=True):
                 cluster = clusters[i]
                 audio_bank[cluster].write(region)
         
-        
+
+# TODO: remove cloud
 def evaluate_embedding(embedding_folder, wav_folder, params, k, p_keep = 1.0, cloud=True, sparsify=False):
     '''
     Evaluate a large embedding run
@@ -440,29 +444,67 @@ def test_reconstruction(folder, out, params):
     plt.close()
 
 
-def induction(inp, out, embedder):
-    path = "{}/induction_str.csv".format(out)
+def sequence_clustering(inp, out, embedder):    
+    print("Sequence Clustering")
     for filename in os.listdir(inp):
         if filename.endswith('.wav'):
-            path = "{}/{}".format(inp, filename)
-            inducer = TypeExtraction.from_audiofiles(inp, embedder)
-            inducer.save(path, append=True)                
-    snippets   = [(start, stop, f) for start, stop, _, f in signature_whistles(path)]
-    gaps = []
-    for g, f in signature_whistle_gaps(path, signature_whistles(path)):
-        for start, stop in g:
-            gaps.append((start, stop, f))
-    
-    audio_bank = AudioSnippetCollection("{}/signatures.wav".format(out))
-    for audio_snippet in audio_snippets(snippets):
-        audio_bank.write(audio_snippet)
-    audio_bank.close()
-    
-    for start, stop, dist, f in signature_whistles(path):
-        print("{} - {} {} {}".format(
-            str(datetime.timedelta(seconds=start/48000)),
-            str(datetime.timedelta(seconds=stop/48000)), dist, f))        
+            name = filename.replace(".wav", "")
+            in_path  = "{}/{}".format(inp, filename)
+            out_path = "{}/embedding_{}.csv".format(out, name)
+            print("\t {}".format(in_path))
+            if not os.path.isfile(out_path):
+                inducer = TypeExtraction.from_audiofile(in_path, embedder)
+                inducer.save(out_path, append=True)
+    print("\n clustering:")
+    clusters = [x for x in hierarchical_clustering(out)]            
+    print(clusters)
+    grouped_by_filename = {}
+    for start, stop, f, c in clusters:
+        if f not in grouped_by_filename:
+            grouped_by_filename[f] = []
+        grouped_by_filename[f].append((start, stop, c))
 
+    k = max([c for _, _, _, c in clusters]) + 1
+    audio_bank = [AudioSnippetCollection("{}/seq_cluster_{}.wav".format(out, i)) for i in range(0, k)]    
+
+    for f, regions in grouped_by_filename.items():
+        filename = f.split(".")[0].split("/")[-1]
+        log_path = "{}/seq_clustering_log_{}.csv".format(out, filename)
+        with open(log_path, "w") as fp:
+            for start, stop, c in regions:
+                fp.write("{},{},{},{}\n".format(start, stop, f, c))
+                
+        snippets        = [(start, stop, f) for start, stop, _ in regions]
+        cluster_snippet = [c for _, _, c in regions] 
+        for audio_snippet, c in zip(audio_snippets(snippets), cluster_snippet):
+            audio_bank[c].write(audio_snippet)
+        audio_bank.close()
+    
+
+    
+def signature_whistles(inp, out, embedder):
+    for filename in os.listdir(inp):
+        if filename.endswith('.wav'):
+            name = filename.replace(".wav", "")
+            in_path  = "{}/{}".format(inp, filename)
+            out_path = "{}/embedding_{}.csv".format(out, name)
+            log_path = "{}/signature_log_{}.csv".format(out, name)
+            if not os.path.isfile(out_path):
+                inducer = TypeExtraction.from_audiofile(in_path, embedder)
+                inducer.save(out_path, append=True)
+            snippets   = [(start, stop, f) for start, stop, _, f in signature_whistle_detector(out_path)]
+            if len(snippets) > 0:
+                audio_bank = AudioSnippetCollection("{}/signatures_{}.wav".format(out, name))
+                for audio_snippet in audio_snippets(snippets):
+                    audio_bank.write(audio_snippet)
+                audio_bank.close()
+                with open(log_path, "w") as fp:
+                    for start, stop, dist, f in signature_whistle_detector(out_path):
+                        fp.write("{},{},{},{}\n".format(start, stop, dist, f))
+                        print("{} - {} {} {}".format(
+                            str(datetime.timedelta(seconds=start/48000)),
+                            str(datetime.timedelta(seconds=stop/48000)), dist, f))        
+                
         
 def header():
     return """
@@ -502,6 +544,7 @@ def header():
 if __name__== "__main__":
     print(header())
     if  len(sys.argv) == 3 and sys.argv[1] == 'run':
+        # kill this
         c = yaml.load(open(sys.argv[2]))
         print("Parameters: {}".format(c))
         params       = WindowParams(c['spec_win'], c['spec_step'], c['fft_win'], c['fft_step'], c['highpass'])
@@ -512,7 +555,7 @@ if __name__== "__main__":
         silence      = load_model("{}/sil.h5".format(output))
         type_classifier = load_model("{}/type.h5".format(output))
         embedder     = SequenceEmbedder(enc, silence, type_classifier, params)
-        if inp.startswith('gs://'):
+        if inp.startswith('gs://'): 
             run_embedder_gs(embedder, inp, output)
             evaluate_embedding(output, inp, params, k, 0.25, True, True)
             clustering_audio(output, inp, k, True)            
@@ -523,7 +566,7 @@ if __name__== "__main__":
     elif len(sys.argv) == 3 and sys.argv[1] == 'report':
         c = yaml.load(open(sys.argv[2]))
         print("Parameters: {}".format(c))
-        from_template('ml_pipeline/reporting_template.md', c)
+        from_template('ml_pipeline/reporting_template.md', c) # Add signature whistle and induction
     elif len(sys.argv) == 3 and sys.argv[1] == 'train':
         c = yaml.load(open(sys.argv[2]))
         print("Parameters: {}".format(c))
@@ -556,4 +599,5 @@ if __name__== "__main__":
         type_classifier = load_model("{}/type.h5".format(output))
         km              = unpickle("{}/km.p".format(output))
         embedder        = SequenceEmbedder(enc, silence, type_classifier, km, params)
-        induction(inp, output, embedder) 
+        #signature_whistles(inp, output, embedder) 
+        sequence_clustering(inp, output, embedder)

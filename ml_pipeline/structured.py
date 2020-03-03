@@ -94,7 +94,7 @@ def mk_region(sequences):
     :returns: [([x, x], start, stop), ([x], start, stop),([x, x], start, stop)]
     '''
     for x in sequences:
-        items = [item for _, _, _, item, _ in x]
+        items = [item for _, _, _, item in x]
         start = x[0][0]
         stop  = x[-1][1]
         f     = x[-1][2]
@@ -145,52 +145,50 @@ def interset_distance(x):
     return sum / n
 
 
-def braket_dist(x, y):
+def hierarchical_clustering(annotation_path, max_dist = 5.0):
     '''
-    Braketed distance for two sequences 
-    compute the distance between their first elements and 
-    last elements
-
-    
-    '''
-    dtw = DTW(max([len(a) for a in x] + [len(b) for b in y]))
-    dist_start = dtw(x[0],  y[0])
-    dist_end   = dtw(x[-1], y[-1])
-    return (dist_start + dist_end) / 2
-
-
-def onion_peeler(annotation_path, min_group = 7, max_samples_appart=48000 * 30, max_dist = 5.0):
-    '''
-    Hierarchical clustering under braketing distance.
-      - hierarchical clustering based on only the outer braket with distance threshold.
-      - repeat for each cluster without the outer braket.
-    
-    TODO: Clustering by ID
+    Hierarchical clustering of annotations
     '''
     agg                   = AgglomerativeClustering(distance_threshold=max_dist,
-                                                    metri='precomputed')
-    header                = ["filename", "start", "stop", "type", "embedding"]
-    df                    = pd.read_csv(annotation_path, sep="\t", header = None, names=header)
-    signals               = df[df['type'] >= 2]
-    signals['embedding']  = whistles['embedding'].apply(
-        lambda x: np.array([float(i) for i in x.split(",")]))
-    re                    = RegionExtractors(max_samples_appart)
-    annotated             = [(row['start'], row['stop'], row['filename'], row['embedding'])
-                             for _ , row in signals.iterrows()]
-    overlapping           = groupBy(annotated, re.overlap)
-    signal_groups         = groupBy(overlapping, re.close, min_group)
-    for border in range(0, min_group // 2):
-        dist = np.zeros(n, n)
-        for i, (start_x, stop_x, f_x, embeddings_x) in enumerate(signal_groups):
-            for j, (start_y, stop_y, f_y, embeddings_y) in enumerate(signal_groups):
-                if i < j:
-                    d = braket_dist(embedding_x[border:-border], embedding_y[border:-border])
-                    dist[i, j] = d
-                    dist[j, i] = d
-        clustering = fit_predict = agg.fit(dist)
+                                                    n_clusters=None,
+                                                    linkage='average',
+                                                    affinity='precomputed')
+    re                    = RegionExtractors(0)
+    overlapping           = []
+    for file in os.listdir(annotation_path):        
+        if file.startswith("embedding") and file.endswith(".csv"):
+            path = "{}/{}".format(annotation_path, file)
+            print("\tReading {}".format(path))
+            header                = ["filename", "start", "stop", "type", "embedding"]
+            df                    = pd.read_csv(path, sep="\t", header = None, names=header)
+            signals               = df[df['type'] >= 2]
+            signals['embedding']  = df['embedding'].apply(
+                lambda x: np.array([float(i) for i in x.split(",")]))
+            annotated             = [(row['start'], row['stop'], row['filename'], row['embedding'])
+                                     for _ , row in signals.iterrows()]
+            overlapping += groupBy(annotated, re.overlap)
+            break
+            
+    max_len = int(max([len(e) for _, _, _, e in overlapping]) + 1)
+    dtw = DTW(max_len)
+            
+    n = len(overlapping)
+    print("\t found {} signals".format(n))
+    dist = np.zeros((n, n))
+    for i, (start_x, stop_x, f_x, embedding_x) in enumerate(overlapping):
+        for j, (start_y, stop_y, f_y, embedding_y) in enumerate(overlapping):
+            if i < j:
+                x = np.array([embedding_x]).reshape(len(embedding_x), 256)
+                y = np.array([embedding_y]).reshape(len(embedding_y), 256)
+                d, _       = dtw.align(x, y)
+                dist[i, j] = d
+                dist[j, i] = d
+    clustering = agg.fit_predict(dist)
+    for c, (start, stop, f, _) in zip(clustering, overlapping):
+        yield start, stop, f, c
         
     
-def signature_whistles(annotation_path, min_group = 3, max_samples_appart=48000 * 30, max_dist = 5.0):
+def signature_whistle_detector(annotation_path, min_group = 3, max_samples_appart=48000 * 30, max_dist = 5.0):
     '''
     Extract signature whistles
 

@@ -1,3 +1,4 @@
+
 import sys
 import yaml
 import pickle
@@ -273,7 +274,7 @@ def test_reconstruction(folder, out, params):
     plt.close()
 
 
-def sequence_clustering(inp, out, embedder):    
+def sequence_clustering(inp, out, embedder, support=10):    
     print("Sequence Clustering")
     for filename in os.listdir(inp):
         if filename.endswith('.wav'):
@@ -286,7 +287,6 @@ def sequence_clustering(inp, out, embedder):
                 inducer.save(out_path, append=True)
     print("\n clustering:")
     clusters = [x for x in hierarchical_clustering(out)]            
-    print(clusters)
     grouped_by_filename = {}
     for start, stop, f, c in clusters:
         if f not in grouped_by_filename:
@@ -294,19 +294,24 @@ def sequence_clustering(inp, out, embedder):
         grouped_by_filename[f].append((start, stop, c))
 
     k = max([c for _, _, _, c in clusters]) + 1
-    audio_bank = [AudioSnippetCollection("{}/seq_cluster_{}.wav".format(out, i)) for i in range(0, k)]    
-
-    for f, regions in grouped_by_filename.items():
-        filename = f.split(".")[0].split("/")[-1]
-        log_path = "{}/seq_clustering_log_{}.csv".format(out, filename)
-        with open(log_path, "w") as fp:
-            for start, stop, c in regions:
-                fp.write("{},{},{},{}\n".format(start, stop, f, c))
-                
-        snippets        = [(start, stop, f) for start, stop, _ in regions]
-        cluster_snippet = [c for _, _, c in regions] 
-        for audio_snippet, c in zip(audio_snippets(snippets), cluster_snippet):
-            audio_bank[c].write(audio_snippet)
+    instances_clusters = np.zeros(k)
+    for _, _, _, c in clusters:
+        instances_clusters[c] += 1
+    
+    for cluster_id in range(0, k):
+        if instances_clusters[cluster_id] > support:
+            audio_bank = AudioSnippetCollection("{}/seq_cluster_{}.wav".format(out, cluster_id))
+            for f, regions in grouped_by_filename.items():
+                filename = f.split(".")[0].split("/")[-1]
+                log_path = "{}/seq_clustering_log_{}.csv".format(out, filename)
+                with open(log_path, "w") as fp:
+                    for start, stop, c in regions:
+                        fp.write("{},{},{},{}\n".format(start, stop, f, c))                
+                snippets        = [(start, stop, f) for start, stop, _ in regions]
+                cluster_snippet = [c for _, _, c in regions] 
+                for audio_snippet, c in zip(audio_snippets(snippets), cluster_snippet):
+                    if c == cluster_id:
+                        audio_bank.write(audio_snippet)
         audio_bank.close()
     
 

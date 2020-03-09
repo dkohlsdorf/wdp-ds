@@ -166,9 +166,7 @@ def hierarchical_clustering(annotation_path, max_dist = 5.0):
                 lambda x: np.array([float(i) for i in x.split(",")]))
             annotated             = [(row['start'], row['stop'], row['filename'], row['embedding'])
                                      for _ , row in signals.iterrows()]
-            overlapping += groupBy(annotated, re.overlap)
-            break
-            
+            overlapping += groupBy(annotated, re.overlap)        
     max_len = int(max([len(e) for _, _, _, e in overlapping]) + 1)
     dtw = DTW(max_len)
             

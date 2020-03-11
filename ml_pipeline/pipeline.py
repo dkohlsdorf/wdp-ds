@@ -1,3 +1,4 @@
+
 import sys
 import yaml
 import pickle
@@ -7,6 +8,7 @@ import subprocess
 import os
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3' 
 from tensorflow.keras.backend import set_learning_phase
+import datetime
 
 from tensorflow.keras.models import load_model
 from feature_extractor import *
@@ -15,6 +17,9 @@ from plots import *
 from sequence_embedder import *
 from generate_report import *
 from audio_collection import *
+from structured import *
+from utils import * 
+
 
 def no_label(f,x):
     """
@@ -23,6 +28,7 @@ def no_label(f,x):
     :returns: None
     """
     return None
+
 
 def lable(f, x):
     """
@@ -97,7 +103,7 @@ def train(folder, params, lable, model, batch_size=10, epochs=128, keep=lambda x
                     n_processed += 1
 
 
-def train_type(version_tag, input_folder, output_folder, params, encoder_file, batch, epoch):
+def train_type(version_tag, input_folder, output_folder, params, encoder_file, batch, epoch, latent, freeze, transfer=True):
     """
     Train a multiclass type classifier
     :param version_tag: basically the model name
@@ -108,8 +114,13 @@ def train_type(version_tag, input_folder, output_folder, params, encoder_file, b
     :param batch: batch size
     :param epochs: number of training epochs
     """
-    enc = load_model(encoder_file)
-    cls_type = classifier(enc, n_labels=4)
+    if transfer:
+        enc = load_model(encoder_file)
+    else:
+        _, enc = auto_encoder(
+            (params.spec_win, params.n_fft_bins, 1), latent
+        )
+    cls_type = classifier(enc, 4, freeze)
     x_train = []
     x_test = []
     y_train = []
@@ -138,7 +149,7 @@ def train_type(version_tag, input_folder, output_folder, params, encoder_file, b
     plt.close()
 
 
-def train_silence(version_tag, input_folder, output_folder, params, encoder_file, batch, epoch):
+def train_silence(version_tag, input_folder, output_folder, params, encoder_file, batch, epoch, latent, freeze, transfer=True):
     """
     Train a silence dectector on top of an encoder
 
@@ -151,8 +162,13 @@ def train_silence(version_tag, input_folder, output_folder, params, encoder_file
     :param epochs: number of training epochs
     """
     print("Training Silence Detector: {} {}".format(version_tag, epoch))
-    enc = load_model(encoder_file)
-    cls_sil = classifier(enc)
+    if transfer:
+        enc = load_model(encoder_file)
+    else:
+        _, enc = auto_encoder(
+            (params.spec_win, params.n_fft_bins, 1), latent
+        )    
+    cls_sil = classifier(enc, 1, freeze)
     x_train = []
     x_test = []
     y_train = []
@@ -236,172 +252,6 @@ def evaluate_encoder(version_tag, input_folder, output_folder, encoder_file, par
     visualize_embedding("{}/embeddings.png".format(output_folder), h, x, k)
 
 
-def run_embedder_fs(seq_embedder, folder, output, bucket_size = 1000):
-    """
-    Run sequence embedding on all files in a folder
-
-    :param seq_embedder: a sequence embedder
-    :param folder: folder containing wav files
-    """
-    for filename in os.listdir(folder):
-        if filename.endswith('.wav'):
-            path = "{}/{}".format(folder, filename)
-            print("- Working on embedding {}".format(path))
-            regions = seq_embedder.embed(path)
-            f = filename.replace('.wav', '.p')
-            pickle.dump(regions, open('{}/regions_{}.p'.format(output, filename), 'wb'))
-            print("- Done on embedding n regions: {}".format(len(regions)))
-            
-
-def run_embedder_gs(seq_embedder, folder, output, bucket_size = 1000):
-    """
-    Run sequence embedding on all files in a bucket from google cloud
-
-    :param seq_embedder: a sequence embedder
-    :param folder: folder containing wav files on google cloud
-    """
-    from google.cloud import storage
-    print("Apply sequence embedder to {}".format(folder))
-    cmp = folder.replace("gs://", "").split('/')
-    bucket_path = cmp[0]
-    folder = "/".join(cmp[1:])
-    log = open('audio_log.txt', 'w')
-    client = storage.Client.from_service_account_json('secret.json') 
-    bucket = client.get_bucket(bucket_path)
-    paths = [f.name for f in bucket.list_blobs(prefix=folder) if f.name.endswith('.m4a')] 
-    for path in paths:
-        print("- Working on embedding {}".format(path))
-        with open("/tmp/audio.m4a", "wb") as file_obj: 
-            blob = bucket.blob(path) 
-            blob.download_to_file(file_obj)   
-        subprocess.call(['ffmpeg', '-y', '-i', '/tmp/audio.m4a', '/tmp/audio.wav'], stdout=log, stderr=log) 
-        regions = seq_embedder.embed('/tmp/audio.wav')
-        f = path.split('/')[-1].replace('.wav', '.p')
-        pickle.dump(regions, open('{}/regions_{}.p'.format(output, f), 'wb'))
-        print("- Done on embedding n regions: {}".format(len(regions)))
-
-        
-def clustering_audio(embedding_folder, wav_folder, k, cloud=True):
-    '''
-    Write clusters into audio files
-    
-    :param embedding_folder: where the embeddings are coming from
-    :param folder: folder containing wav files on google cloud
-    :param k: number of clusters
-    :param cloud: is the data coming from the cloud
-    '''
-    print("Dump Clustering Audio")
-    # group clusters by filename
-    grouped_by_filename = {}
-    for line in open('{}/clusters.csv'.format(embedding_folder)):
-        cmp      = line.split(',')
-        cluster  = int(cmp[0])
-        filename = cmp[1]
-        start    = int(cmp[2])
-        stop     = int(cmp[3])
-        if filename not in grouped_by_filename:
-            grouped_by_filename[filename] = [(cluster, start, stop)]
-        else:
-            grouped_by_filename[filename].append((cluster, start, stop))    
-    if cloud: 
-        from google.cloud import storage
-        cmp = wav_folder.replace("gs://", "").split('/')
-        bucket_path = cmp[0]
-        path = "/".join(cmp[1:])
-        client = storage.Client.from_service_account_json('secret.json') 
-        bucket = client.get_bucket(bucket_path)                                
-    audio_bank = [AudioSnippetCollection("{}/cluster_{}.wav".format(embedding_folder, i)) for i in range(0, k)]
-    for filename in grouped_by_filename:
-        regions  = [(start, stop) for (_, start, stop) in grouped_by_filename[filename]]
-        clusters = [c             for (c, _, _) in grouped_by_filename[filename]]
-        if cloud:
-            fname = filename.replace(".p", "").replace("regions_", "")            
-            log = open('audio_log.txt', 'w')
-            with open("/tmp/audio.m4a", "wb") as file_obj: 
-                print("- Process: {}{}".format(path, fname))
-                blob = bucket.blob("{}{}".format(path, fname))
-                blob.download_to_file(file_obj)   
-            subprocess.call(['ffmpeg', '-y', '-i', '/tmp/audio.m4a', '/tmp/audio.wav'], stdout=log, stderr=log)             
-            for i, region in enumerate(audio_regions('/tmp/audio.wav', regions)):
-                cluster = clusters[i]
-                audio_bank[cluster].write(region)                
-        else:
-            for region in spectrogram_regions(filename, regions):            
-                cluster = clusters[i]
-                audio_bank[cluster].write(region)
-        
-        
-def evaluate_embedding(embedding_folder, wav_folder, params, k, p_keep = 1.0, cloud=True, sparsify=False):
-    '''
-    Evaluate a large embedding run
-
-    :param embedding_folder: where the embeddings are coming from
-    :param params: windowing parameters
-    :param k: number of clusters
-    :param p_keep: probability of keeping a sample
-    :param cloud: is the data coming from the cloud
-    :param sparsify: sparsify clusters by shillouette 
-    '''
-    print("Evaluate embeddings: Clustering and Scatter Plot Experiment")
-    # group all embeddings found by file
-    grouped_by_filename = {}
-    for filename in os.listdir(embedding_folder):
-        if filename.startswith('region') and filename.endswith('.p'):
-            path = "{}/{}".format(embedding_folder, filename)
-            embeddings = pickle.load(open(path, "rb"))
-            for (x, f, start, stop) in embeddings:
-                if not cloud:
-                    filename = f
-                if np.random.uniform() < p_keep:
-                    if filename not in grouped_by_filename:
-                        grouped_by_filename[filename] = [(x, start, stop)]
-                    else:
-                        grouped_by_filename[filename].append((x, start, stop))
-    if cloud: 
-        from google.cloud import storage
-        cmp = wav_folder.replace("gs://", "").split('/')
-        bucket_path = cmp[0]
-        path = "/".join(cmp[1:])
-        client = storage.Client.from_service_account_json('secret.json') 
-        bucket = client.get_bucket(bucket_path)                        
-    # collect all spectrograms, embeddings and regions
-    spectrograms = []
-    embeddings   = []
-    all_regions  = []
-    for filename in grouped_by_filename:
-        regions = [(start, stop) for (_, start, stop) in grouped_by_filename[filename]]
-        x       = [x for x, _, _ in  grouped_by_filename[filename]] 
-        if cloud:
-            fname = filename.replace(".p", "").replace("regions_", "")            
-            log = open('audio_log.txt', 'w')
-            with open("/tmp/audio.m4a", "wb") as file_obj: 
-                print("- Process: {}{}".format(path, fname))
-                blob = bucket.blob("{}{}".format(path, fname))
-                blob.download_to_file(file_obj)   
-            subprocess.call(['ffmpeg', '-y', '-i', '/tmp/audio.m4a', '/tmp/audio.wav'], stdout=log, stderr=log) 
-            for region in spectrogram_regions('/tmp/audio.wav', params, regions):            
-                spectrograms.append(region.reshape(region.shape[0], region.shape[1], 1))
-            embeddings.extend(x)
-            all_regions.extend([(filename, start, stop) for (_, start, stop) in grouped_by_filename[filename]])
-        else:
-            regions = [(start, stop) for (_, start, stop) in grouped_by_filename[filename]]
-            x       = [x for x, _, _ in  grouped_by_filename[filename]] 
-            for region in spectrogram_regions(filename, params, regions):            
-                spectrograms.append(region.reshape(region.shape[0], region.shape[1], 1))
-            embeddings.extend(x)
-            all_regions.extend([(filename, start, stop) for (_, start, stop) in grouped_by_filename[filename]])            
-    spectrograms = np.stack(spectrograms)
-    embeddings   = np.stack(embeddings)
-    # visualize the results and save the clustering
-    clusters, km, ids = visualize_embedding("{}/embeddings_test.png".format(embedding_folder), embeddings, spectrograms, k, sparse=sparsify)
-    pickle.dump(km, open("{}/km.p".format(embedding_folder), "wb"))
-    with open("{}/clusters.csv".format(embedding_folder), "w") as fp:
-        for i, x_id in enumerate(ids):
-            filename, start, stop = all_regions[x_id]
-            cluster = clusters[i]
-            fp.write("{},{},{},{}\n".format(cluster, filename, start, stop))
-    
-
 def test_reconstruction(folder, out, params):
     '''
     Reconstruct 100 examples using the auto encoder
@@ -424,6 +274,72 @@ def test_reconstruction(folder, out, params):
     plt.close()
 
 
+def sequence_clustering(inp, out, embedder, support=3):    
+    print("Sequence Clustering")
+    for filename in os.listdir(inp):
+        if filename.endswith('.wav'):
+            name = filename.replace(".wav", "")
+            in_path  = "{}/{}".format(inp, filename)
+            out_path = "{}/embedding_{}.csv".format(out, name)
+            print("\t {}".format(in_path))
+            if not os.path.isfile(out_path):
+                inducer = TypeExtraction.from_audiofile(in_path, embedder)
+                inducer.save(out_path, append=True)
+    print("\n clustering:")
+    clusters = [x for x in hierarchical_clustering(out)]            
+    grouped_by_filename = {}
+    for start, stop, f, c in clusters:
+        if f not in grouped_by_filename:
+            grouped_by_filename[f] = []
+        grouped_by_filename[f].append((start, stop, c))
+
+    k = max([c for _, _, _, c in clusters]) + 1
+    instances_clusters = np.zeros(k)
+    for _, _, _, c in clusters:
+        instances_clusters[c] += 1
+    
+    for cluster_id in range(0, k):
+        if instances_clusters[cluster_id] > support:
+            audio_bank = AudioSnippetCollection("{}/seq_cluster_{}.wav".format(out, cluster_id))
+            for f, regions in grouped_by_filename.items():
+                filename = f.split(".")[0].split("/")[-1]
+                log_path = "{}/seq_clustering_log_{}.csv".format(out, filename)
+                with open(log_path, "w") as fp:
+                    for start, stop, c in regions:
+                        fp.write("{},{},{},{}\n".format(start, stop, f, c))                
+                snippets        = [(start, stop, f) for start, stop, _ in regions]
+                cluster_snippet = [c for _, _, c in regions] 
+                for audio_snippet, c in zip(audio_snippets(snippets), cluster_snippet):
+                    if c == cluster_id:
+                        audio_bank.write(audio_snippet)
+            audio_bank.close()
+    
+
+    
+def signature_whistles(inp, out, embedder):
+    for filename in os.listdir(inp):
+        if filename.endswith('.wav'):
+            name = filename.replace(".wav", "")
+            in_path  = "{}/{}".format(inp, filename)
+            out_path = "{}/embedding_{}.csv".format(out, name)
+            log_path = "{}/signature_log_{}.csv".format(out, name)
+            if not os.path.isfile(out_path):
+                inducer = TypeExtraction.from_audiofile(in_path, embedder)
+                inducer.save(out_path, append=True)
+            snippets   = [(start, stop, f) for start, stop, _, f in signature_whistle_detector(out_path)]
+            if len(snippets) > 0:
+                audio_bank = AudioSnippetCollection("{}/signatures_{}.wav".format(out, name))
+                for audio_snippet in audio_snippets(snippets):
+                    audio_bank.write(audio_snippet)
+                audio_bank.close()
+                with open(log_path, "w") as fp:
+                    for start, stop, dist, f in signature_whistle_detector(out_path):
+                        fp.write("{},{},{},{}\n".format(start, stop, dist, f))
+                        print("{} - {} {} {}".format(
+                            str(datetime.timedelta(seconds=start/48000)),
+                            str(datetime.timedelta(seconds=stop/48000)), dist, f))        
+                
+        
 def header():
     return """
     =================================================================
@@ -449,10 +365,9 @@ def header():
         - Clustering Image
         - Write audio clusters
         
-    usage for training: python ml_pipeline/pipeline.py train config/default_config.yaml
-    usage for testing:  python ml_pipeline/pipeline.py run config/application_config.yaml
-    usage for report:   python ml_pipeline/pipeline.py report config/application_config.yaml
-    
+    usage for training:  python ml_pipeline/pipeline.py train config/default_config.yaml
+    usage for report:    python ml_pipeline/pipeline.py report config/application_config.yaml
+    usage for induction: python ml_pipeline/pipeline.py induction config/induction_config.yaml
     
     by Daniel Kyu Hwa Kohlsdorf
     =================================================================
@@ -461,28 +376,10 @@ def header():
     
 if __name__== "__main__":
     print(header())
-    if  len(sys.argv) == 3 and sys.argv[1] == 'run':
+    if len(sys.argv) == 3 and sys.argv[1] == 'report':
         c = yaml.load(open(sys.argv[2]))
         print("Parameters: {}".format(c))
-        params       = WindowParams(c['spec_win'], c['spec_step'], c['fft_win'], c['fft_step'], c['highpass'])
-        k            = c['k']
-        inp          = c['input']
-        output       = c['output']        
-        enc          = load_model("{}/encoder.h5".format(output))
-        silence      = load_model("{}/sil.h5".format(output))
-        embedder     = SequenceEmbedder(enc, silence, params)
-        if inp.startswith('gs://'):
-            run_embedder_gs(embedder, inp, output)
-            evaluate_embedding(output, inp, params, k, 0.25, True, True)
-            clustering_audio(output, inp, k, True)            
-        else:
-            run_embedder_fs(embedder, inp, output)
-            evaluate_embedding(output, inp, params, k, 0.1, False, True)
-            clustering_audio(output, inp, k, True)
-    elif len(sys.argv) == 3 and sys.argv[1] == 'report':
-        c = yaml.load(open(sys.argv[2]))
-        print("Parameters: {}".format(c))
-        from_template('ml_pipeline/reporting_template.md', c)
+        from_template('ml_pipeline/reporting_template.md', c) # Add signature whistle and induction, delete eval
     elif len(sys.argv) == 3 and sys.argv[1] == 'train':
         c = yaml.load(open(sys.argv[2]))
         print("Parameters: {}".format(c))
@@ -494,12 +391,26 @@ if __name__== "__main__":
         epochs_sup   = c['epochs_sup']
         viz_k        = c['viz_k']
         silence      = c['sil']
-        type_class   = c['type_class']
         unsupervised = c['unsupervised']
         reconstruct  = c['reconstruct'] 
-        output       = c['output']        
+        output       = c['output']
+        transfer     = c['transfer']
+        freeze       = c['freeze'] 
         train_auto_encoder(version, unsupervised, output, params, latent, batch, epochs)
         evaluate_encoder(version, unsupervised, output, "{}/encoder.h5".format(output), params, viz_k)
-        train_silence(version, silence, output, params, "{}/encoder.h5".format(output), batch, epochs_sup)
-        train_type(version, type_class, output, params, "{}/encoder.h5".format(output), batch, epochs_sup)
+        train_silence(version, silence, output, params, "{}/encoder.h5".format(output), batch, epochs_sup, latent, transfer)
+        train_type(version, type_class, output, params, "{}/encoder.h5".format(output), batch, epochs_sup, latent, transfer)
         test_reconstruction(reconstruct, output, params)
+    elif len(sys.argv) == 3 and sys.argv[1] == 'induction':
+        c = yaml.load(open(sys.argv[2]))
+        print("Parameters: {}".format(c))
+        params       = WindowParams(c['spec_win'], c['spec_step'], c['fft_win'], c['fft_step'], c['highpass'])
+        inp          = c['input']
+        output       = c['output'] 
+        enc             = load_model("{}/encoder.h5".format(output))
+        silence         = load_model("{}/sil.h5".format(output))
+        type_classifier = load_model("{}/type.h5".format(output))
+        km              = unpickle("{}/km.p".format(output))
+        embedder        = SequenceEmbedder(enc, silence, type_classifier, km, params)
+        #signature_whistles(inp, output, embedder) 
+        sequence_clustering(inp, output, embedder)

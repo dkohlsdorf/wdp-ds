@@ -10,8 +10,3 @@ and communicate the results with domain experts.
 
 + 1) `ml_pipeline`: Training and Evaluation of Machine Learning Models
 + 2) `models`: The models and evaluations we generated
-
-## Important Branches:
-
-+ `feature/alignments`: Working on multiple sequence alignments
-+ `feature/signature_whistle_anchor`: Finding signature whistles

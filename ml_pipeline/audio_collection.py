@@ -35,4 +35,3 @@ class AudioSnippetCollection:
         close the file
         '''
         self.obj.close()
-    

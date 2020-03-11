@@ -274,7 +274,7 @@ def test_reconstruction(folder, out, params):
     plt.close()
 
 
-def sequence_clustering(inp, out, embedder, support=10):    
+def sequence_clustering(inp, out, embedder, support=3):    
     print("Sequence Clustering")
     for filename in os.listdir(inp):
         if filename.endswith('.wav'):
@@ -312,7 +312,7 @@ def sequence_clustering(inp, out, embedder, support=10):
                 for audio_snippet, c in zip(audio_snippets(snippets), cluster_snippet):
                     if c == cluster_id:
                         audio_bank.write(audio_snippet)
-        audio_bank.close()
+            audio_bank.close()
     
 
     

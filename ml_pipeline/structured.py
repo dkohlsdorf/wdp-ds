@@ -145,7 +145,7 @@ def interset_distance(x):
     return sum / n
 
 
-def hierarchical_clustering(annotation_path, max_dist = 15.0):
+def hierarchical_clustering(annotation_path, max_dist = 5.0):
     '''
     Hierarchical clustering of annotations
     '''
@@ -178,9 +178,9 @@ def hierarchical_clustering(annotation_path, max_dist = 15.0):
             if i < j:
                 x = np.array([embedding_x]).reshape(len(embedding_x), 256)
                 y = np.array([embedding_y]).reshape(len(embedding_y), 256)
-                d, _       = dtw.align(x, y)
-                dist[i, j] = d
-                dist[j, i] = d
+                d, _       = dtw.align(x, y) 
+                dist[i, j] = d / (len(x) * len(y))
+                dist[j, i] = d / (len(x) * len(y))
     clustering = agg.fit_predict(dist)
     for c, (start, stop, f, _) in zip(clustering, overlapping):
         yield start, stop, f, c

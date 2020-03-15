@@ -288,10 +288,11 @@ def sequence_clustering(inp, out, embedder, support=3):
     print("\n clustering:")
     clusters = [x for x in hierarchical_clustering(out)]            
     grouped_by_filename = {}
-    for start, stop, f, c in clusters:
+    # instance id
+    for i, (start, stop, f, c) in enumerate(clusters):
         if f not in grouped_by_filename:
             grouped_by_filename[f] = []
-        grouped_by_filename[f].append((start, stop, c))
+        grouped_by_filename[f].append((start, stop, c, i))
 
     k = max([c for _, _, _, c in clusters]) + 1
     instances_clusters = np.zeros(k)
@@ -304,11 +305,12 @@ def sequence_clustering(inp, out, embedder, support=3):
             for f, regions in grouped_by_filename.items():
                 filename = f.split(".")[0].split("/")[-1]
                 log_path = "{}/seq_clustering_log_{}.csv".format(out, filename)
+                #instance id
                 with open(log_path, "w") as fp:
-                    for start, stop, c in regions:
-                        fp.write("{},{},{},{}\n".format(start, stop, f, c))                
-                snippets        = [(start, stop, f) for start, stop, _ in regions]
-                cluster_snippet = [c for _, _, c in regions] 
+                    for start, stop, c, i in regions:
+                        fp.write("{},{},{},{},{}\n".format(start, stop, f, c, i))                
+                snippets        = [(start, stop, f) for start, stop, _, _ in regions]
+                cluster_snippet = [c for _, _, c,_ in regions] 
                 for audio_snippet, c in zip(audio_snippets(snippets), cluster_snippet):
                     if c == cluster_id:
                         audio_bank.write(audio_snippet)

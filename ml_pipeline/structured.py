@@ -1,7 +1,7 @@
 import numpy as np
 import pandas as pd
 import os 
-
+import pickle as pkl
 
 from sklearn.cluster import AgglomerativeClustering
 from collections import namedtuple
@@ -145,7 +145,7 @@ def interset_distance(x):
     return sum / n
 
 
-def hierarchical_clustering(annotation_path, max_dist = 15.0):
+def hierarchical_clustering(annotation_path, max_dist = 3.0):
     '''
     Hierarchical clustering of annotations
     '''
@@ -178,10 +178,11 @@ def hierarchical_clustering(annotation_path, max_dist = 15.0):
             if i < j:
                 x = np.array([embedding_x]).reshape(len(embedding_x), 256)
                 y = np.array([embedding_y]).reshape(len(embedding_y), 256)
-                d, _       = dtw.align(x, y)
-                dist[i, j] = d
-                dist[j, i] = d
+                d, _       = dtw.align(x, y) 
+                dist[i, j] = d / (len(x) * len(y))
+                dist[j, i] = d / (len(x) * len(y))
     clustering = agg.fit_predict(dist)
+    pkl.dump(agg, open("{}/agg.pkl".format(annotation_path), "wb"))
     for c, (start, stop, f, _) in zip(clustering, overlapping):
         yield start, stop, f, c
         

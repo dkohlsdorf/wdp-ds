@@ -10,3 +10,4 @@ and communicate the results with domain experts.
 
 + 1) `ml_pipeline`: Training and Evaluation of Machine Learning Models
 + 2) `models`: The models and evaluations we generated
++ 3)  `config`: Config files to run pipeline

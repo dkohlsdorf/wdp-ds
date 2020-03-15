@@ -15,7 +15,6 @@ from feature_extractor import *
 from classifier import *
 from plots import *
 from sequence_embedder import *
-from generate_report import *
 from audio_collection import *
 from structured import *
 from utils import * 
@@ -346,29 +345,8 @@ def header():
     return """
     =================================================================
     Dolphin Machine Learning Pipeline
-    
-    Training: 
-        - training unsupervised encoder / decoder
-        - plot evaluations
-        - training supervised silence detector
-        - plot confusion matrix
-    
-    Run:
-        - convert all files in input folder to spectrogram
-        - extract silence detector to all windows
-        - embed every window
-        - cluster windows and write the results to csv (filename, start, stop, cluster)
-        - plot the embeddings
-    
-    Report:
-        - Compile a model report including
-        - Confusion Matrix for silence detection
-        - Convolutional Filters
-        - Clustering Image
-        - Write audio clusters
-        
+                
     usage for training:  python ml_pipeline/pipeline.py train config/default_config.yaml
-    usage for report:    python ml_pipeline/pipeline.py report config/application_config.yaml
     usage for induction: python ml_pipeline/pipeline.py induction config/induction_config.yaml
     
     by Daniel Kyu Hwa Kohlsdorf
@@ -378,11 +356,7 @@ def header():
     
 if __name__== "__main__":
     print(header())
-    if len(sys.argv) == 3 and sys.argv[1] == 'report':
-        c = yaml.load(open(sys.argv[2]))
-        print("Parameters: {}".format(c))
-        from_template('ml_pipeline/reporting_template.md', c) # Add signature whistle and induction, delete eval
-    elif len(sys.argv) == 3 and sys.argv[1] == 'train':
+    if len(sys.argv) == 3 and sys.argv[1] == 'train':
         c = yaml.load(open(sys.argv[2]))
         print("Parameters: {}".format(c))
         params       = WindowParams(c['spec_win'], c['spec_step'], c['fft_win'], c['fft_step'], c['highpass'])
@@ -414,5 +388,5 @@ if __name__== "__main__":
         type_classifier = load_model("{}/type.h5".format(output))
         km              = unpickle("{}/km.p".format(output))
         embedder        = SequenceEmbedder(enc, silence, type_classifier, km, params)
-        #signature_whistles(inp, output, embedder) 
+        signature_whistles(inp, output, embedder) 
         sequence_clustering(inp, output, embedder)

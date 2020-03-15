@@ -6,7 +6,6 @@ from numpy.fft import fft
 from scipy.io import wavfile
 from collections import namedtuple
 
-
 class WindowParams(namedtuple('WindowParams', 'spec_win spec_step fft_win fft_step highpass')):
 
     @property

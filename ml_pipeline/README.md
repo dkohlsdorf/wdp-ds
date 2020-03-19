@@ -10,3 +10,4 @@
 + `sequence_embedder.py`: apply the model to larger files
 + `dtw.pyx`: cython implementation of dynamic programming
 + `structured.py`: structuring dolphin communication 
++ `structured_models.py`: helper function for deep learning on discrete data

@@ -3,9 +3,12 @@ import pandas as pd
 import os 
 import pickle as pkl
 
+from tensorflow.keras.preprocessing.sequence import pad_sequences
+from sklearn.model_selection import train_test_split
 from sklearn.cluster import AgglomerativeClustering
 from collections import namedtuple
 from dtw import DTW
+from structured_model import *
 
 
 class TypeExtraction(namedtuple("Induction", "embeddings starts stops types files")):
@@ -211,3 +214,43 @@ def signature_whistle_detector(annotation_path, min_group = 3, max_samples_appar
         if inter_dist < max_dist:        
             yield start, stop, inter_dist, f
             
+
+def annotations(annotation_path):
+    sequences = []
+    header = ['id', 'year', 'encounter', 'tags', 'activity', 'names', 'anno']
+    encounters = pd.read_csv('data/encodings.csv', names=header, header=None)
+    for file in os.listdir(annotation_path):       
+        if file.startswith("seq_clustering_log") and file.endswith(".csv"):
+            path       = "{}/{}".format(annotation_path, file)
+            header     = ["start", "stop", "filename", "cluster", "index"]
+            df         = pd.read_csv(path, sep=",", header = None, names=header)
+            encounter  = int(file.split('.')[0].replace('seq_clustering_log_', '').replace('Canon', '').replace('C', '').replace('sb', '').replace('N', ''))
+            behavior   = list(encounters[encounters['encounter'] == encounter]['tags'])
+            if len(behavior) > 0:
+                df['behavior'] = df['start'].apply(lambda x: behavior[0].split(' '))
+                print("{}: {}".format(encounter, len(df)))
+                sequences.append(df)
+
+    xindex, xreverse_index, yindex, yreverse_index = token_dict(sequences)
+    n        = len(sequences)
+    max_len  = max([len(s) for s in sequences])
+    win      = 25
+    model    = annotation_model(xindex, yindex, win, structured=True)
+    n_labels = dict([(y, 0) for y in yindex.keys()])
+
+    ys = []
+    xs = []
+    for i in range(0, n):
+        for label in sequences[i]['behavior'][0]:
+            for window in sliding_window(sequences[i]['cluster'], win):
+                n_labels[label] += 1
+                y  = yindex[label]
+                x  = tokenize(np.int32(window), xindex)
+                ys.append(y)
+                xs.append(x)
+    xs = pad_sequences(xs, maxlen=win, dtype='int32', padding='post', truncating='post', value=0.0)
+    ys = np.array(ys)
+    model.fit(xs, ys, batch_size=100, shuffle=True, epochs=25)
+    model.save('annotation_model.h5')
+    _y = model.predict(xs)
+    

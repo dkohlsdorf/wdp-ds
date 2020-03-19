@@ -388,5 +388,6 @@ if __name__== "__main__":
         type_classifier = load_model("{}/type.h5".format(output))
         km              = unpickle("{}/km.p".format(output))
         embedder        = SequenceEmbedder(enc, silence, type_classifier, km, params)
-        signature_whistles(inp, output, embedder) 
-        sequence_clustering(inp, output, embedder)
+        #signature_whistles(inp, output, embedder) 
+        #sequence_clustering(inp, output, embedder)
+        annotations(output)

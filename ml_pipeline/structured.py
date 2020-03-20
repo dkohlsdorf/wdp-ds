@@ -9,7 +9,7 @@ from sklearn.cluster import AgglomerativeClustering
 from collections import namedtuple
 from dtw import DTW
 from structured_model import *
-
+from sklearn.utils import shuffle
 
 class TypeExtraction(namedtuple("Induction", "embeddings starts stops types files")):
     """
@@ -232,25 +232,39 @@ def annotations(annotation_path):
                 sequences.append(df)
 
     xindex, xreverse_index, yindex, yreverse_index = token_dict(sequences)
+    sliding  = True 
     n        = len(sequences)
     max_len  = max([len(s) for s in sequences])
-    win      = 25
-    model    = annotation_model(xindex, yindex, win, structured=True)
+    win      = 20
     n_labels = dict([(y, 0) for y in yindex.keys()])
-
     ys = []
     xs = []
     for i in range(0, n):
         for label in sequences[i]['behavior'][0]:
-            for window in sliding_window(sequences[i]['cluster'], win):
-                n_labels[label] += 1
-                y  = yindex[label]
-                x  = tokenize(np.int32(window), xindex)
-                ys.append(y)
-                xs.append(x)
-    xs = pad_sequences(xs, maxlen=win, dtype='int32', padding='post', truncating='post', value=0.0)
-    ys = np.array(ys)
-    model.fit(xs, ys, batch_size=100, shuffle=True, epochs=25)
-    model.save('annotation_model.h5')
+            if sliding:
+                for window in sliding_window(sequences[i]['cluster'], win, 10):
+                    n_labels[label] += 1
+                    y  = yindex[label]
+                    x  = tokenize(np.int32(window), xindex)
+                    if len(x) == win:
+                        ys.append(y)
+                        xs.append(x)
+            else:
+                    n_labels[label] += 1
+                    y  = yindex[label]
+                    x = tokenize(sequences[i]['cluster'], xindex)
+                    ys.append(y)
+                    xs.append(x)
+
+    model_type = StructuredModels.RECU
+    if sliding:
+        model = annotation_model(xindex, yindex, win, model_type=model_type)
+        xs    = pad_sequences(xs, maxlen=win, dtype='int32', padding='post', truncating='post', value=0.0)
+    else:
+        model = annotation_model(xindex, yindex, max_len, model_type=model_type)
+        xs    = pad_sequences(xs, maxlen=max_len, dtype='int32', padding='post', truncating='post', value=0.0)
+    ys = np.array(ys)    
+    xs, ys = shuffle(xs, ys, random_state=0)
+    model.fit(xs, ys, 5)
     _y = model.predict(xs)
     

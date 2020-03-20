@@ -215,7 +215,10 @@ def signature_whistle_detector(annotation_path, min_group = 3, max_samples_appar
 
 def annotate(annotation_path, encoding_path):
     '''
-    Annotate the clusters with the Encounter Data from denise
+    Annotate the clusters with the Encounter Data
+    
+    :param annotation_path: path to the annotation csv files
+    :param encoding_path: path to the encoding csv files
     '''
     sequences = []
     header = ['id', 'year', 'encounter', 'tags', 'activity', 'anno', 'name']

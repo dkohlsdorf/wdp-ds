@@ -214,18 +214,27 @@ def signature_whistle_detector(annotation_path, min_group = 3, max_samples_appar
             
 
 def annotate(annotation_path, encoding_path):
+    '''
+    Annotate the clusters with the Encounter Data from denise
+    '''
     sequences = []
-    header = ['id', 'year', 'encounter', 'tags', 'activity', 'names', 'anno']
+    header = ['id', 'year', 'encounter', 'tags', 'activity', 'anno', 'name']
     encounters = pd.read_csv(encoding_path, names=header, header=None)
     for file in os.listdir(annotation_path):       
         if file.startswith("seq_clustering_log") and file.endswith(".csv"):
             path       = "{}/{}".format(annotation_path, file)
             header     = ["start", "stop", "filename", "cluster", "index"]
             df         = pd.read_csv(path, sep=",", header = None, names=header)
+            df         = df[["start", "stop", "filename", "cluster"]]
             encounter  = int(file.split('.')[0].replace('seq_clustering_log_', '').replace('Canon', '').replace('C', '').replace('sb', '').replace('N', ''))
             behavior   = list(encounters[encounters['encounter'] == encounter]['tags'])
+            annotation = list(encounters[encounters['encounter'] == encounter]['anno'])
+            names      = list(encounters[encounters['encounter'] == encounter]['name'])
+
             if len(behavior) > 0:
-                df['behavior'] = df['start'].apply(lambda x: behavior[0].split(' '))
+                df['names']     = df['start'].apply(lambda x: names[0])
+                df['anno']     = df['start'].apply(lambda x: annotation[0])
+                df['behavior'] = df['start'].apply(lambda x: behavior[0])
                 print("{}: {}".format(encounter, len(df)))
                 sequences.append(df)
                 df.to_csv("{}/behavior_clusters{}.csv".format(annotation_path, encounter))

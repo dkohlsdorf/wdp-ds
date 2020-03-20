@@ -228,5 +228,5 @@ def annotate(annotation_path, encoding_path):
                 df['behavior'] = df['start'].apply(lambda x: behavior[0].split(' '))
                 print("{}: {}".format(encounter, len(df)))
                 sequences.append(df)
-            df.to_csv("{}/behavior_clusters{}.csv".format(annotation_path, encounter))
+                df.to_csv("{}/behavior_clusters{}.csv".format(annotation_path, encounter))
         

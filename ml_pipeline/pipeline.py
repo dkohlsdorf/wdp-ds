@@ -383,6 +383,7 @@ if __name__== "__main__":
         params       = WindowParams(c['spec_win'], c['spec_step'], c['fft_win'], c['fft_step'], c['highpass'])
         inp          = c['input']
         output       = c['output'] 
+        enc_path     = c['encoding']
         enc             = load_model("{}/encoder.h5".format(output))
         silence         = load_model("{}/sil.h5".format(output))
         type_classifier = load_model("{}/type.h5".format(output))
@@ -390,4 +391,4 @@ if __name__== "__main__":
         embedder        = SequenceEmbedder(enc, silence, type_classifier, km, params)
         #signature_whistles(inp, output, embedder) 
         #sequence_clustering(inp, output, embedder)
-        annotations(output)
+        annotate(output, enc_path)

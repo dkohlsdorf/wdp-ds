@@ -14,5 +14,6 @@ type_class   : 'data/classification'
 unsupervised : 'data/unsupervised'
 reconstruct  : 'data/reconstruction'
 output       : 'models/v2_lstm_v5/'
+encoding     : 'data/encodings.csv'
 transfer     : true
 freeze       : false

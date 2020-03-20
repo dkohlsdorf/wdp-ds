@@ -215,10 +215,10 @@ def signature_whistle_detector(annotation_path, min_group = 3, max_samples_appar
             yield start, stop, inter_dist, f
             
 
-def annotations(annotation_path):
+def annotate(annotation_path, encoding_path):
     sequences = []
     header = ['id', 'year', 'encounter', 'tags', 'activity', 'names', 'anno']
-    encounters = pd.read_csv('data/encodings.csv', names=header, header=None)
+    encounters = pd.read_csv(encoding_path, names=header, header=None)
     for file in os.listdir(annotation_path):       
         if file.startswith("seq_clustering_log") and file.endswith(".csv"):
             path       = "{}/{}".format(annotation_path, file)
@@ -230,3 +230,5 @@ def annotations(annotation_path):
                 df['behavior'] = df['start'].apply(lambda x: behavior[0].split(' '))
                 print("{}: {}".format(encounter, len(df)))
                 sequences.append(df)
+            df.to_csv("{}/behavior_clusters{}.csv".format(annotation_path, encounter))
+        

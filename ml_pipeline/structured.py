@@ -8,8 +8,6 @@ from sklearn.model_selection import train_test_split
 from sklearn.cluster import AgglomerativeClustering
 from collections import namedtuple
 from dtw import DTW
-from structured_model import *
-from sklearn.utils import shuffle
 
 class TypeExtraction(namedtuple("Induction", "embeddings starts stops types files")):
     """

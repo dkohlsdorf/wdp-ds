@@ -9,6 +9,7 @@ from sklearn.cluster import AgglomerativeClustering
 from collections import namedtuple
 from dtw import DTW
 
+
 class TypeExtraction(namedtuple("Induction", "embeddings starts stops types files")):
     """
     Type annotations for dolphin communication   

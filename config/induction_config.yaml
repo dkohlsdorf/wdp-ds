@@ -7,3 +7,4 @@ k            : 100
 output       : 'models/v2_lstm_v5/'
 input        : '/media/dkohlsdorf/GODZILLA/2011_wav/'
 version      : "v2.0"
+encoding     : 'data/encodings.csv'

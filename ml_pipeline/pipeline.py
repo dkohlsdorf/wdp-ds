@@ -1,4 +1,3 @@
-
 import sys
 import yaml
 import pickle
@@ -10,6 +9,7 @@ os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 from tensorflow.keras.backend import set_learning_phase
 import datetime
 
+from ml_pipeline.tokens import *
 from tensorflow.keras.models import load_model
 from feature_extractor import *
 from classifier import *
@@ -274,7 +274,10 @@ def test_reconstruction(folder, out, params):
     plt.close()
 
 
-def sequence_clustering(inp, out, embedder, support=3):    
+def sequence_clustering(inp, out, embedder, min_support=3):    
+    '''
+    Hierarchical cluster connected regions of whistles and bursts
+    '''
     print("Sequence Clustering")
     for filename in os.listdir(inp):
         if filename.endswith('.wav'):
@@ -300,15 +303,16 @@ def sequence_clustering(inp, out, embedder, support=3):
         instances_clusters[c] += 1
     
     for cluster_id in range(0, k):
-        if instances_clusters[cluster_id] > support:
+        if instances_clusters[cluster_id] > min_support:
             audio_bank = AudioSnippetCollection("{}/seq_cluster_{}.wav".format(out, cluster_id))
             for f, regions in grouped_by_filename.items():
                 filename = f.split(".")[0].split("/")[-1]
                 log_path = "{}/seq_clustering_log_{}.csv".format(out, filename)
                 #instance id
-                with open(log_path, "w") as fp:
+                with open(log_path, "a+") as fp:
                     for start, stop, c, i in regions:
-                        fp.write("{},{},{},{},{}\n".format(start, stop, f, c, i))                
+                        if c == cluster_id:
+                            fp.write("{},{},{},{},{}\n".format(start, stop, f, c, i))                
                 snippets        = [(start, stop, f) for start, stop, _, _ in regions]
                 cluster_snippet = [c for _, _, c,_ in regions] 
                 for audio_snippet, c in zip(audio_snippets(snippets), cluster_snippet):
@@ -390,6 +394,6 @@ if __name__== "__main__":
         type_classifier = load_model("{}/type.h5".format(output))
         km              = unpickle("{}/km.p".format(output))
         embedder        = SequenceEmbedder(enc, silence, type_classifier, km, params)
-        #signature_whistles(inp, output, embedder) 
-        #sequence_clustering(inp, output, embedder)
+        signature_whistles(inp, output, embedder) 
+        sequence_clustering(inp, output, embedder)
         annotate(output, enc_path)

@@ -147,7 +147,7 @@ def interset_distance(x):
     return sum / n
 
 
-def hierarchical_clustering(annotation_path, max_dist = 3.0):
+def hierarchical_clustering(annotation_path, max_dist = 5.0):
     '''
     Hierarchical clustering of annotations
     '''

@@ -10,3 +10,5 @@
 + `sequence_embedder.py`: apply the model to larger files
 + `dtw.pyx`: cython implementation of dynamic programming
 + `structured.py`: structuring dolphin communication 
++ `tokens.py`: working with discrete sequences
++ `data_augmentation.py`: augment data

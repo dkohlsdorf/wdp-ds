@@ -17,7 +17,7 @@ class AudioSnippetCollection:
         self.obj.setsampwidth(2)
         self.obj.setframerate(48000)
         
-    def write(self, data):
+    def write(self, data, frames = 48000 // 10):
         '''
         write some audio followed by some zeros
         
@@ -26,7 +26,7 @@ class AudioSnippetCollection:
         for i in range(0, len(data)):
             b = struct.pack('<h', int(data[i]))
             self.obj.writeframesraw(b)
-        for i in range(48000 // 10):
+        for i in range(frames):
             b = struct.pack('<h', 0)
             self.obj.writeframesraw(b)
     

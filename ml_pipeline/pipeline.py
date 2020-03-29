@@ -9,7 +9,7 @@ os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 from tensorflow.keras.backend import set_learning_phase
 import datetime
 
-from ml_pipeline.tokens import *
+from tokens import *
 from tensorflow.keras.models import load_model
 from feature_extractor import *
 from classifier import *
@@ -19,6 +19,7 @@ from audio_collection import *
 from audio import * 
 from structured import *
 from utils import * 
+from data_augmentation import * 
 
 
 def no_label(f,x):
@@ -68,7 +69,7 @@ def auto_encode(f, x):
     return x
 
 
-def train(folder, params, lable, model, batch_size=10, epochs=128, keep=lambda x: True):
+def train(folder, noises, params, model, batch_size=10, epochs=128, keep=lambda x: True):
     """
     Train the model for some epochs with a specific batch size
 
@@ -78,24 +79,19 @@ def train(folder, params, lable, model, batch_size=10, epochs=128, keep=lambda x
     :param epochs: number of runs over the complete dataset
     :param keep: function from label to keep or not
     """
+    augmenter = SpectrogramGenerator(folder, params, noises)
     n_processed = 0
     for epoch in range(epochs):
         batch = []
-        for (x, y, _, _, _) in dataset(folder, params, lable, True):
+        for x, y, meta in augmenter.generate():
             if keep(y):
                 batch.append((x,y))
                 total_loss = 0.0
                 if len(batch) == batch_size:
                     x = np.stack([x.reshape(x.shape[0], x.shape[1], 1) for x, _ in batch])
-                    if isinstance(batch[0][1], float):
-                        y = np.array([y for _, y in batch])
-                    else:
-                        y = np.stack([y.reshape(y.shape[0], y.shape[1], 1) for _, y in batch])
+                    y = np.stack([y.reshape(y.shape[0], y.shape[1], 1) for _, y in batch])
                     loss = model.train_on_batch(x=x, y=y)
-                    if isinstance(loss, np.float32):
-                        total_loss += loss
-                    else:
-                        total_loss += loss[0]
+                    total_loss += loss[0]
                     batch = []
                     if n_processed % 10 == 0:
                         print("#: {} EPOCH: {} LOSS: {}".format(n_processed, epoch, total_loss))
@@ -199,19 +195,29 @@ def train_silence(version_tag, input_folder, output_folder, params, encoder_file
     plt.close()
 
     
-def train_auto_encoder(version_tag, input_folder, output_folder, params, latent, batch, epochs):
+def train_auto_encoder(version_tag, input_folder, output_folder, noise_folder, params, latent, batch, epochs):
     """
     Train an auto encoder for feature embedding
 
     :param version_tag: basically the model name
     :param input_folder: the folder with the training data
     :param output_folder: the folder to save the model
+    :param noise_folder: folder some files with only noise for data augmentation
     :param params: window parameters
     :param latent: dimension of the latent space
     :param batch: batch size
     :param epochs: number of training epochs
     """
     print("Training Auto Encoder: {}".format(version_tag))
+    noises = []
+    print("\t loading noises")
+    for filename in os.listdir('data/classification_noise/'):
+        if filename.startswith('noise'):
+            p = "data/classification_noise/{}".format(filename)
+            for spectrogram,_,_,_ in spectrogram_windows(p, params):
+                noises.append(spectrogram)
+    print("\t noise windows: {}".format(len(noises)))
+
     ae, enc = auto_encoder(
         (params.spec_win, params.n_fft_bins, 1), latent
     )
@@ -224,7 +230,7 @@ def train_auto_encoder(version_tag, input_folder, output_folder, params, latent,
         enc.set_weights(_enc.get_weights())
         ae.set_weights(_ae.get_weights())
     w_before = enc.layers[1].get_weights()[0].flatten()
-    train(input_folder, params, auto_encode, ae, batch, epochs)
+    train(input_folder, noises, params, ae, batch, epochs)
     w_after = enc.layers[1].get_weights()[0].flatten()
     print("DELTA W:", np.sum(np.square(w_before - w_after)))
     enc.save('{}/encoder.h5'.format(output_folder))
@@ -377,7 +383,7 @@ if __name__== "__main__":
         output       = c['output']
         transfer     = c['transfer']
         freeze       = c['freeze'] 
-        train_auto_encoder(version, unsupervised, output, params, latent, batch, epochs)
+        train_auto_encoder(version, unsupervised, output, silence, params, latent, batch, epochs)
         evaluate_encoder(version, unsupervised, output, "{}/encoder.h5".format(output), params, viz_k)
         train_silence(version, silence, output, params, "{}/encoder.h5".format(output), batch, epochs_sup, latent, transfer)
         train_type(version, type_class, output, params, "{}/encoder.h5".format(output), batch, epochs_sup, latent, transfer)

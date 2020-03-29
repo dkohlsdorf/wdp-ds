@@ -91,7 +91,7 @@ def train(folder, noises, params, model, batch_size=10, epochs=128, keep=lambda 
                     x = np.stack([x.reshape(x.shape[0], x.shape[1], 1) for x, _ in batch])
                     y = np.stack([y.reshape(y.shape[0], y.shape[1], 1) for _, y in batch])
                     loss = model.train_on_batch(x=x, y=y)
-                    total_loss += loss[0]
+                    total_loss += loss
                     batch = []
                     if n_processed % 10 == 0:
                         print("#: {} EPOCH: {} LOSS: {}".format(n_processed, epoch, total_loss))

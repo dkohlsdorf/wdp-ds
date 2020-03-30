@@ -97,8 +97,8 @@ def train(folder, output_folder, noises, params, enc, ae, batch_size=10, epochs=
                         print("#: {} EPOCH: {} LOSS: {}".format(n_processed, epoch, total_loss))
                         total_loss = 0.0
                     n_processed += 1
-            enc.save('{}/encoder_{}.h5'.format(output_folder, epoch))
-            ae.save('{}/auto_encoder_{}.h5'.format(output_folder, epoch))
+        enc.save('{}/encoder_{}.h5'.format(output_folder, epoch))
+        ae.save('{}/auto_encoder_{}.h5'.format(output_folder, epoch))
 
     
 def train_type(version_tag, input_folder, output_folder, params, encoder_file, batch, epoch, latent, freeze, transfer=True):

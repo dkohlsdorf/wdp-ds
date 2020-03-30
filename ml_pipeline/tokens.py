@@ -78,7 +78,7 @@ class CountTokens:
             n_tokens = np.sum(self.fwd[document])
             for i in range(0, m):
                 idf = np.log(1 + np.sum(self.bwd[i]) / n)
-                tf  = np.log(1 + self.fwd[document][i] / n_tokens)
+                tf  = np.log(1 + self.fwd[document][i] / (10 * n_tokens))
                 tfidf[document][i] = tf * idf
         return tfidf
 
@@ -128,9 +128,9 @@ def plot_idf(sequence, labels, output_folder, counts = False, top_k = 10, width=
         y = []
         for j in range(0, m):
             y.append((input_tokens.bwd[j], tfidf[i][j]))
-        y = sorted(y, key = lambda x: -x[1])[0:top_k]
+        y = sorted(y, key = lambda x: -x[1])[2:top_k]
 
-        x     = np.arange(top_k)
+        x     = np.arange(top_k - 2)
         score = [x[1] for x in y]
         names = [x[0] for x in y] 
         

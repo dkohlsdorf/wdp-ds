@@ -7,7 +7,7 @@ from tensorflow.keras.preprocessing.sequence import pad_sequences
 from sklearn.model_selection import train_test_split
 from sklearn.cluster import AgglomerativeClustering
 from collections import namedtuple
-from dtw import DTW
+from ml_pipeline.dtw import DTW
 
 
 class TypeExtraction(namedtuple("Induction", "embeddings starts stops types files")):

@@ -69,7 +69,7 @@ def auto_encode(f, x):
     return x
 
 
-def train(folder, noises, params, model, batch_size=10, epochs=128, keep=lambda x: True):
+def train(folder, output_folder, noises, params, enc, ae, batch_size=10, epochs=128, keep=lambda x: True):
     """
     Train the model for some epochs with a specific batch size
 
@@ -90,15 +90,17 @@ def train(folder, noises, params, model, batch_size=10, epochs=128, keep=lambda 
                 if len(batch) == batch_size:
                     x = np.stack([x.reshape(x.shape[0], x.shape[1], 1) for x, _ in batch])
                     y = np.stack([y.reshape(y.shape[0], y.shape[1], 1) for _, y in batch])
-                    loss = model.train_on_batch(x=x, y=y)
+                    loss = ae.train_on_batch(x=x, y=y)
                     total_loss += loss
                     batch = []
                     if n_processed % 10 == 0:
                         print("#: {} EPOCH: {} LOSS: {}".format(n_processed, epoch, total_loss))
                         total_loss = 0.0
                     n_processed += 1
+            enc.save('{}/encoder_{}.h5'.format(output_folder, epoch))
+            ae.save('{}/auto_encoder_{}.h5'.format(output_folder, epoch))
 
-
+    
 def train_type(version_tag, input_folder, output_folder, params, encoder_file, batch, epoch, latent, freeze, transfer=True):
     """
     Train a multiclass type classifier
@@ -230,7 +232,7 @@ def train_auto_encoder(version_tag, input_folder, output_folder, noise_folder, p
         enc.set_weights(_enc.get_weights())
         ae.set_weights(_ae.get_weights())
     w_before = enc.layers[1].get_weights()[0].flatten()
-    train(input_folder, noises, params, ae, batch, epochs)
+    train(input_folder, output_folder, noises, params, enc, ae, batch, epochs)
     w_after = enc.layers[1].get_weights()[0].flatten()
     print("DELTA W:", np.sum(np.square(w_before - w_after)))
     enc.save('{}/encoder.h5'.format(output_folder))

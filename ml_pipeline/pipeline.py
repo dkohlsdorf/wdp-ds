@@ -17,7 +17,7 @@ from plots import *
 from sequence_embedder import *
 from audio_collection import *
 from audio import * 
-#from structured import *
+from structured import *
 from utils import * 
 from data_augmentation import * 
 
@@ -171,7 +171,7 @@ def train_silence(version_tag, input_folder, output_folder, params, encoder_file
     x_test = []
     y_train = []
     y_test = []
-    for (x, y, _, _, _) in dataset(input_folder, params, sil, True):
+    for (x, y, f, _, _) in dataset(input_folder, params, sil, True):
         if np.random.uniform() > 0.6:
             x_test.append(x)
             y_test.append(y)
@@ -385,8 +385,8 @@ if __name__== "__main__":
         output       = c['output']
         transfer     = c['transfer']
         freeze       = c['freeze'] 
-        train_auto_encoder(version, unsupervised, output, silence, params, latent, batch, epochs)
-        evaluate_encoder(version, unsupervised, output, "{}/encoder.h5".format(output), params, viz_k)
+        #train_auto_encoder(version, unsupervised, output, silence, params, latent, batch, epochs)
+        #evaluate_encoder(version, unsupervised, output, "{}/encoder.h5".format(output), params, viz_k)
         train_silence(version, silence, output, params, "{}/encoder.h5".format(output), batch, epochs_sup, latent, transfer)
         train_type(version, type_class, output, params, "{}/encoder.h5".format(output), batch, epochs_sup, latent, transfer)
         test_reconstruction(reconstruct, output, params)

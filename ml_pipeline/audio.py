@@ -68,7 +68,7 @@ def dataset(folder, params, label_func, shuffle):
     :returns: iterator (spectrogram, label, filename, start, stop)
     """
     for filename in os.listdir(folder):
-        if filename.endswith('.wav'):
+        if filename.endswith('.wav') or filename.startswith('cluster') or filename.startswith('noise'):
             path = "{}/{}".format(folder, filename)
             spec_iter = labeled_spectrogram_windows(path, params, label_func, shuffle=shuffle)
             for x in spec_iter:

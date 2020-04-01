@@ -6,7 +6,7 @@ highpass     : 25
 latent       : 128 
 batch        : 25
 version      : "v2.0"
-epochs       : 10
+epochs       : 5
 epochs_sup   : 10
 viz_k        : 100
 sil          : 'data/classification_noise'

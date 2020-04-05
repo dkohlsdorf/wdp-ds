@@ -390,7 +390,7 @@ if __name__== "__main__":
         freeze       = c['freeze'] 
         #train_auto_encoder(version, unsupervised, output, silence, params, latent, batch, epochs)
         #evaluate_encoder(version, unsupervised, output, "{}/encoder.h5".format(output), params, viz_k)
-       # train_silence(version, silence, output, params, "{}/encoder.h5".format(output), batch, epochs_sup, latent, freeze, transfer)
+        #train_silence(version, silence, output, params, "{}/encoder.h5".format(output), batch, epochs_sup, latent, freeze, transfer)
         train_type(version, type_class, output, params, "{}/encoder.h5".format(output), batch, epochs_sup, latent, freeze, transfer)
         test_reconstruction(reconstruct, output, params)
     elif len(sys.argv) == 3 and sys.argv[1] == 'induction':
@@ -408,4 +408,4 @@ if __name__== "__main__":
         signature_whistles(inp, output, embedder) 
         sequence_clustering(inp, output, embedder)
         annotate(output, enc_path)
-B
+

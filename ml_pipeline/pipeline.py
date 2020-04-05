@@ -113,6 +113,7 @@ def train_type(version_tag, input_folder, output_folder, params, encoder_file, b
     :param epochs: number of training epochs
     """
     if transfer:
+        print(encoder_file)
         enc = load_model(encoder_file)
     else:
         _, enc = auto_encoder(
@@ -255,7 +256,8 @@ def evaluate_encoder(version_tag, input_folder, output_folder, encoder_file, par
     visualize_2dfilters(output_folder, enc, [1], n_rows = 8)    
     x = np.stack([x.reshape(x.shape[0], x.shape[1], 1) for (x,_,_,_,_) in dataset(
         input_folder, params, no_label, False
-    )])
+    ) if np.random.uniform() < 0.1])
+    print(x.shape)
     h = enc.predict(x)
     visualize_embedding("{}/embeddings.png".format(output_folder), h, x, k)
 
@@ -380,6 +382,7 @@ if __name__== "__main__":
         epochs_sup   = c['epochs_sup']
         viz_k        = c['viz_k']
         silence      = c['sil']
+        type_class   = c['type_class']
         unsupervised = c['unsupervised']
         reconstruct  = c['reconstruct'] 
         output       = c['output']
@@ -387,8 +390,8 @@ if __name__== "__main__":
         freeze       = c['freeze'] 
         #train_auto_encoder(version, unsupervised, output, silence, params, latent, batch, epochs)
         #evaluate_encoder(version, unsupervised, output, "{}/encoder.h5".format(output), params, viz_k)
-        train_silence(version, silence, output, params, "{}/encoder.h5".format(output), batch, epochs_sup, latent, transfer)
-        train_type(version, type_class, output, params, "{}/encoder.h5".format(output), batch, epochs_sup, latent, transfer)
+       # train_silence(version, silence, output, params, "{}/encoder.h5".format(output), batch, epochs_sup, latent, freeze, transfer)
+        train_type(version, type_class, output, params, "{}/encoder.h5".format(output), batch, epochs_sup, latent, freeze, transfer)
         test_reconstruction(reconstruct, output, params)
     elif len(sys.argv) == 3 and sys.argv[1] == 'induction':
         c = yaml.load(open(sys.argv[2]))
@@ -405,3 +408,4 @@ if __name__== "__main__":
         signature_whistles(inp, output, embedder) 
         sequence_clustering(inp, output, embedder)
         annotate(output, enc_path)
+B

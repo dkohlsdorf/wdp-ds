@@ -267,7 +267,7 @@ def test_reconstruction(folder, out, params):
     Reconstruct 100 examples using the auto encoder
     '''
     ae = load_model('{}/auto_encoder.h5'.format(out))
-    gen = pipe.dataset(folder, params, no_label, True)
+    gen = dataset(folder, params, no_label, True)
     i = 0
     plt.figure(figsize=(40, 40))
     for (x, _, f, _, _) in gen:
@@ -391,7 +391,7 @@ if __name__== "__main__":
         #train_auto_encoder(version, unsupervised, output, silence, params, latent, batch, epochs)
         #evaluate_encoder(version, unsupervised, output, "{}/encoder.h5".format(output), params, viz_k)
         #train_silence(version, silence, output, params, "{}/encoder.h5".format(output), batch, epochs_sup, latent, freeze, transfer)
-        train_type(version, type_class, output, params, "{}/encoder.h5".format(output), batch, epochs_sup, latent, freeze, transfer)
+        #train_type(version, type_class, output, params, "{}/encoder.h5".format(output), batch, epochs_sup, latent, freeze, transfer)
         test_reconstruction(reconstruct, output, params)
     elif len(sys.argv) == 3 and sys.argv[1] == 'induction':
         c = yaml.load(open(sys.argv[2]))

@@ -113,4 +113,4 @@ class SpectrogramGenerator:
                     if noise:
                         yield additive_noise(_x[i-self.params.spec_win:i], self.noises), additive_noise(_x[i-self.params.spec_win:i], self.noises), meta + '_add_noise'
                     else:
-                        yield _x[i-self.params.spec_win:i], additive_noise(_x[i-self.params.spec_win:i], self.noises), meta
+                        yield _x[i-self.params.spec_win:i], _x[i-self.params.spec_win:i], meta

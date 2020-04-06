@@ -17,7 +17,7 @@ from plots import *
 from sequence_embedder import *
 from audio_collection import *
 from audio import * 
-from structured import *
+#from structured import *
 from utils import * 
 from data_augmentation import * 
 
@@ -213,9 +213,9 @@ def train_auto_encoder(version_tag, input_folder, output_folder, noise_folder, p
     """
     print("Training Auto Encoder: {}".format(version_tag))
     noises = []
-    print("\t loading noises")
-    if noises is not None:
-        for filename in os.listdir('data/classification_noise/'):
+    if noise_folder is not None:
+        print("\t loading noises")
+        for filename in os.listdir(noise_folder):
             if filename.startswith('noise'):
                 p = "data/classification_noise/{}".format(filename)
                 for spectrogram,_,_,_ in spectrogram_windows(p, params):

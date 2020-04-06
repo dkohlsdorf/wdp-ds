@@ -43,7 +43,7 @@ class TypeExtraction(namedtuple("Induction", "embeddings starts stops types file
         files      = [] 
         print("- Working on embedding {}".format(path))
         regions = embedder.embed(path)
-        for x, f, start, stop, t, c in regions:
+        for x, f, start, stop, t in regions:
             embeddings.append(x)
             starts.append(start)
             stops.append(stop)

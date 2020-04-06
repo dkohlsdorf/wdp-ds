@@ -214,12 +214,13 @@ def train_auto_encoder(version_tag, input_folder, output_folder, noise_folder, p
     print("Training Auto Encoder: {}".format(version_tag))
     noises = []
     print("\t loading noises")
-    for filename in os.listdir('data/classification_noise/'):
-        if filename.startswith('noise'):
-            p = "data/classification_noise/{}".format(filename)
-            for spectrogram,_,_,_ in spectrogram_windows(p, params):
-                noises.append(spectrogram)
-    print("\t noise windows: {}".format(len(noises)))
+    if noises is not None:
+        for filename in os.listdir('data/classification_noise/'):
+            if filename.startswith('noise'):
+                p = "data/classification_noise/{}".format(filename)
+                for spectrogram,_,_,_ in spectrogram_windows(p, params):
+                    noises.append(spectrogram)
+        print("\t noise windows: {}".format(len(noises)))
 
     ae, enc = auto_encoder(
         (params.spec_win, params.n_fft_bins, 1), latent
@@ -388,7 +389,7 @@ if __name__== "__main__":
         output       = c['output']
         transfer     = c['transfer']
         freeze       = c['freeze'] 
-        train_auto_encoder(version, unsupervised, output, silence, params, latent, batch, epochs)
+        train_auto_encoder(version, unsupervised, output, None, params, latent, batch, epochs)
         evaluate_encoder(version, unsupervised, output, "{}/encoder.h5".format(output), params, viz_k)
         train_silence(version, silence, output, params, "{}/encoder.h5".format(output), batch, epochs_sup, latent, freeze, transfer)
         train_type(version, type_class, output, params, "{}/encoder.h5".format(output), batch, epochs_sup, latent, freeze, transfer)

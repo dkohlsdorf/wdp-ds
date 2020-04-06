@@ -108,7 +108,8 @@ class SpectrogramGenerator:
                         meta = 'shrink_region'
                         _x = shrink(x, by=by)
                 for i in range(self.params.spec_win, len(_x), self.params.spec_step):
-                    noise = np.random.uniform() > 0.25
+                    noise  = np.random.uniform() > 0.25
+                    noise &= len(self.noises) > 0
                     if noise:
                         yield additive_noise(_x[i-self.params.spec_win:i], self.noises), additive_noise(_x[i-self.params.spec_win:i], self.noises), meta + '_add_noise'
                     else:

@@ -17,7 +17,7 @@ from plots import *
 from sequence_embedder import *
 from audio_collection import *
 from audio import * 
-#from structured import *
+from structured import *
 from utils import * 
 from data_augmentation import * 
 

@@ -9,7 +9,6 @@ os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 from tensorflow.keras.backend import set_learning_phase
 import datetime
 
-from tokens import *
 from tensorflow.keras.models import load_model
 from feature_extractor import *
 from classifier import *

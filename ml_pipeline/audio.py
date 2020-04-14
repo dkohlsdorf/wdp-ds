@@ -1,9 +1,11 @@
 import numpy as np
 import random
 import os
+import tensorflow as tf
+
+from pydub import AudioSegment
 
 from numpy.fft import fft
-from scipy.io import wavfile
 from collections import namedtuple
 
 class WindowParams(namedtuple('WindowParams', 'spec_win spec_step fft_win fft_step highpass')):
@@ -51,10 +53,22 @@ class WindowParams(namedtuple('WindowParams', 'spec_win spec_step fft_win fft_st
 
         :param audio_samples: number of audio samples in audio_file
 
-        :return: length of the window
+        :returns: length of the window
         """
         return (audio_samples - self.win_len) // self.step + 1
 
+def read(path):
+    '''
+    Read an audio file from local file system or cloud storage
+    all all formats that ffmpeg supports are supported
+
+    :param path: pathlike object
+    :returns: audio file with shape (time, channels)
+    '''
+    with tf.io.gfile.GFile(path, "rb") as f:
+        x = AudioSegment.from_file(f)
+        x = np.array(x.get_array_of_samples()).reshape(int(x.frame_count()),  x.channels)
+    return x
 
 def dataset(folder, params, label_func, shuffle):
     """
@@ -67,7 +81,7 @@ def dataset(folder, params, label_func, shuffle):
 
     :returns: iterator (spectrogram, label, filename, start, stop)
     """
-    for filename in os.listdir(folder):
+    for filename in tf.io.gfile.listdir(folder):
         if filename.endswith('.wav') or filename.startswith('cluster') or filename.startswith('noise'):
             path = "{}/{}".format(folder, filename)
             spec_iter = labeled_spectrogram_windows(path, params, label_func, shuffle=shuffle)
@@ -106,7 +120,7 @@ def spectrogram_windows(filename, params, shuffle=False):
     :returns: iterator (spectrogram, filename, start, stop)
     """
     assert isinstance(params, WindowParams)
-    _, data = wavfile.read(filename)
+    data = read(filename)
     if len(data.shape) > 1:
         data = np.mean(data, axis=1) 
     n = len(data)
@@ -135,7 +149,7 @@ def spectrogram_regions(filename, params, regions):
     :param regions: sequence of start, stop tuples
     :returns: spectrogram of the normalized region
     '''
-    _, data = wavfile.read(filename)
+    data = read(filename)
     if len(data.shape) > 1:
         data = np.mean(data, axis=1) 
     for (start, stop) in regions:
@@ -176,7 +190,7 @@ def audio_regions(filename, regions):
     :param regions: sequence of start, stop tuples
     :returns: audio snippets
     '''
-    _, data = wavfile.read(filename)
+    data = read(filename)
     if len(data.shape) > 1:
         data = np.mean(data, axis=1) 
     for (start, stop) in regions:

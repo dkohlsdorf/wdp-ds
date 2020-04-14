@@ -5,10 +5,12 @@ import pickle
 import numpy as np
 import subprocess  
 import os
-os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3' 
-from tensorflow.keras.backend import set_learning_phase
 import datetime
+import tensorflow as tf
 
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3' 
+
+from tensorflow.keras.backend import set_learning_phase
 from tensorflow.keras.models import load_model
 from feature_extractor import *
 from classifier import *
@@ -214,9 +216,9 @@ def train_auto_encoder(version_tag, input_folder, output_folder, noise_folder, p
     noises = []
     if noise_folder is not None:
         print("\t loading noises")
-        for filename in os.listdir(noise_folder):
+        for filename in tf.io.gfile.listdir(noise_folder):
             if filename.startswith('noise'):
-                p = "data/classification_noise/{}".format(filename)
+                p = "{}/{}".format(noise_folder, filename)
                 for spectrogram,_,_,_ in spectrogram_windows(p, params):
                     noises.append(spectrogram)
         print("\t noise windows: {}".format(len(noises)))
@@ -289,7 +291,7 @@ def sequence_clustering(inp, out, embedder, min_support=3):
     Hierarchical cluster connected regions of whistles and bursts
     '''
     print("Sequence Clustering")
-    for filename in os.listdir(inp):
+    for filename in tf.io.gfile.listdir(inp):
         if filename.endswith('.wav'):
             name = filename.replace(".wav", "")
             in_path  = "{}/{}".format(inp, filename)
@@ -333,7 +335,7 @@ def sequence_clustering(inp, out, embedder, min_support=3):
 
     
 def signature_whistles(inp, out, embedder):
-    for filename in os.listdir(inp):
+    for filename in tf.io.gfile.listdir(inp):
         if filename.endswith('.wav'):
             name = filename.replace(".wav", "")
             in_path  = "{}/{}".format(inp, filename)
@@ -388,7 +390,7 @@ if __name__== "__main__":
         output       = c['output']
         transfer     = c['transfer']
         freeze       = c['freeze'] 
-        train_auto_encoder(version, unsupervised, output, None, params, latent, batch, epochs)
+        #train_auto_encoder(version, unsupervised, output, None, params, latent, batch, epochs)
         evaluate_encoder(version, unsupervised, output, "{}/encoder.h5".format(output), params, viz_k)
         train_silence(version, silence, output, params, "{}/encoder.h5".format(output), batch, epochs_sup, latent, freeze, transfer)
         train_type(version, type_class, output, params, "{}/encoder.h5".format(output), batch, epochs_sup, latent, freeze, transfer)

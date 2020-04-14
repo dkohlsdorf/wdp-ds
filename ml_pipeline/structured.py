@@ -157,7 +157,7 @@ def hierarchical_clustering(annotation_path, max_dist = 5.0):
                                                     affinity='precomputed')
     re                    = RegionExtractors(0)
     overlapping           = []
-    for file in os.listdir(annotation_path):        
+    for file in tf.io.gfile.listdir(annotation_path):        
         if file.startswith("embedding") and file.endswith(".csv"):
             path = "{}/{}".format(annotation_path, file)
             print("\tReading {}".format(path))
@@ -224,7 +224,7 @@ def annotate(annotation_path, encoding_path):
     sequences = []
     header = ['id', 'year', 'encounter', 'tags', 'activity', 'anno', 'name']
     encounters = pd.read_csv(encoding_path, names=header, header=None)
-    for file in os.listdir(annotation_path):       
+    for file in tf.io.gfile.listdir(annotation_path):       
         if file.startswith("seq_clustering_log") and file.endswith(".csv"):
             path       = "{}/{}".format(annotation_path, file)
             header     = ["start", "stop", "filename", "cluster", "index"]

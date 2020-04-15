@@ -20,7 +20,6 @@ from audio_collection import *
 from audio import * 
 from structured import *
 from utils import * 
-from data_augmentation import * 
 
 
 def no_label(f,x):
@@ -80,11 +79,10 @@ def train(folder, output_folder, noises, params, enc, ae, batch_size=10, epochs=
     :param epochs: number of runs over the complete dataset
     :param keep: function from label to keep or not
     """
-    augmenter = SpectrogramGenerator(folder, params, noises)
     n_processed = 0
     for epoch in range(epochs):
         batch = []
-        for x, y, meta in augmenter.generate():
+        for (x, y, _, _, _) in dataset(folder, params, lable, True):
             if keep(y):
                 batch.append((x,y))
                 total_loss = 0.0

@@ -63,7 +63,7 @@ def read(path):
     all all formats that ffmpeg supports are supported
 
     :param path: pathlike object
-    :returns: audio file with shape (time, channels)
+    :returns: audio file with shape (time, )
     '''
     with tf.io.gfile.GFile(path, "rb") as f:
         x = AudioSegment.from_file(f)

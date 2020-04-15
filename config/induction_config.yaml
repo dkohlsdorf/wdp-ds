@@ -4,7 +4,7 @@ fft_win      : 512
 fft_step     : 64
 highpass     : 25
 k            : 100
-output       : 'models/v2_lstm_v7/'
+output       : 'models/v2_lstm_v8/'
 input        : '/media/dkohlsdorf/GODZILLA/2011_wav/'
 version      : "v2.0"
 encoding     : 'data/encodings.csv'

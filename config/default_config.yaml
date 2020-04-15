@@ -13,6 +13,6 @@ sil          : 'data/classification_noise'
 type_class   : 'data/classification'
 unsupervised : 'data/unsupervised'
 reconstruct  : 'data/reconstruction'
-output       : 'models/v2_lstm_v7/'
+output       : 'models/v2_lstm_v8/'
 transfer     : true
 freeze       : false

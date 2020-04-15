@@ -82,7 +82,7 @@ def train(folder, output_folder, noises, params, enc, ae, batch_size=10, epochs=
     n_processed = 0
     for epoch in range(epochs):
         batch = []
-        for (x, y, _, _, _) in dataset(folder, params, lable, True):
+        for (x, y, _, _, _) in dataset(folder, params, auto_encode, True):
             if keep(y):
                 batch.append((x,y))
                 total_loss = 0.0
@@ -390,7 +390,7 @@ if __name__== "__main__":
         output       = c['output']
         transfer     = c['transfer']
         freeze       = c['freeze'] 
-        #train_auto_encoder(version, unsupervised, output, None, params, latent, batch, epochs)
+        train_auto_encoder(version, unsupervised, output, None, params, latent, batch, epochs)
         evaluate_encoder(version, unsupervised, output, "{}/encoder.h5".format(output), params, viz_k)
         train_silence(version, silence, output, params, "{}/encoder.h5".format(output), batch, epochs_sup, latent, freeze, transfer)
         train_type(version, type_class, output, params, "{}/encoder.h5".format(output), batch, epochs_sup, latent, freeze, transfer)

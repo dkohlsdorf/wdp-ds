@@ -163,7 +163,7 @@ def hierarchical_clustering(annotation_path, max_dist = 5.0):
             print("\tReading {}".format(path))
             header                = ["filename", "start", "stop", "type", "embedding"]
             df                    = pd.read_csv(path, sep="\t", header = None, names=header)
-            signals               = df[df['type'] >= 1]
+            signals               = df[df['type'] >= 0]
             signals['embedding']  = df['embedding'].apply(
                 lambda x: np.array([float(i) for i in x.split(",")]))
             annotated             = [(row['start'], row['stop'], row['filename'], row['embedding'])
@@ -191,7 +191,8 @@ def hierarchical_clustering(annotation_path, max_dist = 5.0):
     
 def signature_whistle_detector(annotation_path, min_group = 3, max_samples_appart=48000 * 30, max_dist = 5.0):
     '''
-    Extract signature whistles
+    Extract signature whistles 
+    Easy experiment to check distance thresholds
 
     :param annotation_path: path to an annotation csv file
     :param min_group: minimum size of a group of whistles in order to be considered a signature whistle

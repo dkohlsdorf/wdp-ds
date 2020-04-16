@@ -57,6 +57,7 @@ class WindowParams(namedtuple('WindowParams', 'spec_win spec_step fft_win fft_st
         """
         return (audio_samples - self.win_len) // self.step + 1
 
+    
 def read(path):
     '''
     Read an audio file from local file system or cloud storage
@@ -66,9 +67,14 @@ def read(path):
     :returns: audio file with shape (time, )
     '''
     with tf.io.gfile.GFile(path, "rb") as f:
-        x = AudioSegment.from_file(f)
-        x = np.array(x.get_array_of_samples()).reshape(int(x.frame_count()),  x.channels)
+        try:
+            x = AudioSegment.from_file(f)
+            x = np.array(x.get_array_of_samples()).reshape(int(x.frame_count()),  x.channels)
+        except Exception as e:
+            print("Skip file {} = {}".format(path, e))
+            x = None
     return x
+
 
 def dataset(folder, params, label_func, shuffle):
     """
@@ -84,6 +90,7 @@ def dataset(folder, params, label_func, shuffle):
     for filename in tf.io.gfile.listdir(folder):
         if filename.endswith('.wav') or filename.startswith('cluster') or filename.startswith('noise'):
             path = "{}/{}".format(folder, filename)
+            print(path)
             spec_iter = labeled_spectrogram_windows(path, params, label_func, shuffle=shuffle)
             for x in spec_iter:
                 yield x
@@ -121,23 +128,24 @@ def spectrogram_windows(filename, params, shuffle=False):
     """
     assert isinstance(params, WindowParams)
     data = read(filename)
-    if len(data.shape) > 1:
-        data = np.mean(data, axis=1) 
-    n = len(data)
-    n_windows = params.len(n)
-    ordered   = [i for i in range(0, n_windows)]
-    if shuffle:
-        random.shuffle(ordered)
-    for i in ordered:
-        start, stop = params.range(i)
-        audio = data[start:stop]
-        spec  = fwd_spectrogram(audio, params.fft_win_filtered, params.fft_step)
-        dft_start = params.fft_win - params.n_fft_bins
-        dft_stop  = params.fft_win 
-        spec  = spec[:, dft_start:dft_stop]
-        mu      = np.mean(spec)
-        sigma   = np.std(spec) + 1.0
-        yield ((spec - mu) / sigma, filename, start, stop)
+    if data is not None:
+        if len(data.shape) > 1:
+            data = np.mean(data, axis=1) 
+        n = len(data)
+        n_windows = params.len(n)
+        ordered   = [i for i in range(0, n_windows)]
+        if shuffle:
+            random.shuffle(ordered)
+        for i in ordered:
+            start, stop = params.range(i)
+            audio = data[start:stop]
+            spec  = fwd_spectrogram(audio, params.fft_win_filtered, params.fft_step)
+            dft_start = params.fft_win - params.n_fft_bins
+            dft_stop  = params.fft_win 
+            spec  = spec[:, dft_start:dft_stop]
+            mu      = np.mean(spec)
+            sigma   = np.std(spec) + 1.0
+            yield ((spec - mu) / sigma, filename, start, stop)
 
 
 def spectrogram_regions(filename, params, regions):

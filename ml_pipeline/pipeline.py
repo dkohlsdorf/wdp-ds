@@ -290,8 +290,9 @@ def sequence_clustering(inp, out, embedder, min_support=3):
     '''
     print("Sequence Clustering")
     for filename in tf.io.gfile.listdir(inp):
-        if filename.endswith('.wav'):
+        if filename.endswith('.ogg') or filename.endswith('.wav'):
             name = filename.replace(".wav", "")
+            name = name.replace(".ogg", "")            
             in_path  = "{}/{}".format(inp, filename)
             out_path = "{}/embedding_{}.csv".format(out, name)
             print("\t {}".format(in_path))
@@ -334,8 +335,9 @@ def sequence_clustering(inp, out, embedder, min_support=3):
     
 def signature_whistles(inp, out, embedder):
     for filename in tf.io.gfile.listdir(inp):
-        if filename.endswith('.wav'):
+        if filename.endswith('.ogg') or filename.endswith('.wav'):
             name = filename.replace(".wav", "")
+            name = name.replace(".ogg", "")            
             in_path  = "{}/{}".format(inp, filename)
             out_path = "{}/embedding_{}.csv".format(out, name)
             log_path = "{}/signature_log_{}.csv".format(out, name)

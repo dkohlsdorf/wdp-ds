@@ -7,10 +7,9 @@ from scipy.sparse import lil_matrix
 
 from tensorflow.keras.preprocessing.sequence import pad_sequences
 from sklearn.model_selection import train_test_split
-from sklearn.cluster import AgglomerativeClustering
 from collections import namedtuple
 from dtw import DTW
-
+from hierarchical_clustering import Agglomerative
 
 class TypeExtraction(namedtuple("Induction", "embeddings starts stops types files")):
     """
@@ -153,10 +152,6 @@ def hierarchical_clustering(annotation_path, max_dist = 5.0):
     '''
     Hierarchical clustering of annotations
     '''
-    agg                   = AgglomerativeClustering(distance_threshold=max_dist,
-                                                    n_clusters=None,
-                                                    linkage='average',
-                                                    affinity='precomputed')
     re                    = RegionExtractors(0)
     overlapping           = []
     for file in tf.io.gfile.listdir(annotation_path):        
@@ -186,7 +181,8 @@ def hierarchical_clustering(annotation_path, max_dist = 5.0):
                 if d < max_dist:
                     dist[i, j] = d / (len(x) * len(y))
                     dist[j, i] = d / (len(x) * len(y))
-    clustering = agg.fit_predict(dist)
+
+    agg = Agglomerative(dist, max_dist)
     pkl.dump(agg, open("{}/agg.pkl".format(annotation_path), "wb"))
     for c, (start, stop, f, _) in zip(clustering, overlapping):
         yield start, stop, f, c

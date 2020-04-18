@@ -2,6 +2,8 @@ import numpy as np
 import pandas as pd
 import os 
 import pickle as pkl
+import tensorflow as tf
+from scipy.sparse import lil_matrix
 
 from tensorflow.keras.preprocessing.sequence import pad_sequences
 from sklearn.model_selection import train_test_split
@@ -174,15 +176,16 @@ def hierarchical_clustering(annotation_path, max_dist = 5.0):
             
     n = len(overlapping)
     print("\t found {} signals".format(n))
-    dist = np.zeros((n, n))
+    dist = lil_matrix((n, n))
     for i, (start_x, stop_x, f_x, embedding_x) in enumerate(overlapping):
         for j, (start_y, stop_y, f_y, embedding_y) in enumerate(overlapping):
             if i < j:
                 x = np.array([embedding_x]).reshape(len(embedding_x), 256)
                 y = np.array([embedding_y]).reshape(len(embedding_y), 256)
                 d, _       = dtw.align(x, y) 
-                dist[i, j] = d / (len(x) * len(y))
-                dist[j, i] = d / (len(x) * len(y))
+                if d < max_dist:
+                    dist[i, j] = d / (len(x) * len(y))
+                    dist[j, i] = d / (len(x) * len(y))
     clustering = agg.fit_predict(dist)
     pkl.dump(agg, open("{}/agg.pkl".format(annotation_path), "wb"))
     for c, (start, stop, f, _) in zip(clustering, overlapping):

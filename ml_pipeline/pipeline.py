@@ -284,7 +284,7 @@ def test_reconstruction(folder, out, params):
     plt.close()
 
 
-def sequence_clustering(inp, out, embedder, min_support=3):    
+def sequence_clustering(inp, out, embedder, min_support=1):    
     '''
     Hierarchical cluster connected regions of whistles and bursts
     '''

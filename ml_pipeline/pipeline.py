@@ -299,6 +299,8 @@ def sequence_clustering(inp, out, embedder, min_support=1):
             if not os.path.isfile(out_path):
                 inducer = TypeExtraction.from_audiofile(in_path, embedder)
                 inducer.save(out_path, append=True)
+    
+    
     print("\n clustering:")
     clusters = [x for x in hierarchical_clustering(out)]            
     grouped_by_filename = {}
@@ -331,7 +333,6 @@ def sequence_clustering(inp, out, embedder, min_support=1):
                         audio_bank.write(audio_snippet)
             audio_bank.close()
     
-
     
 def signature_whistles(inp, out, embedder):
     for filename in tf.io.gfile.listdir(inp):

@@ -10,4 +10,4 @@
 + `sequence_embedder.py`: apply the model to larger files
 + `dtw.pyx`: cython implementation of dynamic programming
 + `structured.py`: structuring dolphin communication 
-+ `data_augmentation.py`: augment data
++ `sequence_hashing.pyx`: using symbolic aggregate approximation for bucketing

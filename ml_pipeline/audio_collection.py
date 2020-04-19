@@ -1,6 +1,8 @@
 import wave
-from scipy.io import wavfile
 import struct
+import numpy as np
+
+from scipy.io import wavfile
 
 
 class AudioSnippetCollection:
@@ -23,12 +25,10 @@ class AudioSnippetCollection:
         
         :param data: some data to attach
         '''
-        for i in range(0, len(data)):
-            b = struct.pack('<i', int(data[i]))
-            self.obj.writeframesraw(b)
-        for i in range(frames):
-            b = struct.pack('<i', 0)
-            self.obj.writeframesraw(b)
+        b = bytearray(data.astype(np.int32))
+        self.obj.writeframesraw(b)
+        b = bytearray(np.zeros(frames, dtype=np.int32))
+        self.obj.writeframesraw(b)
     
     def close(self):
         '''

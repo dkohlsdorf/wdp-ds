@@ -225,6 +225,5 @@ def fwd_spectrogram(audio, win=512, step=64):
     hanning = np.hanning(win)
     for i in range(win, len(audio), step):
         dft = np.abs(fft(audio[i - win: i] * hanning))
-        print(dft.shape)
         spectrogram.append(dft)
     return np.array(spectrogram)

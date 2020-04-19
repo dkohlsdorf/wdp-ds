@@ -1,5 +1,6 @@
 import numpy as np
 
+
 cdef class Agglomerative:
     cdef:
         cdef int[:] assignment

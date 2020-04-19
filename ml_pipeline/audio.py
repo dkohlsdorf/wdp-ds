@@ -129,7 +129,9 @@ def spectrogram_windows(filename, params, shuffle=False):
     data = read(filename)
     if data is not None:
         if len(data.shape) > 1:
-            data = np.mean(data, axis=1) 
+            data = np.mean(data, axis=1)
+        else:
+            data = data.reshape((len(data)))
         n = len(data)
         n_windows = params.len(n)
         ordered   = [i for i in range(0, n_windows)]
@@ -159,6 +161,9 @@ def spectrogram_regions(filename, params, regions):
     data = read(filename)
     if len(data.shape) > 1:
         data = np.mean(data, axis=1) 
+    else:
+        data = data.reshape((len(data)))
+
     for (start, stop) in regions:
         audio = data[start:stop]
         spec  = fwd_spectrogram(audio, params.fft_win_filtered, params.fft_step)
@@ -200,6 +205,8 @@ def audio_regions(filename, regions):
     data = read(filename)
     if len(data.shape) > 1:
         data = np.mean(data, axis=1) 
+    else:
+        data = data.reshape((len(data)))
     for (start, stop) in regions:
         yield data[start:stop]
 
@@ -218,5 +225,6 @@ def fwd_spectrogram(audio, win=512, step=64):
     hanning = np.hanning(win)
     for i in range(win, len(audio), step):
         dft = np.abs(fft(audio[i - win: i] * hanning))
+        print(dft.shape)
         spectrogram.append(dft)
     return np.array(spectrogram)

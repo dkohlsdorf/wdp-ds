@@ -8,8 +8,9 @@ from scipy.sparse import lil_matrix
 from tensorflow.keras.preprocessing.sequence import pad_sequences
 from sklearn.model_selection import train_test_split
 from collections import namedtuple
-from dtw import DTW
-from hierarchical_clustering import Agglomerative
+from ml_pipeline.dtw import DTW
+from sklearn.cluster import AgglomerativeClustering
+
 
 class TypeExtraction(namedtuple("Induction", "embeddings starts stops types files")):
     """
@@ -126,6 +127,7 @@ def groupBy(sequences, grouping_cond, window_size=None):
             else:
                 if window_size is None:
                     groups.append(current)
+                    print(len(current))
                     current = [x]
     return [x for x in mk_region(groups)]
 
@@ -182,7 +184,8 @@ def hierarchical_clustering(annotation_path, max_dist = 5.0):
                     dist[i, j] = d / (len(x) * len(y))
                     dist[j, i] = d / (len(x) * len(y))
 
-    agg = Agglomerative(dist, max_dist)
+    agg = AgglomerativeClustering(distance_threshold = 5.0, linkage = 'average', affinity='precomputed')
+    clustering = agg.fit_predict(dist)
     pkl.dump(agg, open("{}/agg.pkl".format(annotation_path), "wb"))
     for c, (start, stop, f, _) in zip(clustering, overlapping):
         yield start, stop, f, c

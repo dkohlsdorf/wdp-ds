@@ -3,7 +3,7 @@ from tensorflow.keras.models import *
 
 
 KERNEL_SIZE = (8,8)
-N_FILTERS = 256
+N_FILTERS = 512
 
 
 def encoder(in_shape, latent_dim):
@@ -20,6 +20,7 @@ def encoder(in_shape, latent_dim):
     loc = Conv2D(N_FILTERS, kernel_size=KERNEL_SIZE, activation='relu', padding='same')(inp) 
     loc = MaxPool2D(pool_size=(1, dft_dim))(loc)
     loc = Reshape((in_shape[0], N_FILTERS))(loc)
+    loc = Conv1D(N_FILTERS // 2, kernel_size=KERNEL_SIZE[0], activation='relu', padding='same')(loc) 
     x   = BatchNormalization()(loc)
     x   = Bidirectional(LSTM(latent_dim, return_sequences=True))(x)
     x   = LSTM(latent_dim)(x)            

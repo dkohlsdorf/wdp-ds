@@ -8,7 +8,7 @@ from scipy.sparse import lil_matrix
 from tensorflow.keras.preprocessing.sequence import pad_sequences
 from sklearn.model_selection import train_test_split
 from collections import namedtuple
-from ml_pipeline.dtw import DTW
+from dtw import DTW
 from sklearn.cluster import AgglomerativeClustering
 
 

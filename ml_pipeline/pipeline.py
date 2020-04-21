@@ -1,6 +1,5 @@
 import sys
 import yaml
-import pickle
 
 import numpy as np
 import subprocess  
@@ -19,7 +18,6 @@ from sequence_embedder import *
 from audio_collection import *
 from audio import * 
 from structured import *
-from utils import * 
 
 
 def no_label(f,x):
@@ -69,7 +67,7 @@ def auto_encode(f, x):
     return x
 
 
-def train(folder, output_folder, noises, params, enc, ae, batch_size=10, epochs=128, keep=lambda x: True):
+def train(folder, output_folder, params, enc, ae, batch_size=10, epochs=128, keep=lambda x: True):
     """
     Train the model for some epochs with a specific batch size
 
@@ -197,7 +195,7 @@ def train_silence(version_tag, input_folder, output_folder, params, encoder_file
     plt.close()
 
     
-def train_auto_encoder(version_tag, input_folder, output_folder, noise_folder, params, latent, batch, epochs):
+def train_auto_encoder(version_tag, input_folder, output_folder, params, latent, batch, epochs):
     """
     Train an auto encoder for feature embedding
 
@@ -211,16 +209,6 @@ def train_auto_encoder(version_tag, input_folder, output_folder, noise_folder, p
     :param epochs: number of training epochs
     """
     print("Training Auto Encoder: {}".format(version_tag))
-    noises = []
-    if noise_folder is not None:
-        print("\t loading noises")
-        for filename in tf.io.gfile.listdir(noise_folder):
-            if filename.startswith('noise'):
-                p = "{}/{}".format(noise_folder, filename)
-                for spectrogram,_,_,_ in spectrogram_windows(p, params):
-                    noises.append(spectrogram)
-        print("\t noise windows: {}".format(len(noises)))
-
     ae, enc = auto_encoder(
         (params.spec_win, params.n_fft_bins, 1), latent
     )
@@ -233,7 +221,7 @@ def train_auto_encoder(version_tag, input_folder, output_folder, noise_folder, p
         enc.set_weights(_enc.get_weights())
         ae.set_weights(_ae.get_weights())
     w_before = enc.layers[1].get_weights()[0].flatten()
-    train(input_folder, output_folder, noises, params, enc, ae, batch, epochs)
+    train(input_folder, output_folder, params, enc, ae, batch, epochs)
     w_after = enc.layers[1].get_weights()[0].flatten()
     print("DELTA W:", np.sum(np.square(w_before - w_after)))
     enc.save('{}/encoder.h5'.format(output_folder))
@@ -391,7 +379,7 @@ if __name__== "__main__":
         output       = c['output']
         transfer     = c['transfer']
         freeze       = c['freeze'] 
-        train_auto_encoder(version, unsupervised, output, None, params, latent, batch, epochs)
+        train_auto_encoder(version, unsupervised, output, params, latent, batch, epochs)
         evaluate_encoder(version, unsupervised, output, "{}/encoder.h5".format(output), params, viz_k)
         train_silence(version, silence, output, params, "{}/encoder.h5".format(output), batch, epochs_sup, latent, freeze, transfer)
         train_type(version, type_class, output, params, "{}/encoder.h5".format(output), batch, epochs_sup, latent, freeze, transfer)

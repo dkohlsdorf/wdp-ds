@@ -6,6 +6,8 @@ import subprocess
 import os
 import datetime
 import tensorflow as tf
+import matplotlib
+matplotlib.use('Agg')
 
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3' 
 
@@ -78,6 +80,7 @@ def train(folder, output_folder, params, enc, ae, batch_size=10, epochs=128, kee
     :param keep: function from label to keep or not
     """
     n_processed = 0
+    history = []
     for epoch in range(epochs):
         batch = []
         for (x, y, _, _, _) in dataset(folder, params, auto_encode, True):
@@ -88,12 +91,15 @@ def train(folder, output_folder, params, enc, ae, batch_size=10, epochs=128, kee
                     x = np.stack([x.reshape(x.shape[0], x.shape[1], 1) for x, _ in batch])
                     y = np.stack([y.reshape(y.shape[0], y.shape[1], 1) for _, y in batch])
                     loss = ae.train_on_batch(x=x, y=y)
+                    history.append(loss)
                     total_loss += loss
                     batch = []
                     if n_processed % 10 == 0:
                         print("#: {} EPOCH: {} LOSS: {}".format(n_processed, epoch, total_loss))
                         total_loss = 0.0
                     n_processed += 1
+        plt.plot(history)
+        plt.savefig('{}/history_{}.png'.format(output_folder, epoch))
         enc.save('{}/encoder_{}.h5'.format(output_folder, epoch))
         ae.save('{}/auto_encoder_{}.h5'.format(output_folder, epoch))
 

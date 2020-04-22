@@ -81,8 +81,10 @@ def train(folder, output_folder, params, enc, ae, batch_size=10, epochs=128, kee
     """
     n_processed = 0
     history = []
+    training_log = open('{}/loss.csv'.format(output_folder), 'w') 
     for epoch in range(epochs):
         batch = []
+        epoch_loss = 0.0
         for (x, y, _, _, _) in dataset(folder, params, auto_encode, True):
             if keep(y):
                 batch.append((x,y))
@@ -98,11 +100,14 @@ def train(folder, output_folder, params, enc, ae, batch_size=10, epochs=128, kee
                         print("#: {} EPOCH: {} LOSS: {}".format(n_processed, epoch, total_loss))
                         total_loss = 0.0
                     n_processed += 1
+                    epoch_loss += loss
+        training_log.write('{},{},{}\n'.format(epoch, n_processed, epoch_loss))
+        training_log.flush()
         plt.plot(history)
         plt.savefig('{}/history_{}.png'.format(output_folder, epoch))
         enc.save('{}/encoder_{}.h5'.format(output_folder, epoch))
         ae.save('{}/auto_encoder_{}.h5'.format(output_folder, epoch))
-
+    training_log.close()
     
 def train_type(version_tag, input_folder, output_folder, params, encoder_file, batch, epoch, latent, freeze, transfer=True):
     """

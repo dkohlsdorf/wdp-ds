@@ -90,6 +90,7 @@ def visualize_2dfilters(img_path, encoder, layers, n_rows = 8):
     :param n_rows: number of rows in the plot
     """
     for l in layers:
+        plt.figure(figsize=(200, 10))
         w = encoder.layers[l].get_weights()[0]
         n = w.shape[-1]
         for i in range(0, n):

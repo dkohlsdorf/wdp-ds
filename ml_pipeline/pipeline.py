@@ -109,6 +109,7 @@ def train(folder, output_folder, params, enc, ae, batch_size=10, epochs=128, kee
         ae.save('{}/auto_encoder_{}.h5'.format(output_folder, epoch))
     training_log.close()
     
+    
 def train_type(version_tag, input_folder, output_folder, params, encoder_file, batch, epoch, latent, freeze, transfer=True):
     """
     Train a multiclass type classifier
@@ -141,7 +142,7 @@ def train_type(version_tag, input_folder, output_folder, params, encoder_file, b
             y_train.append(y)
     x_train = np.stack(x_train)
     y_train = np.stack(y_train) 
-    cls_type.fit(x=x_train, y=y_train, batch_size=50, epochs=epoch)
+    cls_type.fit(x=x_train, y=y_train, batch_size=10, epochs=epoch)
     confusion = np.zeros((4,4))
     for x, y in zip(x_test, y_test):
             _y = np.argmax(cls_type.predict(x.reshape(1, x.shape[0], x.shape[1], 1)), axis=1)[0]
@@ -189,7 +190,7 @@ def train_silence(version_tag, input_folder, output_folder, params, encoder_file
             y_train.append(y)
     x_train = np.stack(x_train)
     y_train = np.stack(y_train) 
-    cls_sil.fit(x=x_train, y=y_train, batch_size=50, epochs=epoch)
+    cls_sil.fit(x=x_train, y=y_train, batch_size=5, epochs=epoch)
     cls_sil.save('{}/sil.h5'.format(output_folder))
 
     confusion = np.zeros((2,2))
@@ -299,7 +300,6 @@ def sequence_clustering(inp, out, embedder, min_support=1):
                 inducer = TypeExtraction.from_audiofile(in_path, embedder)
                 inducer.save(out_path, append=True)
     
-    
     print("\n clustering:")
     clusters = [x for x in hierarchical_clustering(out)]            
     grouped_by_filename = {}
@@ -390,8 +390,8 @@ if __name__== "__main__":
         output       = c['output']
         transfer     = c['transfer']
         freeze       = c['freeze'] 
-        train_auto_encoder(version, unsupervised, output, params, latent, batch, epochs)
-        evaluate_encoder(version, unsupervised, output, "{}/encoder.h5".format(output), params, viz_k)
+        #train_auto_encoder(version, unsupervised, output, params, latent, batch, epochs)
+        #evaluate_encoder(version, unsupervised, output, "{}/encoder.h5".format(output), params, viz_k)
         train_silence(version, silence, output, params, "{}/encoder.h5".format(output), batch, epochs_sup, latent, freeze, transfer)
         train_type(version, type_class, output, params, "{}/encoder.h5".format(output), batch, epochs_sup, latent, freeze, transfer)
         test_reconstruction(reconstruct, output, params)

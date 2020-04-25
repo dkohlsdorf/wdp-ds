@@ -13,8 +13,10 @@ def paa(double[:, :] sequence, int n):
     cdef int d = len(sequence[0])
     cdef int N = len(sequence)
     cdef int bucket = int(N / n)
-    cdef double[:, :] compressed = np.zeros((n, d))
     cdef int i = 0
+    cdef double[:, :] compressed = np.zeros((n, d))
+    if N < n:
+        return np.array(sequence)
     for i in range(n):
         compressed[i] = np.mean(sequence[i * bucket : (i + 1) * bucket])
     return np.array(compressed)
@@ -31,15 +33,23 @@ def saxnd(list sequences, int n, int m):
     '''
     cdef int d = len(sequences[0][0])
     cdef int N = len(sequences)
-    cdef int i = 0
+    cdef int i, j = 0
+    print("PAA")
     compressed = []
     for i in range(N):
         compressed.append(paa(sequences[i], n))
     compressed = np.vstack(compressed)
-    codebook = KMeans(n_clusters=m, n_init=10, max_iter=300)   
-    sequence = codebook.fit_predict(compressed) 
-    sequence = sequence.reshape((N, n))
-    return np.array(sequence)
+    print("Clustering")
+    codebook = KMeans(n_clusters=m, n_init=10, max_iter=300)
+    codebook.fit(compressed) 
+    codes = []
+    for i in range(N):
+        code = []
+        for j in range(len(compressed[i])):
+            code.append(codebook.predict([compressed[i][j]]))
+        print("Processing code: {}".format(code))
+        codes.append(code)
+    return codes
 
 
 def similarity_bucketing(list sequences, int n, int m):
@@ -52,7 +62,7 @@ def similarity_bucketing(list sequences, int n, int m):
     :returns: bucket id for each sequence
     '''
     cdef int N = len(sequences)
-    cdef int[:, :] codes = saxnd(sequences, n, m)
+    cdef list codes = saxnd(sequences, n, m)
     cdef int[:] buckets = np.zeros(N, dtype=np.int32)
     cdef int i = 0
     cdef int cur = 0

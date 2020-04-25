@@ -8,7 +8,7 @@ from scipy.sparse import lil_matrix
 from tensorflow.keras.preprocessing.sequence import pad_sequences
 from sklearn.model_selection import train_test_split
 from collections import namedtuple
-from dtw import DTW
+from ml_pipeline.dtw import DTW
 from sklearn.cluster import AgglomerativeClustering
 
 
@@ -127,7 +127,6 @@ def groupBy(sequences, grouping_cond, window_size=None):
             else:
                 if window_size is None:
                     groups.append(current)
-                    print(len(current))
                     current = [x]
     return [x for x in mk_region(groups)]
 

@@ -406,7 +406,6 @@ if __name__== "__main__":
         silence         = load_model("{}/sil.h5".format(output))
         type_classifier = load_model("{}/type.h5".format(output))
         embedder        = SequenceEmbedder(enc, silence, type_classifier, params)
-        #signature_whistles(inp, output, embedder) 
+        signature_whistles(inp, output, embedder) 
         sequence_clustering(inp, output, embedder)
-        annotate(output, enc_path)
 

@@ -39,7 +39,8 @@ def saxnd(list sequences, int n, int m, int n_samples=10000):
     print("PAA")
     compressed = []
     for i in range(N):
-        compressed.append(paa(sequences[i], n))
+        compressed_seq = paa(sequences[i], n)
+        compressed.append(compressed_seq)
     samples = np.vstack(compressed)
     cluster = resample(samples, replace=False, n_samples=n_samples)
     print("Clustering {} instances of {} instances".format(cluster.shape, len(compressed)))
@@ -49,7 +50,6 @@ def saxnd(list sequences, int n, int m, int n_samples=10000):
     codes = []
     counts = np.zeros(m, dtype=np.int32)
     counts_at_length = np.zeros(m, dtype=np.int32)
-
     for i in range(N):
         code = []
         for j in range(len(compressed[i])):
@@ -58,7 +58,6 @@ def saxnd(list sequences, int n, int m, int n_samples=10000):
             if len(compressed[i]) == n:
                 counts_at_length[symbol] += 1
             code.append(symbol)          
-        print("Processing code: {}".format(code))
         codes.append(code)
     print("Cluster usage:   {}".format(counts))
     print("Cluster usage@n: {}".format(counts_at_length))

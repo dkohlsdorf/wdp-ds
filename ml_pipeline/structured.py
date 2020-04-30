@@ -16,15 +16,6 @@ from ml_pipeline.sequence_hashing import similarity_bucketing
 from sklearn.cluster import AgglomerativeClustering
 
 
-'''
-GOALS: Get rid of notebooks
-
-TODO: Delete all signature whistles code
-TODO: port clustering code here
-TODO: data set extractor
-TODO: Evaluate Clustering
-'''
-
 class TypeExtraction(namedtuple("Induction", "embeddings starts stops types files")):
     """
     Type annotations for dolphin communication   

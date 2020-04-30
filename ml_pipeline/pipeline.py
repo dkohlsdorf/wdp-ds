@@ -325,7 +325,7 @@ def sequence_clustering(inp, out, embedder, min_support=1, n_writers=10):
     clusters = hierarchical_clustering(out)
     grouped_by_filename = {}
     grouped_by_cluster  = {}
-    for (start, stop, f, c):
+    for (start, stop, f, c) in clusters:
         if c not in grouped_by_cluster:
             grouped_by_cluster[c] = {}
         if f not in grouped_by_cluster[c]:
@@ -366,18 +366,22 @@ def generate_dataset(work_folder, annotations, out):
     :param out: output folder
     '''
     print("Generate Dataset")
+    i = 0
     for cluster, d in annotate_clustering(work_folder, annotations).items():
+        print("\t\t{}".format(cluster))
         for filename, regions in d.items():
+            print("\t\t{}".format(filename))
             r = [(start, stop) for start, stop, _ in regions]
             a = [a for _, _, a in regions]
-            for annotation, audio_snippet in zip(a, audio_regions(f, r)):
-                filename = "{}/clustering_{}_{}_{}_{}.wav".format(out, annotation, cluster_id, filename, start)
-                print(filename)
-                audio_bank = AudioSnippetCollection(filename)
+            for annotation, audio_snippet in zip(a, audio_regions(filename, r)):
+                fp = "{}/{}_clustering_{}.wav".format(out, annotation, i)
+                print("\t\t{}".format(fp))
+                audio_bank = AudioSnippetCollection(fp)
                 audio_bank.write(audio_snippet)
                 audio_bank.close()
+                i += 1
 
-
+                
 def header():
     return """
     =================================================================
@@ -385,7 +389,7 @@ def header():
                 
     usage for training:   python ml_pipeline/pipeline.py train config/default_config.yaml
     usage for induction:  python ml_pipeline/pipeline.py induction config/induction_config.yaml
-    usage for annotation: python ml_pipeline/pipeline.py annotate config/annotation_config.yaml
+    usage for annotation: python ml_pipeline/pipeline.py annotate config/annotation.yaml
     by Daniel Kyu Hwa Kohlsdorf
     =================================================================
     """
@@ -427,7 +431,8 @@ if __name__== "__main__":
         type_classifier = load_model("{}/type.h5".format(output))
         embedder        = SequenceEmbedder(enc, silence, type_classifier, params)
         sequence_clustering(inp, output, embedder)
-    elif len(sys.argv) == 3 and sys.argv[1] == 'annotate':
+    elif len(sys.argv) == 3 and sys.argv[1] == 'annotate':        
+        c = yaml.load(open(sys.argv[2]))
         work_folder  = c['work_folder']
         annotations  = c['annotations'] 
         out          = c['out']

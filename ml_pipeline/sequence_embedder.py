@@ -1,6 +1,6 @@
 import numpy as np
 
-from ml_pipeline.audio import *
+from audio import *
 
 
 class SequenceEmbedder:

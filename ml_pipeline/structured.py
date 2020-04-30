@@ -11,8 +11,8 @@ from scipy.sparse import lil_matrix
 from tensorflow.keras.preprocessing.sequence import pad_sequences
 from sklearn.model_selection import train_test_split
 from collections import namedtuple
-from ml_pipeline.dtw import DTW
-from ml_pipeline.sequence_hashing import similarity_bucketing
+from dtw import DTW
+from sequence_hashing import similarity_bucketing
 from sklearn.cluster import AgglomerativeClustering
 
 
@@ -221,18 +221,24 @@ def annotate_clustering(work_folder, annotations):
     :returns: dict[clusters][filename][start, stop, annotation]
     '''
     header = ["cluster", "type"]
-    df = pd.read_csv(annotations, sep="\t", header = None, names=header)    
+    df = pd.read_csv(annotations, sep=",", header = None, names=header)    
     annotations = {}
-    for i, row in sd.iterrows():
-        annotations[row['cluster']] = row['type']
-    clusters = {}
+    for i, row in df.iterrows():
+        c = int(row['cluster'])
+        annotations[c] = row['type']
+        
+    clusters = {}    
     for file in tf.io.gfile.listdir(work_folder):
         if file.startswith("seq_clustering") and file.endswith(".csv"):        
-            header = ["filename", "start", "stop", "file", "cluster", "i"]
+            header = ["start", "stop", "filename", "cluster", "i"]
             path = "{}/{}".format(work_folder, file)
-            df = pd.read_csv(path, sep="\t", header = None, names=header)
+            df = pd.read_csv(path, sep=",", header = None, names=header)
             for i, row in df.iterrows():
-                c = row['cluster']
+                c = int(row['cluster'])
+                filename = row['filename']
+                start = row['start']
+                stop = row['stop']
+
                 if c in annotations:
                     if c not in clusters:
                         clusters[c] = {}

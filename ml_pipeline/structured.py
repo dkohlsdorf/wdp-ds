@@ -4,6 +4,7 @@ import os
 import pickle as pkl
 import tensorflow as tf
 import re
+import multiprocessing as mp
 
 from scipy.sparse import lil_matrix
 
@@ -11,8 +12,18 @@ from tensorflow.keras.preprocessing.sequence import pad_sequences
 from sklearn.model_selection import train_test_split
 from collections import namedtuple
 from ml_pipeline.dtw import DTW
+from ml_pipeline.sequence_hashing import similarity_bucketing
 from sklearn.cluster import AgglomerativeClustering
 
+
+'''
+GOALS: Get rid of notebooks
+
+TODO: Delete all signature whistles code
+TODO: port clustering code here
+TODO: data set extractor
+TODO: Evaluate Clustering
+'''
 
 class TypeExtraction(namedtuple("Induction", "embeddings starts stops types files")):
     """
@@ -65,29 +76,14 @@ class TypeExtraction(namedtuple("Induction", "embeddings starts stops types file
                 fp.write("{}\t{}\t{}\t{}\t{}\n".format(filename, start, stop, t, csv))
 
 
-class RegionExtractors:
+def overlap(self, x1, x2):
+    '''
+    Do two regions (x1_start, x1_stop, file) and (x2_start, x2_stop, file) overlap?
 
-    def __init__(self, threshold = 0):
-        self.threshold = threshold
-
-    def overlap(self, x1, x2):
-        '''
-        Do two regions (x1_start, x1_stop, file) and (x2_start, x2_stop, file) overlap?
-
-        :param x1: first region tuple 
-        :param x2: second reggion tuple
-        '''
-        return max(x1[0],x2[0]) <= min(x1[1],x2[1]) and x1[2] == x2[2]
-
-    def close(self, x1, x2):
-        '''
-        Are two regions (x1_start, x1_stop, file) and (x2_start, x2_stop, file) close in time?
-
-        :param x1: first region tuple 
-        :param x2: second reggion tuple
-        '''
-        return (x2[1] - x1[0]) < self.threshold and x1[2] == x2[2]
-
+    :param x1: first region tuple 
+    :param x2: second reggion tuple
+    '''
+    return max(x1[0],x2[0]) <= min(x1[1],x2[1]) and x1[2] == x2[2]
 
 def mk_region(sequences):
     '''
@@ -133,29 +129,58 @@ def groupBy(sequences, grouping_cond, window_size=None):
     return [x for x in mk_region(groups)]
 
 
-def interset_distance(x):
+def process_dtw(assignment, overlapping, max_dist):
     '''
-    Compute average distane in set of sequences
+    Cluster sequences
 
-    :param x: numpy array (Instances, Time, Dimension)
-    :returns: average distance
+    :param assignment: Assignment id for bucket to cluster
+    :param overlapping: All sequences
+    :param max_dist: Distance for thresholding
+    :returns: clustering and overlapping
     '''
-    dtw = DTW(max([len(a) for a in x]))
-    sum = 0
-    n   = 0
-    for i in range(len(x)):
-        for j in range(i + 1, len(x)):
-            dist, _ = dtw.align(x[i], x[j])
-            sum += dist / (len(x[i]) * len(x[j]))
-            n   += 1
-    return sum / n
+    n = len(overlapping)
+    if n > 1:
+        max_len = int(max([len(e) for _, _, _, e in overlapping]) + 1)
+        dtw = DTW(max_len)
+        dist = np.zeros((n, n))
+        for i, (start_x, stop_x, f_x, embedding_x) in enumerate(overlapping):
+            if i % 250 == 0 and i > 0:
+                print("\t\t Processing: {} {}".format(i, len(overlapping)))
+            for j, (start_y, stop_y, f_y, embedding_y) in enumerate(overlapping):
+                if i < j:
+                    x = np.array([embedding_x]).reshape(len(embedding_x), 256)
+                    y = np.array([embedding_y]).reshape(len(embedding_y), 256)
+                    d, _       = dtw.align(x, y) 
+                    dist[i, j] = d / (len(x) * len(y))
+                    dist[j, i] = d / (len(x) * len(y))
+        print("\t {} {} {} {} {} {} ".format(assignment, n, np.percentile(dist.flatten(), 5), np.percentile(dist.flatten(), 95), np.mean(dist), np.std(dist)))
+        agg = AgglomerativeClustering(n_clusters = None, 
+                                      distance_threshold = max_dist, linkage = 'average', affinity='precomputed')
+        clustering = agg.fit_predict(dist)
+        return clustering, overlapping
+    return [], []
 
 
-def hierarchical_clustering(annotation_path, max_dist = 5.0):
+def hierarchical_clustering(
+    annotation_path,
+    max_dist = 5.0, 
+    min_len=2, 
+    max_len=50, 
+    paa = 3, 
+    sax = 5,
+    processes = 10,
+):
     '''
     Hierarchical clustering of annotations
+    :param annotation_path: path to work folder
+    :param max_dist: distance threshold for clustering
+    :param min_len: minimum length of sequence
+    :param max_len: maximum length of sequence
+    :param paa: compressed size
+    :param sax: quantization codebook size
+    :param processes: number of threads
+    :returns: clustering result [(start, stop, filename, cluster)]
     '''
-    re                    = RegionExtractors(0)
     overlapping           = []
     for file in tf.io.gfile.listdir(annotation_path):        
         if file.startswith("embedding") and file.endswith(".csv"):
@@ -168,55 +193,59 @@ def hierarchical_clustering(annotation_path, max_dist = 5.0):
                 lambda x: np.array([float(i) for i in x.split(",")]))
             annotated             = [(row['start'], row['stop'], row['filename'], row['embedding'])
                                      for _ , row in signals.iterrows()]
-            overlapping += groupBy(annotated, re.overlap)        
+            overlapping += groupBy(annotated, overlap)
+            
+    overlapping = [x for x in overlapping if len(x[3]) > min_th and len(x[3]) < max_th]
     max_len = int(max([len(e) for _, _, _, e in overlapping]) + 1)
-    dtw = DTW(max_len)
-            
-    n = len(overlapping)
-    print("\t found {} signals".format(n))
-    dist = lil_matrix((n, n))
-    for i, (start_x, stop_x, f_x, embedding_x) in enumerate(overlapping):
-        for j, (start_y, stop_y, f_y, embedding_y) in enumerate(overlapping):
-            if i < j:
-                x = np.array([embedding_x]).reshape(len(embedding_x), 256)
-                y = np.array([embedding_y]).reshape(len(embedding_y), 256)
-                d, _       = dtw.align(x, y) 
-                if d < max_dist:
-                    dist[i, j] = d / (len(x) * len(y))
-                    dist[j, i] = d / (len(x) * len(y))
-
-    agg = AgglomerativeClustering(distance_threshold = 5.0, linkage = 'average', affinity='precomputed')
-    clustering = agg.fit_predict(dist)
-    pkl.dump(agg, open("{}/agg.pkl".format(annotation_path), "wb"))
-    for c, (start, stop, f, _) in zip(clustering, overlapping):
-        yield start, stop, f, c
-        
+    sequences = [np.stack(s) for _, _, _, s in overlapping]
+    assignments = similarity_bucketing(sequences, paa, sax)
+    clusters = max(assignments) + 1
+    by_assignment = {}
+    for o, s in zip(overlapping, assignments):
+        if s not in by_assignment:
+            by_assignment[s] = []
+        by_assignment[s].append(o)
     
-def signature_whistle_detector(annotation_path, min_group = 3, max_samples_appart=48000 * 30, max_dist = 5.0):
-    '''
-    Extract signature whistles 
-    Easy experiment to check distance thresholds
+    pool = mp.Pool(processes=processes)
+    results = [pool.apply_async(process, args=(assignment, overlapping, max_dist)) for assignment, overlapping in by_assignment.items()]
+    outputs = [p.get() for p in results]
 
-    :param annotation_path: path to an annotation csv file
-    :param min_group: minimum size of a group of whistles in order to be considered a signature whistle
-    :param max_samples_appart: maximum number of samples between whistles to form a group
-    :param max_dist: maximum distance allowed 
+    cur = 0
+    clusters = []
+    for clustering, overlapping in outputs:
+        if len(clustering) > 0:
+            for c, (start, stop, f, _) in zip(clustering, overlapping):
+                    clusters.append((start, stop, f, c + cur))
+            for c in range(len(set(clustering))):
+                cur += 1
+    return clusters
+
+
+def annotate_clustering(work_folder, annotations):
     '''
-    print(annotation_path)
-    header                = ["filename", "start", "stop", "type", "embedding"]
-    df                    = pd.read_csv(annotation_path, sep="\t", header = None, names=header)
-    whistles              = df[df['type'] == 3]
-    whistles['embedding'] = whistles['embedding'].apply(lambda x: np.array([float(i) for i in x.split(",")]))
-    re                    = RegionExtractors(max_samples_appart)
-    annotated             = [(row['start'], row['stop'], row['filename'], row['embedding']) for _ , row in whistles.iterrows()]
-    overlapping           = groupBy(annotated, re.overlap)
-    signal_groups         = groupBy(overlapping, re.close, min_group)
-    for start, stop, f, embeddings in signal_groups:
-        embed_set  = [np.stack(e) for e in embeddings]
-        inter_dist = interset_distance(embed_set)
-        if inter_dist < max_dist:        
-            yield start, stop, inter_dist, f
-            
-            
-def encounter_id(strg):
-    return re.sub('[^0-9]+', '', strg.split('.')[0].replace('seq_clustering_log_', ''))
+    Annotates a clustering
+
+    :param work_folder: folder with clustering results
+    :param annotations: file with annotations
+    :returns: dict[clusters][filename][start, stop, annotation]
+    '''
+    header = ["cluster", "type"]
+    df = pd.read_csv(annotations, sep="\t", header = None, names=header)    
+    annotations = {}
+    for i, row in sd.iterrows():
+        annotations[row['cluster']] = row['type']
+    clusters = {}
+    for file in tf.io.gfile.listdir(work_folder):
+        if file.startswith("seq_clustering") and file.endswith(".csv"):        
+            header = ["filename", "start", "stop", "file", "cluster", "i"]
+            path = "{}/{}".format(work_folder, file)
+            df = pd.read_csv(path, sep="\t", header = None, names=header)
+            for i, row in df.iterrows():
+                c = row['cluster']
+                if c in annotations:
+                    if c not in clusters:
+                        clusters[c] = {}
+                    if filename not in clusters[c]:
+                        clusters[c][filename] = []
+                    clusters[c][filename].append((start, stop, annotations[c]))
+    return clusters

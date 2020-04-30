@@ -8,6 +8,7 @@ import datetime
 import tensorflow as tf
 import matplotlib
 matplotlib.use('Agg')
+import multiprocessing as mp
 
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3' 
 
@@ -284,7 +285,28 @@ def test_reconstruction(folder, out, params):
     plt.close()
 
 
-def sequence_clustering(inp, out, embedder, min_support=1):    
+def write_audio(cluster_id, instances_clusters, grouped_by_cluster, min_support, max_support):
+    '''
+    Write clusters as audio
+    
+    :param cluster_id: id to write
+    :param instances_clusters: number of instances per cluster
+    :param grouped_by_cluster: dict[clusters][filename][start, stop]
+    :param min_support: minimum number of instances in cluster
+    :param max_support: maximum number of instances in cluster
+    '''
+    if instances_clusters[cluster_id] > min_support and instances_clusters[cluster_id] < max_support:
+        print("Audio result for cluster: {} {}".format(cluster_id, instances_clusters[cluster_id]))
+        audio_bank = AudioSnippetCollection("{}/seq_cluster_{}.wav".format(out, cluster_id))
+        for f, snippets in grouped_by_cluster[cluster_id].items():
+            print("Cluster: {}, {}, {}".format(cluster_id, f, len(snippets)))
+            for audio_snippet in audio_regions(f, snippets):                  
+                audio_bank.write(audio_snippet)
+        audio_bank.close()
+        print("Done: {}".format(cluster_id))
+
+
+def sequence_clustering(inp, out, embedder, min_support=1, n_writers=10):    
     '''
     Hierarchical cluster connected regions of whistles and bursts
     '''
@@ -300,72 +322,70 @@ def sequence_clustering(inp, out, embedder, min_support=1):
                 inducer = TypeExtraction.from_audiofile(in_path, embedder)
                 inducer.save(out_path, append=True)
     
-    print("\n clustering:")
-    clusters = [x for x in hierarchical_clustering(out)]            
+    clusters = hierarchical_clustering(out)
     grouped_by_filename = {}
-    # instance id
-    for i, (start, stop, f, c) in enumerate(clusters):
+    grouped_by_cluster  = {}
+    for (start, stop, f, c):
+        if c not in grouped_by_cluster:
+            grouped_by_cluster[c] = {}
+        if f not in grouped_by_cluster[c]:
+            grouped_by_cluster[c][f] = []
+        grouped_by_cluster[c][f].append((start, stop))
         if f not in grouped_by_filename:
             grouped_by_filename[f] = []
         grouped_by_filename[f].append((start, stop, c, i))
-
-    k = max([c for _, _, _, c in clusters]) + 1
-    instances_clusters = np.zeros(k)
-    for _, _, _, c in clusters:
-        instances_clusters[c] += 1
+        clusters.append(c)
     
+    k = max(clusters) + 1
+    instances_clusters = np.zeros(k, dtype=np.int32)
+    for c, collection in grouped_by_cluster.items():
+        for f, regions in collection.items():
+            for r in regions:
+                instances_clusters[c] += 1
+    pool = mp.Pool(processes=n_writers)
+    results = [pool.apply_async(write_audio, args=(cluster_id, instances_clusters, grouped_by_cluster, 2, 500)) for cluster_id in range(0, k)]
+    outputs = [p.get() for p in results]
     for cluster_id in range(0, k):
-        if instances_clusters[cluster_id] > min_support:
-            audio_bank = AudioSnippetCollection("{}/seq_cluster_{}.wav".format(out, cluster_id))
-            for f, regions in grouped_by_filename.items():
-                filename = f.split(".")[0].split("/")[-1]
-                log_path = "{}/seq_clustering_log_{}.csv".format(out, filename)
-                #instance id
-                with open(log_path, "a+") as fp:
-                    for start, stop, c, i in regions:
-                        if c == cluster_id:
-                            fp.write("{},{},{},{},{}\n".format(start, stop, f, c, i))                
-                snippets        = [(start, stop, f) for start, stop, _, _ in regions]
-                cluster_snippet = [c for _, _, c,_ in regions] 
-                for audio_snippet, c in zip(audio_snippets(snippets), cluster_snippet):
+        for f, regions in grouped_by_filename.items():
+            filename = f.split(".")[0].split("/")[-1]
+            log_path = "{}/seq_clustering_log_{}.csv".format(out, filename)
+            #instance id
+            with open(log_path, "a+") as fp:
+                for start, stop, c, i in regions:
                     if c == cluster_id:
-                        audio_bank.write(audio_snippet)
-            audio_bank.close()
-    
-    
-def signature_whistles(inp, out, embedder):
-    for filename in tf.io.gfile.listdir(inp):
-        if filename.endswith('.ogg') or filename.endswith('.wav'):
-            name = filename.replace(".wav", "")
-            name = name.replace(".ogg", "")            
-            in_path  = "{}/{}".format(inp, filename)
-            out_path = "{}/embedding_{}.csv".format(out, name)
-            log_path = "{}/signature_log_{}.csv".format(out, name)
-            if not os.path.isfile(out_path):
-                inducer = TypeExtraction.from_audiofile(in_path, embedder)
-                inducer.save(out_path, append=True)
-            snippets   = [(start, stop, f) for start, stop, _, f in signature_whistle_detector(out_path)]
-            if len(snippets) > 0:
-                audio_bank = AudioSnippetCollection("{}/signatures_{}.wav".format(out, name))
-                for audio_snippet in audio_snippets(snippets):
-                    audio_bank.write(audio_snippet)
-                audio_bank.close()
-                with open(log_path, "w") as fp:
-                    for start, stop, dist, f in signature_whistle_detector(out_path):
-                        fp.write("{},{},{},{}\n".format(start, stop, dist, f))
-                        print("{} - {} {} {}".format(
-                            str(datetime.timedelta(seconds=start/48000)),
-                            str(datetime.timedelta(seconds=stop/48000)), dist, f))        
-                
+                        fp.write("{},{},{},{},{}\n".format(start, stop, f, c, i))
+    clustering_usage(out)
+
         
+def generate_dataset(work_folder, annotations, out):
+    '''
+    Generate an annotated dataset from clustering result
+
+    :param work_folder: work folder
+    :param annotations: annotation file
+    :param out: output folder
+    '''
+    print("Generate Dataset")
+    for cluster, d in annotate_clustering(work_folder, annotations).items():
+        for filename, regions in d.items():
+            r = [(start, stop) for start, stop, _ in regions]
+            a = [a for _, _, a in regions]
+            for annotation, audio_snippet in zip(a, audio_regions(f, r)):
+                filename = "{}/clustering_{}_{}_{}_{}.wav".format(out, annotation, cluster_id, filename, start)
+                print(filename)
+                audio_bank = AudioSnippetCollection(filename)
+                audio_bank.write(audio_snippet)
+                audio_bank.close()
+
+
 def header():
     return """
     =================================================================
     Dolphin Machine Learning Pipeline
                 
-    usage for training:  python ml_pipeline/pipeline.py train config/default_config.yaml
-    usage for induction: python ml_pipeline/pipeline.py induction config/induction_config.yaml
-    
+    usage for training:   python ml_pipeline/pipeline.py train config/default_config.yaml
+    usage for induction:  python ml_pipeline/pipeline.py induction config/induction_config.yaml
+    usage for annotation: python ml_pipeline/pipeline.py annotate config/annotation_config.yaml
     by Daniel Kyu Hwa Kohlsdorf
     =================================================================
     """
@@ -390,8 +410,8 @@ if __name__== "__main__":
         output       = c['output']
         transfer     = c['transfer']
         freeze       = c['freeze'] 
-        #train_auto_encoder(version, unsupervised, output, params, latent, batch, epochs)
-        #evaluate_encoder(version, unsupervised, output, "{}/encoder.h5".format(output), params, viz_k)
+        train_auto_encoder(version, unsupervised, output, params, latent, batch, epochs)
+        evaluate_encoder(version, unsupervised, output, "{}/encoder.h5".format(output), params, viz_k)
         train_silence(version, silence, output, params, "{}/encoder.h5".format(output), batch, epochs_sup, latent, freeze, transfer)
         train_type(version, type_class, output, params, "{}/encoder.h5".format(output), batch, epochs_sup, latent, freeze, transfer)
         test_reconstruction(reconstruct, output, params)
@@ -406,6 +426,9 @@ if __name__== "__main__":
         silence         = load_model("{}/sil.h5".format(output))
         type_classifier = load_model("{}/type.h5".format(output))
         embedder        = SequenceEmbedder(enc, silence, type_classifier, params)
-        signature_whistles(inp, output, embedder) 
         sequence_clustering(inp, output, embedder)
-
+    elif len(sys.argv) == 3 and sys.argv[1] == 'annotate':
+        work_folder  = c['work_folder']
+        annotations  = c['annotations'] 
+        out          = c['out']
+        generate_dataset(work_folder, annotations, out)

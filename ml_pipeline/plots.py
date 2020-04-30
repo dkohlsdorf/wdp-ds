@@ -16,6 +16,40 @@ COLORS = list(
     pd.read_csv('ml_pipeline/colors.txt', sep='\t', header=None)[1])
 
 
+def clustering_usage(log_path):
+    '''
+    Plot the cluster usage
+
+    :param log_path: path to work folder
+    '''
+    n_clusters = {}
+    for filename in os.listdir(log_path):
+        if filename.startswith('seq_clustering_log'):
+            path = "{}/{}".format(log_path, filename) 
+            key  = filename.split('.')[0]
+            df = pd.read_csv(path, names=["start", "stop", "cluster", "i"])
+            if len(df) > 5:
+                df = df.sort_values('start')
+                n_clusters[key] = list([row['cluster'] for _, row in df.iterrows()])
+    clusters = {}
+    for k, v in n_clusters.items():
+        for c in v:
+            if c in clusters:
+                clusters[c] += 1
+            else:
+                clusters[c]  = 1
+    clusters = sorted([(c, count) for c, count in clusters.items() if count > 3], key=lambda x: -x[1])
+    plt.figure(figsize=(30, 5))
+    plt.bar(np.arange(len(clusters)), [c for i, c in clusters])
+    plt.title('Cluster Usage')
+    plt.xticks(np.arange(len(clusters)), [str(i) for i, c in clusters], rotation=90)
+    plt.xlabel("clusters")
+    plt.ylabel("#occurance")
+    plt.savefig('{}/occurance.png'.format(log_path))
+    plt.show()
+
+
+
 def plot_confusion_matrix(confusion, classes, title, cmap=plt.cm.Blues):
     """
     Plot confusion matrix

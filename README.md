@@ -11,3 +11,10 @@ and communicate the results with domain experts.
 + 1) `ml_pipeline`: Training and Evaluation of Machine Learning Models
 + 2) `models`: The models and evaluations we generated
 + 3) `config`: Config files to run pipeline
+
+## Usage:
+```
+    usage for training:   python ml_pipeline/pipeline.py train config/default_config.yaml
+    usage for induction:  python ml_pipeline/pipeline.py induction config/induction_config.yaml
+    usage for annotation: python ml_pipeline/pipeline.py annotate config/annotation_config.yaml
+```

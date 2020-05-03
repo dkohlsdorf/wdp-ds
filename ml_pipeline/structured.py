@@ -67,7 +67,7 @@ class TypeExtraction(namedtuple("Induction", "embeddings starts stops types file
                 fp.write("{}\t{}\t{}\t{}\t{}\n".format(filename, start, stop, t, csv))
 
 
-def overlap(self, x1, x2):
+def overlap(x1, x2):
     '''
     Do two regions (x1_start, x1_stop, file) and (x2_start, x2_stop, file) overlap?
 

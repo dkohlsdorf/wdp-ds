@@ -155,9 +155,9 @@ def process_dtw(assignment, overlapping, max_dist):
 def hierarchical_clustering(
     annotation_path,
     max_dist = 5.0, 
-    min_len=2, 
-    max_len=50, 
-    paa = 3, 
+    min_th=2, 
+    max_th=50, 
+    paa = 4, 
     sax = 5,
     processes = 10,
 ):
@@ -198,7 +198,7 @@ def hierarchical_clustering(
         by_assignment[s].append(o)
     
     pool = mp.Pool(processes=processes)
-    results = [pool.apply_async(process, args=(assignment, overlapping, max_dist)) for assignment, overlapping in by_assignment.items()]
+    results = [pool.apply_async(process_dtw, args=(assignment, overlapping, max_dist)) for assignment, overlapping in by_assignment.items()]
     outputs = [p.get() for p in results]
 
     cur = 0

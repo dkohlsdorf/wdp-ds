@@ -325,6 +325,7 @@ def sequence_clustering(inp, out, embedder, min_support=1, n_writers=10):
     clusters = hierarchical_clustering(out)
     grouped_by_filename = {}
     grouped_by_cluster  = {}
+    i = 0
     for (start, stop, f, c) in clusters:
         if c not in grouped_by_cluster:
             grouped_by_cluster[c] = {}
@@ -335,7 +336,8 @@ def sequence_clustering(inp, out, embedder, min_support=1, n_writers=10):
             grouped_by_filename[f] = []
         grouped_by_filename[f].append((start, stop, c, i))
         clusters.append(c)
-    
+        i += 1
+
     k = max(clusters) + 1
     instances_clusters = np.zeros(k, dtype=np.int32)
     for c, collection in grouped_by_cluster.items():

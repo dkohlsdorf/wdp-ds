@@ -48,8 +48,8 @@ def saxnd(list sequences, int n, int m, int n_samples=10000):
     codebook.fit(cluster) 
     print("Done Clustering")
     codes = []
-    counts = np.zeros(m, dtype=np.int32)
-    counts_at_length = np.zeros(m, dtype=np.int32)
+    counts = np.zeros(m + 1, dtype=np.int32)
+    counts_at_length = np.zeros(m + 1, dtype=np.int32)
     for i in range(N):
         code = []
         for j in range(len(compressed[i])):

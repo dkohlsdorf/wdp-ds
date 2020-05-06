@@ -285,7 +285,7 @@ def test_reconstruction(folder, out, params):
     plt.close()
 
 
-def write_audio(cluster_id, instances_clusters, grouped_by_cluster, min_support, max_support):
+def write_audio(out, cluster_id, instances_clusters, grouped_by_cluster, min_support, max_support):
     '''
     Write clusters as audio
     
@@ -306,7 +306,7 @@ def write_audio(cluster_id, instances_clusters, grouped_by_cluster, min_support,
         print("Done: {}".format(cluster_id))
 
 
-def sequence_clustering(inp, out, embedder, min_support=1, n_writers=10):    
+def sequence_clustering(inp, out, embedder, min_support=1, n_writers=10, max_instances=None):    
     '''
     Hierarchical cluster connected regions of whistles and bursts
     '''
@@ -322,10 +322,11 @@ def sequence_clustering(inp, out, embedder, min_support=1, n_writers=10):
                 inducer = TypeExtraction.from_audiofile(in_path, embedder)
                 inducer.save(out_path, append=True)
     
-    clusters = hierarchical_clustering(out)
+    clusters = hierarchical_clustering(out, max_instances=max_instances)
     grouped_by_filename = {}
     grouped_by_cluster  = {}
     i = 0
+    k = 0
     for (start, stop, f, c) in clusters:
         if c not in grouped_by_cluster:
             grouped_by_cluster[c] = {}
@@ -335,17 +336,18 @@ def sequence_clustering(inp, out, embedder, min_support=1, n_writers=10):
         if f not in grouped_by_filename:
             grouped_by_filename[f] = []
         grouped_by_filename[f].append((start, stop, c, i))
-        clusters.append(c)
+        if c > k:
+            k = c
         i += 1
 
-    k = max(clusters) + 1
+    k = k + 1
     instances_clusters = np.zeros(k, dtype=np.int32)
     for c, collection in grouped_by_cluster.items():
         for f, regions in collection.items():
             for r in regions:
                 instances_clusters[c] += 1
     pool = mp.Pool(processes=n_writers)
-    results = [pool.apply_async(write_audio, args=(cluster_id, instances_clusters, grouped_by_cluster, 2, 500)) for cluster_id in range(0, k)]
+    results = [pool.apply_async(write_audio, args=(out, cluster_id, instances_clusters, grouped_by_cluster, 2, 500)) for cluster_id in range(0, k)]
     outputs = [p.get() for p in results]
     for cluster_id in range(0, k):
         for f, regions in grouped_by_filename.items():

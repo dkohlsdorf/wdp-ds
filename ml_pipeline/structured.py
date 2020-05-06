@@ -154,12 +154,13 @@ def process_dtw(assignment, overlapping, max_dist):
 
 def hierarchical_clustering(
     annotation_path,
-    max_dist = 5.0, 
+    max_dist = 10.0, 
     min_th=2, 
     max_th=50, 
     paa = 4, 
     sax = 5,
     processes = 10,
+    max_instances=None
 ):
     '''
     Hierarchical clustering of annotations
@@ -185,11 +186,16 @@ def hierarchical_clustering(
             annotated             = [(row['start'], row['stop'], row['filename'], row['embedding'])
                                      for _ , row in signals.iterrows()]
             overlapping += groupBy(annotated, overlap)
-            
+            if max_instances is not None and len(overlapping) > max_instances:
+                break
+                
     overlapping = [x for x in overlapping if len(x[3]) > min_th and len(x[3]) < max_th]
     max_len = int(max([len(e) for _, _, _, e in overlapping]) + 1)
     sequences = [np.stack(s) for _, _, _, s in overlapping]
-    assignments = similarity_bucketing(sequences, paa, sax)
+    if max_instances is not None:
+        assignments = similarity_bucketing(sequences, paa, sax, max_instances)
+    else:
+        assignments = similarity_bucketing(sequences, paa, sax)
     clusters = max(assignments) + 1
     by_assignment = {}
     for o, s in zip(overlapping, assignments):
@@ -202,14 +208,14 @@ def hierarchical_clustering(
     outputs = [p.get() for p in results]
 
     cur = 0
-    clusters = []
+    cluster_regions = []
     for clustering, overlapping in outputs:
         if len(clustering) > 0:
             for c, (start, stop, f, _) in zip(clustering, overlapping):
-                    clusters.append((start, stop, f, c + cur))
+                    cluster_regions.append((start, stop, f, c + cur))
             for c in range(len(set(clustering))):
                 cur += 1
-    return clusters
+    return cluster_regions
 
 
 def annotate_clustering(work_folder, annotations):

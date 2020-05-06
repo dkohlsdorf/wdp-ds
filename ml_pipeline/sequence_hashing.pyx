@@ -64,7 +64,7 @@ def saxnd(list sequences, int n, int m, int n_samples=10000):
     return codes
 
 
-def similarity_bucketing(list sequences, int n, int m):
+def similarity_bucketing(list sequences, int n, int m, int n_samples=10000):
     '''
     Bueckting based on similarity
     
@@ -74,7 +74,7 @@ def similarity_bucketing(list sequences, int n, int m):
     :returns: bucket id for each sequence
     '''
     cdef int N = len(sequences)
-    cdef list codes = saxnd(sequences, n, m)
+    cdef list codes = saxnd(sequences, n, m, n_samples)
     cdef int[:] buckets = np.zeros(N, dtype=np.int32)
     cdef int i = 0
     cdef int cur = 0

@@ -154,12 +154,12 @@ def process_dtw(assignment, overlapping, max_dist):
 
 def hierarchical_clustering(
     annotation_path,
-    max_dist = 10.0, 
+    max_dist = 5.0, 
     min_th=2, 
     max_th=50, 
     paa = 4, 
     sax = 5,
-    processes = 10,
+    processes = 25,
     max_instances=None
 ):
     '''
@@ -180,7 +180,7 @@ def hierarchical_clustering(
             print("\tReading {}".format(path))
             header                = ["filename", "start", "stop", "type", "embedding"]
             df                    = pd.read_csv(path, sep="\t", header = None, names=header)
-            signals               = df[df['type'] >= 0]
+            signals               = df[df['type'] >= 1]
             signals['embedding']  = df['embedding'].apply(
                 lambda x: np.array([float(i) for i in x.split(",")]))
             annotated             = [(row['start'], row['stop'], row['filename'], row['embedding'])

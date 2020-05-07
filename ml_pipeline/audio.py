@@ -203,13 +203,14 @@ def audio_regions(filename, regions):
     :returns: audio snippets
     '''
     data = read(filename)
-    if len(data.shape) > 1:
-        data = np.mean(data, axis=1) 
-    else:
-        data = data.reshape((len(data)))
-    for (start, stop) in regions:
-        yield data[start:stop]
-
+    if data is not None:
+        if len(data.shape) > 1:
+            data = np.mean(data, axis=1) 
+        else:
+            data = data.reshape((len(data)))
+        for (start, stop) in regions:
+            yield data[start:stop]
+    
         
 def fwd_spectrogram(audio, win=512, step=64):
     """

@@ -7,7 +7,7 @@ latent       : 256
 batch        : 25
 version      : "v3.0"
 epochs       : 50
-epochs_sup   : 10
+epochs_sup   : 50
 viz_k        : 100
 sil          : 'data/classification_noise'
 type_class   : 'data/classification'

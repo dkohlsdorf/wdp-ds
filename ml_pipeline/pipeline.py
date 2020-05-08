@@ -327,7 +327,7 @@ def sequence_clustering(inp, out, embedder, min_support=1, n_writers=10, max_ins
     grouped_by_cluster  = {}
     i = 0
     k = 0
-    for (start, stop, f, c) in clusters:
+    for (start, stop, f, t, c) in clusters:
         if c not in grouped_by_cluster:
             grouped_by_cluster[c] = {}
         if f not in grouped_by_cluster[c]:
@@ -335,7 +335,7 @@ def sequence_clustering(inp, out, embedder, min_support=1, n_writers=10, max_ins
         grouped_by_cluster[c][f].append((start, stop))
         if f not in grouped_by_filename:
             grouped_by_filename[f] = []
-        grouped_by_filename[f].append((start, stop, c, i))
+        grouped_by_filename[f].append((start, stop, c, t, i))
         if c > k:
             k = c
         i += 1
@@ -355,9 +355,10 @@ def sequence_clustering(inp, out, embedder, min_support=1, n_writers=10, max_ins
             log_path = "{}/seq_clustering_log_{}.csv".format(out, filename)
             #instance id
             with open(log_path, "a+") as fp:
+                fp.write("start, stop, file, cluster, type, region id\n")
                 for start, stop, c, i in regions:
                     if c == cluster_id:
-                        fp.write("{},{},{},{},{}\n".format(start, stop, f, c, i))
+                        fp.write("{},{},{},{},{},{}\n".format(start, stop, f, c, t, i))
     clustering_usage(out)
 
         

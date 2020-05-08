@@ -69,36 +69,38 @@ class TypeExtraction(namedtuple("Induction", "embeddings starts stops types file
 
 def overlap(x1, x2):
     '''
-    Do two regions (x1_start, x1_stop, file) and (x2_start, x2_stop, file) overlap?
+    Do two regions (x1_start, x1_stop, file, type) and (x2_start, x2_stop, file, type) overlap?
 
     :param x1: first region tuple 
     :param x2: second reggion tuple
     '''
-    return max(x1[0],x2[0]) <= min(x1[1],x2[1]) and x1[2] == x2[2]
+    return max(x1[0],x2[0]) <= min(x1[1],x2[1]) and x1[2] == x2[2] and x1[3] == x2[3]
+
 
 def mk_region(sequences):
     '''
     Convert a set of grouped sequences into a region
 
     :param sequences: [
-        [(start, stop, file, x), (start, stop, file, x)], 
+        [(start, stop, file, type, x), (start, stop, file, type, x)], 
         [(start, stop, file, x)], 
         [(start, stop, file, x), (start, stop, file, x)]]
     :returns: [([x, x], start, stop), ([x], start, stop),([x, x], start, stop)]
     '''
     for x in sequences:
-        items = [item for _, _, _, item in x]
+        items = [item for _, _, _, _, item in x]
         start = x[0][0]
         stop  = x[-1][1]
         f     = x[-1][2]
-        yield start, stop, f, items
+        t     = x[-1][3]
+        yield start, stop, f, t, items
 
 
 def groupBy(sequences, grouping_cond, window_size=None):
     '''
     Extract groups of signals
 
-    :param sequences: a sortd list of time stamped embedding sequences (seq, start, stop, file)
+    :param sequences: a sortd list of time stamped embedding sequences (seq, start, stop, file, type)
     :param grouping_cond: a function (x1, x2) returning true if two items should be grouped
     :returns: grouped sequence list
     '''
@@ -131,13 +133,13 @@ def process_dtw(assignment, overlapping, max_dist):
     '''
     n = len(overlapping)
     if n > 1:
-        max_len = int(max([len(e) for _, _, _, e in overlapping]) + 1)
+        max_len = int(max([len(e) for _, _, _, _, e in overlapping]) + 1)
         dtw = DTW(max_len)
         dist = np.zeros((n, n))
-        for i, (start_x, stop_x, f_x, embedding_x) in enumerate(overlapping):
+        for i, (start_x, stop_x, f_x, t_x, embedding_x) in enumerate(overlapping):
             if i % 250 == 0 and i > 0:
                 print("\t\t Processing: {} {}".format(i, len(overlapping)))
-            for j, (start_y, stop_y, f_y, embedding_y) in enumerate(overlapping):
+            for j, (start_y, stop_y, f_y, t_y, embedding_y) in enumerate(overlapping):
                 if i < j:
                     x = np.array([embedding_x]).reshape(len(embedding_x), 256)
                     y = np.array([embedding_y]).reshape(len(embedding_y), 256)
@@ -155,8 +157,8 @@ def process_dtw(assignment, overlapping, max_dist):
 def hierarchical_clustering(
     annotation_path,
     max_dist = 5.0, 
-    min_th=2, 
-    max_th=50, 
+    min_th= 2, 
+    max_th= 50, 
     paa = 4, 
     sax = 5,
     processes = 25,
@@ -183,15 +185,15 @@ def hierarchical_clustering(
             signals               = df[df['type'] >= 1]
             signals['embedding']  = df['embedding'].apply(
                 lambda x: np.array([float(i) for i in x.split(",")]))
-            annotated             = [(row['start'], row['stop'], row['filename'], row['embedding'])
+            annotated             = [(row['start'], row['stop'], row['filename'], row['type'], row['embedding'])
                                      for _ , row in signals.iterrows()]
             overlapping += groupBy(annotated, overlap)
             if max_instances is not None and len(overlapping) > max_instances:
                 break
                 
-    overlapping = [x for x in overlapping if len(x[3]) > min_th and len(x[3]) < max_th]
-    max_len = int(max([len(e) for _, _, _, e in overlapping]) + 1)
-    sequences = [np.stack(s) for _, _, _, s in overlapping]
+    overlapping = [x for x in overlapping if len(x[4]) > min_th and len(x[4]) < max_th]
+    max_len = int(max([len(e) for _, _, _, _, e in overlapping]) + 1)
+    sequences = [np.stack(s) for _, _, _, _, s in overlapping]
     if max_instances is not None:
         assignments = similarity_bucketing(sequences, paa, sax, max_instances)
     else:
@@ -211,8 +213,8 @@ def hierarchical_clustering(
     cluster_regions = []
     for clustering, overlapping in outputs:
         if len(clustering) > 0:
-            for c, (start, stop, f, _) in zip(clustering, overlapping):
-                    cluster_regions.append((start, stop, f, c + cur))
+            for c, (start, stop, f, t, _) in zip(clustering, overlapping):
+                    cluster_regions.append((start, stop, f, t, c + cur))
             for c in range(len(set(clustering))):
                 cur += 1
     return cluster_regions

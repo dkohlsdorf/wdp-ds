@@ -306,7 +306,7 @@ def write_audio(out, cluster_id, instances_clusters, grouped_by_cluster, min_sup
         print("Done: {}".format(cluster_id))
 
 
-def sequence_clustering(inp, out, embedder, min_support=1, n_writers=10, max_instances=None):    
+def sequence_clustering(inp, out, embedder, min_support=1, n_writers=5, max_instances=None):    
     '''
     Hierarchical cluster connected regions of whistles and bursts
     '''
@@ -345,24 +345,24 @@ def sequence_clustering(inp, out, embedder, min_support=1, n_writers=10, max_ins
         for f, regions in collection.items():
             for r in regions:
                 instances_clusters[c] += 1
-    println('Done Clustering')
+    print('Done Clustering')
     pool = mp.Pool(processes=n_writers)
     results = [pool.apply_async(write_audio, args=(out, cluster_id, instances_clusters, grouped_by_cluster, 2, 25)) for cluster_id in range(0, k)]
-    println('Done Writing')
     outputs = [p.get() for p in results]
-    for cluster_id in range(0, k):
-        for f, regions in grouped_by_filename.items():
-            filename = f.split(".")[0].split("/")[-1]
-            log_path = "{}/seq_clustering_log_{}.csv".format(out, filename)
-            #instance id
-            with open(log_path, "a+") as fp:
-                fp.write("start, stop, file, cluster, type, region id\n")
-                for start, stop, c, i in regions:
-                    if c == cluster_id:
-                        fp.write("{},{},{},{},{},{}\n".format(start, stop, f, c, t, i))
-    println('Done Logs')
+    print('Done Writing')
+    
+    for f, regions in grouped_by_filename.items():
+        filename = f.split(".")[0].split("/")[-1]
+        log_path = "{}/seq_clustering_log_{}.csv".format(out, filename)
+        print("writing: {}".format(log_path))
+        with open(log_path, "a+") as fp:
+            fp.write("start, stop, file, cluster, type, region id\n")
+            for start, stop, c, i in regions:
+                fp.write("{},{},{},{},{},{}\n".format(start, stop, f, c, t, i))
+                        
+    print('Done Logs')
     clustering_usage(out)
-    println('Done !!!')
+    print('Done !!!')
 
         
 def generate_dataset(work_folder, annotations, out):

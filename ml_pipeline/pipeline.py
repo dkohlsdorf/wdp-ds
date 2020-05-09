@@ -306,7 +306,7 @@ def write_audio(out, cluster_id, instances_clusters, grouped_by_cluster, min_sup
         print("Done: {}".format(cluster_id))
 
 
-def sequence_clustering(inp, out, embedder, min_support=1, n_writers=5, max_instances=None):    
+def sequence_clustering(inp, out, embedder, min_support=1, n_writers=10, max_instances=None):    
     '''
     Hierarchical cluster connected regions of whistles and bursts
     '''
@@ -356,8 +356,8 @@ def sequence_clustering(inp, out, embedder, min_support=1, n_writers=5, max_inst
         log_path = "{}/seq_clustering_log_{}.csv".format(out, filename)
         print("writing: {}".format(log_path))
         with open(log_path, "a+") as fp:
-            fp.write("start, stop, file, cluster, type, region id\n")
-            for start, stop, c, i in regions:
+            fp.write("start, stop, file, cluster, type, region, id\n")
+            for start, stop, c, t, i in regions:
                 fp.write("{},{},{},{},{},{}\n".format(start, stop, f, c, t, i))
                         
     print('Done Logs')

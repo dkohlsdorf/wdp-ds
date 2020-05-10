@@ -28,6 +28,7 @@ def clustering_usage(log_path):
             path = "{}/{}".format(log_path, filename) 
             key  = filename.split('.')[0]
             df = pd.read_csv(path)
+            print(df.head(), key)
             df = df.sort_values('start')
             n_clusters[key] = list([row['cluster'] for _, row in df.iterrows()])
     clusters = {}

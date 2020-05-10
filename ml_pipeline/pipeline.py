@@ -355,14 +355,12 @@ def sequence_clustering(inp, out, embedder, min_support=1, n_writers=5, max_inst
         filename = f.split(".")[0].split("/")[-1]
         log_path = "{}/seq_clustering_log_{}.csv".format(out, filename)
         print("writing: {}".format(log_path))
-        with open(log_path, "a+") as fp:
+        with open(log_path, "w") as fp:
             fp.write("start, stop, file, cluster, type, region, id\n")
             for start, stop, c, t, i in regions:
                 fp.write("{},{},{},{},{},{}\n".format(start, stop, f, c, t, i))
                         
     print('Done Logs')
-    clustering_usage(out)
-    print('Done !!!')
 
         
 def generate_dataset(work_folder, annotations, out):
@@ -440,6 +438,8 @@ if __name__== "__main__":
         type_classifier = load_model("{}/type.h5".format(output))
         embedder        = SequenceEmbedder(enc, silence, type_classifier, params)
         sequence_clustering(inp, output, embedder)
+        clustering_usage(output)
+        print('Done !!!')
     elif len(sys.argv) == 3 and sys.argv[1] == 'annotate':        
         c = yaml.load(open(sys.argv[2]))
         work_folder  = c['work_folder']

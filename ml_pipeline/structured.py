@@ -182,7 +182,7 @@ def hierarchical_clustering(
             print("\tReading {}".format(path))
             header                = ["filename", "start", "stop", "type", "embedding"]
             df                    = pd.read_csv(path, sep="\t", header = None, names=header)
-            signals               = df[df['type'] >= 1]
+            signals               = df[df['type'] > 1]
             signals['embedding']  = df['embedding'].apply(
                 lambda x: np.array([float(i) for i in x.split(",")]))
             annotated             = [(row['start'], row['stop'], row['filename'], row['type'], row['embedding'])

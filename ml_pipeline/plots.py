@@ -27,8 +27,7 @@ def clustering_usage(log_path):
         if filename.startswith('seq_clustering_log'):
             path = "{}/{}".format(log_path, filename) 
             key  = filename.split('.')[0]
-            df = pd.read_csv(path)
-            print(df.head(), key)
+            df = pd.read_csv(path)            
             df = df.sort_values('start')
             n_clusters[key] = list([row['cluster'] for _, row in df.iterrows()])
     clusters = {}

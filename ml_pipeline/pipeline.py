@@ -356,10 +356,9 @@ def sequence_clustering(inp, out, embedder, min_support=1, n_writers=5, max_inst
         log_path = "{}/seq_clustering_log_{}.csv".format(out, filename)
         print("writing: {}".format(log_path))
         with open(log_path, "w") as fp:
-            fp.write("start, stop, file, cluster, type, region, id\n")
+            fp.write("start,stop,file,cluster,type,region_id\n")
             for start, stop, c, t, i in regions:
                 fp.write("{},{},{},{},{},{}\n".format(start, stop, f, c, t, i))
-                        
     print('Done Logs')
 
         

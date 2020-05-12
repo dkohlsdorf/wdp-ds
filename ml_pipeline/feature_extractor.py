@@ -92,7 +92,7 @@ class VAE:
         e         = enc(inp)
         x         = dec(e) 
         model = Model(inputs = [inp], outputs = [x])
-        model.compile(optimizer = Adam(), loss=self.vae_loss)
+        model.compile(optimizer = Adam(), loss=self.vae_loss, metrics=[self.vae_kl_loss, self.vae_r_loss])
         model.summary()
         return model, enc
 

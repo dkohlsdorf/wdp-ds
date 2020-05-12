@@ -157,8 +157,8 @@ def process_dtw(assignment, overlapping, max_dist):
 def hierarchical_clustering(
     annotation_path,
     max_dist = 5.0, 
-    min_th= 2,  # maybe 1 here
-    max_th= 50, # maybe 250 here    
+    min_th= 1,   
+    max_th= 500,
     paa = 4, 
     sax = 5,
     processes = 25,

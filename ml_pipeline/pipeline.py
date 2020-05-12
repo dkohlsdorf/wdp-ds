@@ -222,7 +222,8 @@ def train_auto_encoder(version_tag, input_folder, output_folder, params, latent,
     :param epochs: number of training epochs
     """
     print("Training Auto Encoder: {}".format(version_tag))
-    ae, enc = auto_encoder(
+    vae = VAE()
+    ae, enc = vae.auto_encoder(
         (params.spec_win, params.n_fft_bins, 1), latent
     )
     enc.summary()

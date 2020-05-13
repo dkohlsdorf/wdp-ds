@@ -242,7 +242,7 @@ def annotate_clustering(work_folder, annotations):
             df = pd.read_csv(path)            
             for i, row in df.iterrows():
                 c = int(row['cluster'])
-                filename = row['filen']
+                filename = row['filename']
                 start = row['start']
                 stop = row['stop']
 

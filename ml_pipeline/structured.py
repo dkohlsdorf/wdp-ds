@@ -238,12 +238,11 @@ def annotate_clustering(work_folder, annotations):
     clusters = {}    
     for file in tf.io.gfile.listdir(work_folder):
         if file.startswith("seq_clustering") and file.endswith(".csv"):        
-            header = ["start", "stop", "filename", "cluster", "i"]
             path = "{}/{}".format(work_folder, file)
-            df = pd.read_csv(path, sep=",", header = None, names=header)
+            df = pd.read_csv(path)            
             for i, row in df.iterrows():
                 c = int(row['cluster'])
-                filename = row['filename']
+                filename = row['filen']
                 start = row['start']
                 stop = row['stop']
 

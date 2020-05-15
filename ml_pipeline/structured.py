@@ -156,11 +156,11 @@ def process_dtw(assignment, overlapping, max_dist):
 
 def hierarchical_clustering(
     annotation_path,
-    max_dist = 5.0, 
+    max_dist = 10.0, 
     min_th= 1, 
     max_th= 500, 
-    paa = 4, 
-    sax = 5,
+    paa = 3, 
+    sax = 4,
     processes = 25,
     max_instances=None
 ):
@@ -242,7 +242,7 @@ def annotate_clustering(work_folder, annotations):
             df = pd.read_csv(path)            
             for i, row in df.iterrows():
                 c = int(row['cluster'])
-                filename = row['filename']
+                filename = row['file']
                 start = row['start']
                 stop = row['stop']
 

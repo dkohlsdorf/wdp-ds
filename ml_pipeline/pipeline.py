@@ -347,7 +347,7 @@ def sequence_clustering(inp, out, embedder, min_support=1, n_writers=10, max_ins
                 instances_clusters[c] += 1
     print('Done Clustering')
     pool = mp.Pool(processes=n_writers)
-    results = [pool.apply_async(write_audio, args=(out, cluster_id, instances_clusters, grouped_by_cluster, 2, 1500)) for cluster_id in range(0, k)]
+    results = [pool.apply_async(write_audio, args=(out, cluster_id, instances_clusters, grouped_by_cluster, 0, 1500)) for cluster_id in range(0, k)]
     outputs = [p.get() for p in results]
     print('Done Writing')
     
@@ -392,8 +392,8 @@ def header():
     =================================================================
     Dolphin Machine Learning Pipeline
                 
-    usage for training:   python ml_pipeline/pipeline.py train config/default_config.yaml
-    usage for induction:  python ml_pipeline/pipeline.py induction config/induction_config.yaml
+    usage for training:   python ml_pipeline/pipeline.py train config/default_config.yaml > train_log.txt
+    usage for induction:  python ml_pipeline/pipeline.py induction config/induction_config.yaml > induction_log.txt
     usage for annotation: python ml_pipeline/pipeline.py annotate config/annotation.yaml
     
     by Daniel Kyu Hwa Kohlsdorf

@@ -261,7 +261,7 @@ def hierarchical_clustering(
     max_th= 500, 
     paa = 3, 
     sax = 4,
-    processes = 5,
+    processes = 10,
     max_instances=None
 ):
     '''
@@ -327,10 +327,14 @@ def hierarchical_clustering(
     print("Build Hidden Markov Models")
     pool = mp.Pool(processes=processes)
     model_pool = list(set(assignments))
+    print("\t 1) Distribute Work for {}".format(len(model_pool)))
     results = [pool.apply_async(make_hmm, args=(model, assignments, sequences)) for model in model_pool]
+    print("\t 2) Get Results")
     hmms    = [p.get() for p in results]
-    pool.close()
+    print("\t 3) Finalize")
     hmms    = [hmm for hmm in hmms if hmm is not None]
+    pool.close()
+                        
     print("Greedy Mixture Learning / Cluster Supression")
     models, last_ll, assignemnts = greedy_mixture_learning(sequences, hmms, 1e-6)
     cluster_regions = [(start, stop, f, t, c) for c, (start, stop, f, t, _) in zip(assignments, overlapping)]

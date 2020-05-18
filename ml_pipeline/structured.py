@@ -285,7 +285,7 @@ def hierarchical_clustering(
     for file in tf.io.gfile.listdir(annotation_path):        
         if file.startswith("embedding") and file.endswith(".csv"):
             path = "{}/{}".format(annotation_path, file)
-            logstructure.info("\tReading {}".format(path))
+            logstructure.info("\tReading {} {}".format(path, len(overlapping)))
             header                = ["filename", "start", "stop", "type", "embedding"]
             df                    = pd.read_csv(path, sep="\t", header = None, names=header)
             signals               = df[df['type'] > 1]
@@ -297,7 +297,7 @@ def hierarchical_clustering(
             if max_instances is not None and len(overlapping) > max_instances:
                 break
                 
-    overlapping = [x for x in overlapping if len(x[4]) > min_th and len(x[4]) < max_th]
+    overlapping = [x for x in overlapping[:max_instances] if len(x[4]) > min_th and len(x[4]) < max_th]
     max_len = int(max([len(e) for _, _, _, _, e in overlapping]) + 1)
     sequences = [np.stack(s) for _, _, _, _, s in overlapping]
     logstructure.info("Bucketing instances")

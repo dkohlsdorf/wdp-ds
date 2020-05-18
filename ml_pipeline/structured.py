@@ -172,10 +172,10 @@ def make_hmm(cluster, assignment, overlapping, min_instances = 5):
     :param overlapping: the overlapping sequences
     :returns: a hidden markov model   
     '''
-    logstructure.info("MkModel: {}".format("cluster"))
     x_label = np.array([overlapping[i] for i in range(0, len(overlapping)) if assignment[i] == cluster])
-    logstructure.info("\t {} instances".format(len(x_label)))
     if len(x_label) > min_instances:        
+        logstructure.info("MkModel: {}".format("cluster"))
+        logstructure.info("\t {} instances".format(len(x_label)))
         frames = int(np.mean([len(x) for x in x_label]))
         n = frames / 4
         l = 1 / n

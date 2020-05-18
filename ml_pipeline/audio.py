@@ -6,7 +6,7 @@ import tensorflow as tf
 import logging
 logging.basicConfig()
 logaudio = logging.getLogger('audio')
-logaudio.setLevel(logaudioging.INFO)
+logaudio.setLevel(logging.INFO)
 
 from pydub import AudioSegment
 

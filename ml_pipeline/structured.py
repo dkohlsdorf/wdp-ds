@@ -294,10 +294,9 @@ def hierarchical_clustering(
             annotated             = [(row['start'], row['stop'], row['filename'], row['type'], row['embedding'])
                                      for _ , row in signals.iterrows()]
             overlapping += groupBy(annotated, overlap)
-            if max_instances is not None and len(overlapping) > max_instances:
-                break
-                
-    overlapping = [x for x in overlapping[:max_instances] if len(x[4]) > min_th and len(x[4]) < max_th]
+    if max_instances is not None:
+        overlapping = overlapping[:max_instances]
+    overlapping = [x for x in overlapping if len(x[4]) > min_th and len(x[4]) < max_th]
     max_len = int(max([len(e) for _, _, _, _, e in overlapping]) + 1)
     sequences = [np.stack(s) for _, _, _, _, s in overlapping]
     logstructure.info("Bucketing instances")

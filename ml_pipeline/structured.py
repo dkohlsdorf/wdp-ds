@@ -8,6 +8,8 @@ import multiprocessing as mp
 
 from scipy.sparse import lil_matrix
 
+from pomegranate import *
+
 from tensorflow.keras.preprocessing.sequence import pad_sequences
 from sklearn.model_selection import train_test_split
 from collections import namedtuple
@@ -154,6 +156,94 @@ def process_dtw(assignment, overlapping, max_dist):
     return [], []
 
 
+def make_hmm(cluster, assignment, overlapping):
+    '''
+    Learn a 4 state Hidden Markov Model with 2 skip states.
+    Initialization is performed from using flat start (mean and variances equal for all states)
+    Training is performed using Baum Welch
+
+    :param cluster: cluster number
+    :param assignment: assignment of clusters for each sequence
+    :param overlapping: the overlapping sequences
+    :returns: a hidden markov model   
+    '''
+
+    n = steps / 4
+    l = 1 / n
+    s = 1 - l
+    trans_mat = numpy.array([[s,     l/2, l/2, 0.0],
+                            [0.0,   s, l,     0.0],
+                            [0.0, 0.0, s,       l],
+                            [0.0, 0.0, 0.0,     s]])
+    starts    = numpy.array([1.0, 0.0, 0.0, 0.0])
+    ends      = numpy.array([0.0, 0.0, 0.0, 0.1])
+    x_label   = np.array([overlapping[i] for i in range(0, len(overlapping)) if assignment[i] == cluster])
+    dim       = len(overlapping[0][0])
+    dists     = []
+    for i in range(0, 4):
+        state = x_label[:, i * int(n): (i + 1) * int(n), :]
+        mu    = np.mean(state, axis=(0, 1))
+        std   = np.eye(dim) * (np.std(state, axis=(0, 1)) + 1.0)
+        dists.append(MultivariateGaussianDistribution(mu, std))
+    model = HiddenMarkovModel.from_matrix(trans_mat, dists, starts, ends)
+    model.fit(x_label, algorithm='baum-welch', max_iterations=50, verbose=True)
+    return model
+
+
+def decode(sequence, hmms):
+    '''
+    Decode all sequences using a hidden Markov model
+    :param sequence: a  sequences to decode
+    :param hmms: a list of hidden markov model
+    :returns: (max likelihoods, max assignment)
+    '''
+    max_ll = 0.0
+    max_hmm     = 0
+    for i, hmm in enumerate(hmms):
+        ll = hmm.log_probability(sequence)
+        if ll > max_ll:
+            max_ll = ll
+            max_hmm = i
+    return max_ll, max_hmm
+
+
+def greedy_mixture_learning(sequences, hmms, pool, th):
+    '''
+    Greedily learn a mixture of hidden markov models
+
+    :param sequences: a list of sequences
+    :param hmms: a list of hidden Markov models
+    :param pool: a thread pool
+    :param th: stop when improvement is below a threshold
+    :returns: final set of hmms 
+    '''
+    last_ll = float('-inf')
+    models   = []
+    openlist = hmms.copy()
+    while len(openlist) > 0:
+        max_hypothesis_ll = float('-inf')
+        max_hypothesis    = 0
+        for i, hmm in enumerate(openlist):
+            hypothesis = models + [hmm]
+            results     = [pool.apply_async(decode, args=(sequence, hypothesis)) for sequence in sequences]
+            decoded     = [p.get() for p in results]
+            assignemnts = [assignment for _, assignment in decoded]
+            likelihoods = [ll for ll, _ in decoded]
+            likelihood   = sum(likelihoods)
+            if likelihood > max_hypothesis_ll:
+                max_hypothesis_ll = likelihood
+                max_hypothesis = i
+        best   = openlist.pop(max_hypothesis)
+        models = models + [best]
+        print("Greedy Mixture Learning: {}".format(max_hypothesis_ll))
+        if last_ll - max_hypothesis_ll < th:
+            break
+    results     = [pool.apply_async(decode, args=(sequence, hmms)) for sequence in sequences]
+    decoded     = [p.get() for p in results]
+    assignemnts = [assignment for _, assignment in decoded]
+    return models, last_ll, assignemnts
+
+
 def hierarchical_clustering(
     annotation_path,
     max_dist = 10.0, 
@@ -194,6 +284,7 @@ def hierarchical_clustering(
     overlapping = [x for x in overlapping if len(x[4]) > min_th and len(x[4]) < max_th]
     max_len = int(max([len(e) for _, _, _, _, e in overlapping]) + 1)
     sequences = [np.stack(s) for _, _, _, _, s in overlapping]
+    print("Bucketing instances")
     if max_instances is not None:
         assignments = similarity_bucketing(sequences, paa, sax, max_instances)
     else:
@@ -204,19 +295,28 @@ def hierarchical_clustering(
         if s not in by_assignment:
             by_assignment[s] = []
         by_assignment[s].append(o)
-    
+    print("Bucketed Clustering")
     pool = mp.Pool(processes=processes)
     results = [pool.apply_async(process_dtw, args=(assignment, overlapping, max_dist)) for assignment, overlapping in by_assignment.items()]
     outputs = [p.get() for p in results]
-
+    print("Process Results")
     cur = 0
-    cluster_regions = []
+    assignments = []
+    overlapping = []
+    sequences   = []
     for clustering, overlapping in outputs:
         if len(clustering) > 0:
-            for c, (start, stop, f, t, _) in zip(clustering, overlapping):
-                    cluster_regions.append((start, stop, f, t, c + cur))
+            for c, (start, stop, f, t, sequence) in zip(clustering, overlapping):
+                    clusters.append(c)
+                    overlapping.append((start, stop, f, t, c + cur))
+                    sequences.append(sequence)
             for c in range(len(set(clustering))):
                 cur += 1
+    print("Build Hidden Markov Models")
+    results = [pool.apply_async(make_hmm, args=(c, assignments, sequences)) for c in range(len(assignments))]
+    hmms    = [p.get() for p in results]
+    models, last_ll, assignemnts = greedy_mixture_learning(sequences, hmms, pool, 1e-6)
+    cluster_regions = [(start, stop, f, t, c) for c, (start, stop, f, t, _) in zip(assignments, overlapping)]
     return cluster_regions
 
 

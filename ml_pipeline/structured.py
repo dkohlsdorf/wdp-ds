@@ -327,7 +327,7 @@ def hierarchical_clustering(
     print("Build Hidden Markov Models")
     pool = mp.Pool(processes=processes)
     model_pool = list(set(assignments))
-    results = [pool.apply_async(make_hmm, args=(c, assignments, sequences)) for model in model_pool]
+    results = [pool.apply_async(make_hmm, args=(model, assignments, sequences)) for model in model_pool]
     hmms    = [p.get() for p in results]
     pool.close()
     hmms    = [hmm for hmm in hmms if hmm is not None]

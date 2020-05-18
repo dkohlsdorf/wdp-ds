@@ -156,7 +156,7 @@ def process_dtw(assignment, overlapping, max_dist):
     return [], []
 
 
-def make_hmm(cluster, assignment, overlapping):
+def make_hmm(cluster, assignment, overlapping, min_instances = 5):
     '''
     Learn a 4 state Hidden Markov Model with 2 skip states.
     Initialization is performed from using flat start (mean and variances equal for all states)
@@ -168,26 +168,28 @@ def make_hmm(cluster, assignment, overlapping):
     :returns: a hidden markov model   
     '''
     x_label = np.array([overlapping[i] for i in range(0, len(overlapping)) if assignment[i] == cluster])
-    frames = int(np.mean([len(x) for x in x_label]))
-    n = frames / 4
-    l = 1 / n
-    s = 1 - l
-    trans_mat = numpy.array([[s,     l/2, l/2, 0.0],
-                            [0.0,   s, l,     0.0],
-                            [0.0, 0.0, s,       l],
-                            [0.0, 0.0, 0.0,     s]])
-    starts    = numpy.array([1.0, 0.0, 0.0, 0.0])
-    ends      = numpy.array([0.0, 0.0, 0.0, 0.1])
-    dim       = len(overlapping[0][0])
-    dists     = []
-    for i in range(0, 4):
-        state = x_label[0][i * int(n): (i + 1) * int(n)]
-        mu    = np.mean(state, axis=(0, 1))
-        std   = np.eye(dim) * (np.std(state, axis=(0, 1)) + 1.0)
-        dists.append(MultivariateGaussianDistribution(mu, std))
-    model = HiddenMarkovModel.from_matrix(trans_mat, dists, starts, ends)
-    model.fit(x_label, algorithm='baum-welch', max_iterations=50, verbose=True)
-    return model
+    if len(x_label > min_instances):
+        frames = int(np.mean([len(x) for x in x_label]))
+        n = frames / 4
+        l = 1 / n
+        s = 1 - l
+        trans_mat = numpy.array([[s,     l/2, l/2, 0.0],
+                                [0.0,   s, l,     0.0],
+                                [0.0, 0.0, s,       l],
+                                [0.0, 0.0, 0.0,     s]])
+        starts    = numpy.array([1.0, 0.0, 0.0, 0.0])
+        ends      = numpy.array([0.0, 0.0, 0.0, 0.1])
+        dim       = len(overlapping[0][0])
+        dists     = []
+        for i in range(0, 4):
+            state = x_label[0][i * int(n): (i + 1) * int(n)]
+            mu    = np.mean(state, axis=(0, 1))
+            std   = np.eye(dim) * (np.std(state, axis=(0, 1)) + 1.0)
+            dists.append(MultivariateGaussianDistribution(mu, std))
+        model = HiddenMarkovModel.from_matrix(trans_mat, dists, starts, ends)
+        model.fit(x_label, algorithm='baum-welch', max_iterations=50, verbose=True)
+        return model
+    return None
 
 
 def decode(sequence, hmms):
@@ -315,6 +317,7 @@ def hierarchical_clustering(
     print("Build Hidden Markov Models")
     results = [pool.apply_async(make_hmm, args=(c, assignments, sequences)) for c in range(len(assignments))]
     hmms    = [p.get() for p in results]
+    hmms    = [hmm for hmm in hmms if hmm is not None]
     models, last_ll, assignemnts = greedy_mixture_learning(sequences, hmms, pool, 1e-6)
     cluster_regions = [(start, stop, f, t, c) for c, (start, stop, f, t, _) in zip(assignments, overlapping)]
     return cluster_regions

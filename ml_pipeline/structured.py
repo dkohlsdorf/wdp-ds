@@ -167,8 +167,9 @@ def make_hmm(cluster, assignment, overlapping):
     :param overlapping: the overlapping sequences
     :returns: a hidden markov model   
     '''
-
-    n = steps / 4
+    x_label = np.array([overlapping[i] for i in range(0, len(overlapping)) if assignment[i] == cluster])
+    frames = int(np.mean([len(x) for x in x_label]))
+    n = frames / 4
     l = 1 / n
     s = 1 - l
     trans_mat = numpy.array([[s,     l/2, l/2, 0.0],
@@ -177,7 +178,6 @@ def make_hmm(cluster, assignment, overlapping):
                             [0.0, 0.0, 0.0,     s]])
     starts    = numpy.array([1.0, 0.0, 0.0, 0.0])
     ends      = numpy.array([0.0, 0.0, 0.0, 0.1])
-    x_label   = np.array([overlapping[i] for i in range(0, len(overlapping)) if assignment[i] == cluster])
     dim       = len(overlapping[0][0])
     dists     = []
     for i in range(0, 4):

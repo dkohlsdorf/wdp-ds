@@ -178,7 +178,6 @@ def make_hmm(cluster, assignment, overlapping, min_instances = 5, max_train=10):
         logstructure.info("MkModel: {}".format("cluster"))
         logstructure.info("\t {} instances".format(len(x_label)))
         logstructure.info("\t sample {}".format(x_label[0:10]))
-        logstructure.info("\t {} shape".format(x_label.shape))
         frames = int(np.mean([len(x) for x in x_label]))
         n = frames / 4
         l = 1 / n

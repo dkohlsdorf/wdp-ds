@@ -12,7 +12,7 @@ from sklearn.manifold.t_sne import TSNE
 from sklearn.metrics import silhouette_samples, silhouette_score
 
 import logging
-log = logging.getLogger('audop')
+log = logging.getLogger('plots')
 log.setLevel(logging.INFO)
 
 

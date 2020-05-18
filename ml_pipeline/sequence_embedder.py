@@ -3,7 +3,7 @@ import numpy as np
 from audio import *
 
 import logging
-log = logging.getLogger('audop')
+log = logging.getLogger('embedder')
 log.setLevel(logging.INFO)
 
 class SequenceEmbedder:

@@ -3,7 +3,7 @@ from sklearn.cluster import KMeans
 from sklearn.utils import resample
 
 import logging
-log = logging.getLogger('audop')
+log = logging.getLogger('sax')
 log.setLevel(logging.INFO)
 
 

@@ -10,7 +10,7 @@ import matplotlib
 matplotlib.use('Agg')
 import multiprocessing as mp
 import logging
-log = logging.getLogger('audop')
+log = logging.getLogger('main')
 log.setLevel(logging.INFO)
 
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3' 

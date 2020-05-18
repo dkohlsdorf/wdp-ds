@@ -167,8 +167,10 @@ def make_hmm(cluster, assignment, overlapping, min_instances = 5):
     :param overlapping: the overlapping sequences
     :returns: a hidden markov model   
     '''
+    print("MkModel: {}".format("cluster"))
     x_label = np.array([overlapping[i] for i in range(0, len(overlapping)) if assignment[i] == cluster])
-    if len(x_label) > min_instances:
+    print("\t {} instances".format(len(x_label)))
+    if len(x_label) > min_instances:        
         frames = int(np.mean([len(x) for x in x_label]))
         n = frames / 4
         l = 1 / n
@@ -220,6 +222,7 @@ def greedy_mixture_learning(sequences, hmms, th):
     :param th: stop when improvement is below a threshold
     :returns: final set of hmms 
     '''
+    print("Starting greedy mixture learning")
     last_ll = float('-inf')
     models   = []
     openlist = hmms.copy()
@@ -228,7 +231,7 @@ def greedy_mixture_learning(sequences, hmms, th):
         max_hypothesis    = 0
         for i, hmm in enumerate(openlist):
             hypothesis = models + [hmm]
-            pool = mp.Pool(processes=processes)
+            pool = mp.Pool(processes=10)
             results     = [pool.apply_async(decode, args=(sequence, hypothesis)) for sequence in sequences]
             decoded     = [p.get() for p in results]
             pool.close()
@@ -243,7 +246,7 @@ def greedy_mixture_learning(sequences, hmms, th):
         print("Greedy Mixture Learning: {}".format(max_hypothesis_ll))
         if last_ll - max_hypothesis_ll < th:
             break
-    pool        = mp.Pool(processes=processes)
+    pool        = mp.Pool(processes=10)
     results     = [pool.apply_async(decode, args=(sequence, hmms)) for sequence in sequences]
     decoded     = [p.get() for p in results]
     assignemnts = [assignment for _, assignment in decoded]
@@ -253,12 +256,12 @@ def greedy_mixture_learning(sequences, hmms, th):
 
 def hierarchical_clustering(
     annotation_path,
-    max_dist = 10.0, 
+    max_dist = 15.0, 
     min_th= 1, 
     max_th= 500, 
     paa = 3, 
     sax = 4,
-    processes = 25,
+    processes = 10,
     max_instances=None
 ):
     '''

@@ -162,7 +162,7 @@ def process_dtw(assignment, overlapping, max_dist):
     return [], []
 
 
-def make_hmm(cluster, assignment, overlapping, min_instances = 5, max_train=10):
+def make_hmm(cluster, assignment, overlapping, min_instances = 5, max_train=100):
     '''
     Learn a 4 state Hidden Markov Model with 2 skip states.
     Initialization is performed from using flat start (mean and variances equal for all states)
@@ -192,7 +192,7 @@ def make_hmm(cluster, assignment, overlapping, min_instances = 5, max_train=10):
         dists     = []
         for i in range(0, 4):
             logstructure.info("\t Init state {}".format(i))
-            state = np.vstack([x[i * int(n): (i + 1) * int(n), :] for x in x_label])
+            state = np.vstack([x[i * int(n): (i + 1) * int(n)] for x in x_label])
             mu    = np.mean(state, axis=(0, 1))
             std   = np.eye(dim) * (np.std(state, axis=(0, 1)) + 1.0)
             dists.append(MultivariateGaussianDistribution(mu, std))

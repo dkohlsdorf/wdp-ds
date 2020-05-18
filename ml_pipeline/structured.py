@@ -5,6 +5,7 @@ import pickle as pkl
 import tensorflow as tf
 import re
 import multiprocessing as mp
+import random
 
 import logging
 logging.basicConfig()
@@ -161,7 +162,7 @@ def process_dtw(assignment, overlapping, max_dist):
     return [], []
 
 
-def make_hmm(cluster, assignment, overlapping, min_instances = 5):
+def make_hmm(cluster, assignment, overlapping, min_instances = 5, max_train=10):
     '''
     Learn a 4 state Hidden Markov Model with 2 skip states.
     Initialization is performed from using flat start (mean and variances equal for all states)
@@ -173,6 +174,8 @@ def make_hmm(cluster, assignment, overlapping, min_instances = 5):
     :returns: a hidden markov model   
     '''
     x_label = np.array([overlapping[i] for i in range(0, len(overlapping)) if assignment[i] == cluster])
+    random.shuffle(x_label)
+    x_label = x_label[0:max_train]
     if len(x_label) > min_instances:        
         logstructure.info("MkModel: {}".format("cluster"))
         logstructure.info("\t {} instances".format(len(x_label)))
@@ -189,10 +192,13 @@ def make_hmm(cluster, assignment, overlapping, min_instances = 5):
         dim       = len(overlapping[0][0])
         dists     = []
         for i in range(0, 4):
+            logstructure.info("\t Init state {}".format(i))
             state = x_label[0][i * int(n): (i + 1) * int(n)]
             mu    = np.mean(state, axis=(0, 1))
             std   = np.eye(dim) * (np.std(state, axis=(0, 1)) + 1.0)
             dists.append(MultivariateGaussianDistribution(mu, std))
+        logstructure.info("\t Model fit")
+        logstructure.info(model)
         model = HiddenMarkovModel.from_matrix(trans_mat, dists, starts, ends)
         model.fit(x_label, algorithm='baum-welch', max_iterations=50, verbose=True)
         logstructure.info(model)

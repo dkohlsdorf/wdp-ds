@@ -3,6 +3,7 @@ import numpy as np
 from audio import *
 
 import logging
+logging.basicConfig()
 log = logging.getLogger('embedder')
 log.setLevel(logging.INFO)
 

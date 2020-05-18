@@ -3,6 +3,7 @@ from sklearn.cluster import KMeans
 from sklearn.utils import resample
 
 import logging
+logging.basicConfig()
 log = logging.getLogger('sax')
 log.setLevel(logging.INFO)
 

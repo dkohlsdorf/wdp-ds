@@ -6,6 +6,9 @@ import tensorflow as tf
 import re
 import multiprocessing as mp
 import logging
+logging.basicConfig()
+log = logging.getLogger('structure')
+log.setLevel(logging.INFO)
 
 from scipy.sparse import lil_matrix
 
@@ -18,8 +21,6 @@ from dtw import DTW
 from sequence_hashing import similarity_bucketing
 from sklearn.cluster import AgglomerativeClustering
 
-log = logging.getLogger('structure')
-log.setLevel(logging.INFO)
 
 class TypeExtraction(namedtuple("Induction", "embeddings starts stops types files")):
     """

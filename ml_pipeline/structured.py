@@ -162,7 +162,7 @@ def process_dtw(assignment, overlapping, max_dist):
     return [], []
 
 
-def make_hmm(cluster, assignment, overlapping, min_instances = 5, max_train=50):
+def make_hmm(cluster, assignment, overlapping, min_instances = 5, max_train=150):
     '''
     Learn a 4 state Hidden Markov Model with 2 skip states.
     Initialization is performed from using flat start (mean and variances equal for all states)
@@ -181,20 +181,20 @@ def make_hmm(cluster, assignment, overlapping, min_instances = 5, max_train=50):
         n = frames / 4
         l = 1 / n
         s = 1 - l
-        trans_mat = numpy.array([[s,     l/2, l/2, 0.0],
-                                [0.0,   s, l,     0.0],
-                                [0.0, 0.0, s,       l],
-                                [0.0, 0.0, 0.0,     s]])
-        starts    = numpy.array([1.0, 0.0, 0.0, 0.0])
+        trans_mat = numpy.array([[s,     l/2, l/2,  0.0],
+                                [0.0,   s, l,       0.0],
+                                [0.0, 0.0, s,        l],
+                                [0.0, 0.0, 0.0,      s]])
+        starts    = numpy.array([0.5, 0.0, 0.0, 0.5])
         ends      = numpy.array([0.0, 0.0, 0.0, 0.1])
         dim       = len(overlapping[0][0])
         dists     = []
-        for i in range(0, 4):
-            logstructure.info("\t Init state {}".format(i))
-            state = np.vstack([x[i * int(n): (i + 1) * int(n)] for x in x_label])
-            mu    = np.mean(state, axis=(0, 1))
-            std   = np.eye(dim) * (np.std(state, axis=(0, 1)) + 1.0)
-            dists.append(MultivariateGaussianDistribution(mu, std))
+                    
+        state = np.vstack(x_label])
+        mu    = np.mean(state, axis=(0, 1))
+        std   = np.eye(dim) * (np.std(state, axis=(0, 1)) + 1.0)
+        print("\t Stats: {} / {}".format(mu.shape, std.shape))
+        dists = [MultivariateGaussianDistribution(mu, std) for i in range(0, 4)]
         logstructure.info("\t Model fit")
         logstructure.info(model)
         model = HiddenMarkovModel.from_matrix(trans_mat, dists, starts, ends)

@@ -268,7 +268,7 @@ def hierarchical_clustering(
     paa = 3, 
     sax = 4,
     processes = 10,
-    max_instances=1000
+    max_instances=100
 ):
     '''
     Hierarchical clustering of annotations

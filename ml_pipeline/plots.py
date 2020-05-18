@@ -11,6 +11,10 @@ from sklearn.cluster import KMeans
 from sklearn.manifold.t_sne import TSNE
 from sklearn.metrics import silhouette_samples, silhouette_score
 
+import logging
+log = logging.getLogger('audop')
+log.setLevel(logging.DEBUG)
+
 
 COLORS = list(
     pd.read_csv('ml_pipeline/colors.txt', sep='\t', header=None)[1])
@@ -160,7 +164,7 @@ def visualize_embedding(img_path, embeddings, examples, k=240, figsize=(80, 60),
         l = [latent for latent, shillouette in zip(l, sample_silhouette_values)     if shillouette > th]
         examples = np.stack([x for x, shillouette in zip(examples, sample_silhouette_values) if shillouette > th])
         ids = [i for i in range(0, len(sample_silhouette_values)) if sample_silhouette_values[i] > th]
-        print("Shillouette TH: {} n_samples left {}".format(th, len(ids)))
+        log.info("Shillouette TH: {} n_samples left {}".format(th, len(ids)))
     else:
         ids = [i for i in range(0, len(c))]
     f, ax = plt.subplots(figsize=figsize)

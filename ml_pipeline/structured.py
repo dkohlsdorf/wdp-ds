@@ -5,6 +5,7 @@ import pickle as pkl
 import tensorflow as tf
 import re
 import multiprocessing as mp
+import logging
 
 from scipy.sparse import lil_matrix
 
@@ -17,6 +18,8 @@ from dtw import DTW
 from sequence_hashing import similarity_bucketing
 from sklearn.cluster import AgglomerativeClustering
 
+log = logging.getLogger('structure')
+log.setLevel(logging.DEBUG)
 
 class TypeExtraction(namedtuple("Induction", "embeddings starts stops types files")):
     """
@@ -49,7 +52,7 @@ class TypeExtraction(namedtuple("Induction", "embeddings starts stops types file
         stops      = []
         types      = []
         files      = [] 
-        print("- Working on embedding {}".format(path))
+        log.info("- Working on embedding {}".format(path))
         regions = embedder.embed(path)
         for x, f, start, stop, t in regions:
             embeddings.append(x)
@@ -140,7 +143,7 @@ def process_dtw(assignment, overlapping, max_dist):
         dist = np.zeros((n, n))
         for i, (start_x, stop_x, f_x, t_x, embedding_x) in enumerate(overlapping):
             if i % 250 == 0 and i > 0:
-                print("\t\t Processing: {} {}".format(i, len(overlapping)))
+                log.info("\t\t Processing: {} {}".format(i, len(overlapping)))
             for j, (start_y, stop_y, f_y, t_y, embedding_y) in enumerate(overlapping):
                 if i < j:
                     x = np.array([embedding_x]).reshape(len(embedding_x), 256)
@@ -148,7 +151,7 @@ def process_dtw(assignment, overlapping, max_dist):
                     d, _       = dtw.align(x, y) 
                     dist[i, j] = d / (len(x) * len(y))
                     dist[j, i] = d / (len(x) * len(y))
-        print("\t {} {} {} {} {} {} ".format(assignment, n, np.percentile(dist.flatten(), 5), np.percentile(dist.flatten(), 95), np.mean(dist), np.std(dist)))
+        log.info("\t {} {} {} {} {} {} ".format(assignment, n, np.percentile(dist.flatten(), 5), np.percentile(dist.flatten(), 95), np.mean(dist), np.std(dist)))
         agg = AgglomerativeClustering(n_clusters = None, 
                                       distance_threshold = max_dist, linkage = 'average', affinity='precomputed')
         clustering = agg.fit_predict(dist)
@@ -167,9 +170,9 @@ def make_hmm(cluster, assignment, overlapping, min_instances = 5):
     :param overlapping: the overlapping sequences
     :returns: a hidden markov model   
     '''
-    print("MkModel: {}".format("cluster"))
+    log.info("MkModel: {}".format("cluster"))
     x_label = np.array([overlapping[i] for i in range(0, len(overlapping)) if assignment[i] == cluster])
-    print("\t {} instances".format(len(x_label)))
+    log.info("\t {} instances".format(len(x_label)))
     if len(x_label) > min_instances:        
         frames = int(np.mean([len(x) for x in x_label]))
         n = frames / 4
@@ -190,7 +193,7 @@ def make_hmm(cluster, assignment, overlapping, min_instances = 5):
             dists.append(MultivariateGaussianDistribution(mu, std))
         model = HiddenMarkovModel.from_matrix(trans_mat, dists, starts, ends)
         model.fit(x_label, algorithm='baum-welch', max_iterations=50, verbose=True)
-        print(model)
+        log.info(model)
         return model
     return None
 
@@ -221,7 +224,7 @@ def greedy_mixture_learning(sequences, hmms, th):
     :param th: stop when improvement is below a threshold
     :returns: final set of hmms 
     '''
-    print("Starting greedy mixture learning")
+    log.info("Starting greedy mixture learning")
     last_ll = float('-inf')
     models   = []
     openlist = hmms.copy()
@@ -240,7 +243,7 @@ def greedy_mixture_learning(sequences, hmms, th):
                 max_hypothesis = i
         best   = openlist.pop(max_hypothesis)
         models = models + [best]
-        print("Greedy Mixture Learning: {}".format(max_hypothesis_ll))
+        log.info("Greedy Mixture Learning: {}".format(max_hypothesis_ll))
         if last_ll - max_hypothesis_ll < th:
             break
     with mp.Pool(processes=10) as pool:
@@ -274,7 +277,7 @@ def hierarchical_clustering(
     for file in tf.io.gfile.listdir(annotation_path):        
         if file.startswith("embedding") and file.endswith(".csv"):
             path = "{}/{}".format(annotation_path, file)
-            print("\tReading {}".format(path))
+            log.info("\tReading {}".format(path))
             header                = ["filename", "start", "stop", "type", "embedding"]
             df                    = pd.read_csv(path, sep="\t", header = None, names=header)
             signals               = df[df['type'] > 1]
@@ -289,7 +292,7 @@ def hierarchical_clustering(
     overlapping = [x for x in overlapping if len(x[4]) > min_th and len(x[4]) < max_th]
     max_len = int(max([len(e) for _, _, _, _, e in overlapping]) + 1)
     sequences = [np.stack(s) for _, _, _, _, s in overlapping]
-    print("Bucketing instances")
+    log.info("Bucketing instances")
     if max_instances is not None:
         assignments = similarity_bucketing(sequences, paa, sax, max_instances)
     else:
@@ -300,12 +303,12 @@ def hierarchical_clustering(
         if s not in by_assignment:
             by_assignment[s] = []
         by_assignment[s].append(o)
-    print("Bucketed Clustering")
+    log.info("Bucketed Clustering")
 
     with mp.Pool(processes=processes) as pool:
         outputs = pool.starmap(process_dtw, ((assignment, overlapping, max_dist) for assignment, overlapping in by_assignment.items()))
 
-    print("Process Results")
+    log.info("Process Results")
     cur = 0
     assignments = []
     overlapping = []
@@ -318,14 +321,14 @@ def hierarchical_clustering(
                     sequences.append(sequence)
             for c in range(len(set(clustering))):
                 cur += 1
-    print("Build Hidden Markov Models")
+    log.info("Build Hidden Markov Models")
     model_pool = list(set(assignments))
-    print("Models: {}".format(model_pool))
+    log.info("Models: {}".format(model_pool))
     with mp.Pool(processes=processes) as pool:
         hmms = pool.starmap(make_hmm, ((model, assignments, sequences) for model in model_pool))
         hmms = [hmm for hmm in hmms if hmm is not None]
                         
-    print("Greedy Mixture Learning / Cluster Supression")
+    log.info("Greedy Mixture Learning / Cluster Supression")
     models, last_ll, assignemnts = greedy_mixture_learning(sequences, hmms, 1e-6)
     cluster_regions = [(start, stop, f, t, c) for c, (start, stop, f, t, _) in zip(assignments, overlapping)]
     return cluster_regions

@@ -9,6 +9,9 @@ import tensorflow as tf
 import matplotlib
 matplotlib.use('Agg')
 import multiprocessing as mp
+import logging
+log = logging.getLogger('audop')
+log.setLevel(logging.DEBUG)
 
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3' 
 
@@ -98,7 +101,7 @@ def train(folder, output_folder, params, enc, ae, batch_size=10, epochs=128, kee
                     total_loss += loss
                     batch = []
                     if n_processed % 10 == 0:
-                        print("#: {} EPOCH: {} LOSS: {}".format(n_processed, epoch, total_loss))
+                        log.info("#: {} EPOCH: {} LOSS: {}".format(n_processed, epoch, total_loss))
                         total_loss = 0.0
                     n_processed += 1
                     epoch_loss += loss
@@ -123,7 +126,7 @@ def train_type(version_tag, input_folder, output_folder, params, encoder_file, b
     :param epochs: number of training epochs
     """
     if transfer:
-        print(encoder_file)
+        log.info(encoder_file)
         enc = load_model(encoder_file)
     else:
         _, enc = auto_encoder(
@@ -150,8 +153,8 @@ def train_type(version_tag, input_folder, output_folder, params, encoder_file, b
             confusion[y][_y] += 1
     np.savetxt('{}/confusion_type.csv'.format(output_folder), confusion)
     accuracy = np.sum(confusion * np.eye(4)) / np.sum(confusion)
-    print(accuracy)
-    print(confusion)
+    log.info(accuracy)
+    log.info(confusion)
     cls_type.save('{}/type.h5'.format(output_folder))
     plot_confusion_matrix(confusion, ["noise", "echo", "burst", "whistle"], 'Type Classification')
     plt.savefig('{}/confusion_type.png'.format(output_folder))
@@ -170,7 +173,7 @@ def train_silence(version_tag, input_folder, output_folder, params, encoder_file
     :param batch: batch size
     :param epochs: number of training epochs
     """
-    print("Training Silence Detector: {} {}".format(version_tag, epoch))
+    log.info("Training Silence Detector: {} {}".format(version_tag, epoch))
     if transfer:
         enc = load_model(encoder_file)
     else:
@@ -201,8 +204,8 @@ def train_silence(version_tag, input_folder, output_folder, params, encoder_file
         confusion[y][_y] += 1
     np.savetxt('{}/confusion.csv'.format(output_folder), confusion)
     accuracy = np.sum(confusion * np.eye(2)) / np.sum(confusion)
-    print(accuracy)
-    print(confusion)
+    log.info(accuracy)
+    log.info(confusion)
     plot_confusion_matrix(confusion, ["noise", "dolphin"], 'Noise Classification')
     plt.savefig('{}/confusion.png'.format(output_folder))
     plt.close()
@@ -221,13 +224,13 @@ def train_auto_encoder(version_tag, input_folder, output_folder, params, latent,
     :param batch: batch size
     :param epochs: number of training epochs
     """
-    print("Training Auto Encoder: {}".format(version_tag))
+    log.info("Training Auto Encoder: {}".format(version_tag))
     ae, enc = auto_encoder(
         (params.spec_win, params.n_fft_bins, 1), latent
     )
     enc.summary()
     if os.path.exists('{}/encoder.h5'.format(output_folder)) and os.path.exists('{}/auto_encoder.h5'.format(output_folder)):
-        print("\tloading previous weights")
+        log.info("\tloading previous weights")
         _enc = load_model('{}/encoder.h5'.format(output_folder))
         _enc.summary()
         _ae  = load_model('{}/auto_encoder.h5'.format(output_folder))
@@ -236,7 +239,7 @@ def train_auto_encoder(version_tag, input_folder, output_folder, params, latent,
     w_before = enc.layers[1].get_weights()[0].flatten()
     train(input_folder, output_folder, params, enc, ae, batch, epochs)
     w_after = enc.layers[1].get_weights()[0].flatten()
-    print("DELTA W:", np.sum(np.square(w_before - w_after)))
+    log.info("DELTA W:", np.sum(np.square(w_before - w_after)))
     enc.save('{}/encoder.h5'.format(output_folder))
     ae.save('{}/auto_encoder.h5'.format(output_folder))
 
@@ -252,13 +255,13 @@ def evaluate_encoder(version_tag, input_folder, output_folder, encoder_file, par
     :param params: window parameters
     :param k: number of clusters
     """
-    print("Evaluate Encoder: {}".format(version_tag))
+    log.info("Evaluate Encoder: {}".format(version_tag))
     enc = load_model(encoder_file)
     visualize_2dfilters(output_folder, enc, [1], n_rows = 8)    
     x = np.stack([x.reshape(x.shape[0], x.shape[1], 1) for (x,_,_,_,_) in dataset(
         input_folder, params, no_label, False
     ) if np.random.uniform() < 0.1])
-    print(x.shape)
+    log.info(x.shape)
     h = enc.predict(x)
     visualize_embedding("{}/embeddings.png".format(output_folder), h, x, k)
 
@@ -278,7 +281,7 @@ def test_reconstruction(folder, out, params):
         plt.imshow(1.0 - ae.predict(x.reshape(1, 128, 256, 1))[0, :, :, 0].T, cmap='gray')
         i += 1
         if i % 10 == 0:        
-            print(i)
+            log.info(i)
         if i == 100:
             break
     plt.savefig('{}/reconstructions.png'.format(out))
@@ -296,28 +299,28 @@ def write_audio(out, cluster_id, instances_clusters, grouped_by_cluster, min_sup
     :param max_support: maximum number of instances in cluster
     '''
     if instances_clusters[cluster_id] > min_support and instances_clusters[cluster_id] < max_support:
-        print("Audio result for cluster: {} {}".format(cluster_id, instances_clusters[cluster_id]))
+        log.info("Audio result for cluster: {} {}".format(cluster_id, instances_clusters[cluster_id]))
         audio_bank = AudioSnippetCollection("{}/seq_cluster_{}.wav".format(out, cluster_id))
         for f, snippets in grouped_by_cluster[cluster_id].items():
-            print("Cluster: {}, {}, {}".format(cluster_id, f, len(snippets)))
+            log.info("Cluster: {}, {}, {}".format(cluster_id, f, len(snippets)))
             for audio_snippet in audio_regions(f, snippets):                  
                 audio_bank.write(audio_snippet)
         audio_bank.close()
-        print("Done: {}".format(cluster_id))
+        log.info("Done: {}".format(cluster_id))
 
 
 def sequence_clustering(inp, out, embedder, min_support=1, n_writers=10, max_instances=None):    
     '''
     Hierarchical cluster connected regions of whistles and bursts
     '''
-    print("Sequence Clustering")
+    log.info("Sequence Clustering")
     for filename in tf.io.gfile.listdir(inp):
         if filename.endswith('.ogg') or filename.endswith('.wav'):
             name = filename.replace(".wav", "")
             name = name.replace(".ogg", "")            
             in_path  = "{}/{}".format(inp, filename)
             out_path = "{}/embedding_{}.csv".format(out, name)
-            print("\t {}".format(in_path))
+            log.info("\t {}".format(in_path))
             if not os.path.isfile(out_path):
                 inducer = TypeExtraction.from_audiofile(in_path, embedder)
                 inducer.save(out_path, append=True)
@@ -345,20 +348,20 @@ def sequence_clustering(inp, out, embedder, min_support=1, n_writers=10, max_ins
         for f, regions in collection.items():
             for r in regions:
                 instances_clusters[c] += 1
-    print('Done Clustering')
+    log.info('Done Clustering')
     with mp.Pool(processes=processes) as pool:
         pool.starmap(write_audio, ((out, cluster_id, instances_clusters, grouped_by_cluster, 0, 1500) for cluster_id in range(0, k)))
-    print('Done Writing')
+    log.info('Done Writing')
     
     for f, regions in grouped_by_filename.items():
         filename = f.split(".")[0].split("/")[-1]
         log_path = "{}/seq_clustering_log_{}.csv".format(out, filename)
-        print("writing: {}".format(log_path))
+        log.info("writing: {}".format(log_path))
         with open(log_path, "w") as fp:
             fp.write("start,stop,file,cluster,type,region_id\n")
             for start, stop, c, t, i in regions:
                 fp.write("{},{},{},{},{},{}\n".format(start, stop, f, c, t, i))
-    print('Done Logs')
+    log.info('Done Logs')
 
         
 def generate_dataset(work_folder, annotations, out):
@@ -369,17 +372,17 @@ def generate_dataset(work_folder, annotations, out):
     :param annotations: annotation file
     :param out: output folder
     '''
-    print("Generate Dataset")
+    log.info("Generate Dataset")
     i = 0
     for cluster, d in annotate_clustering(work_folder, annotations).items():
-        print("\t\t{}".format(cluster))
+        log.info("\t\t{}".format(cluster))
         for filename, regions in d.items():
-            print("\t\t{}".format(filename))
+            log.info("\t\t{}".format(filename))
             r = [(start, stop) for start, stop, _ in regions]
             a = [a for _, _, a in regions]
             for annotation, audio_snippet in zip(a, audio_regions(filename, r)):
                 fp = "{}/{}_clustering_{}.wav".format(out, annotation, i)
-                print("\t\t{}".format(fp))
+                log.info("\t\t{}".format(fp))
                 audio_bank = AudioSnippetCollection(fp)
                 audio_bank.write(audio_snippet)
                 audio_bank.close()
@@ -401,10 +404,10 @@ def header():
     
     
 if __name__== "__main__":
-    print(header())
+    log.info(header())
     if len(sys.argv) == 3 and sys.argv[1] == 'train':
         c = yaml.load(open(sys.argv[2]))
-        print("Parameters: {}".format(c))
+        log.info("Parameters: {}".format(c))
         params       = WindowParams(c['spec_win'], c['spec_step'], c['fft_win'], c['fft_step'], c['highpass'])
         latent       = c['latent']
         batch        = c['batch']
@@ -426,7 +429,7 @@ if __name__== "__main__":
         test_reconstruction(reconstruct, output, params)
     elif len(sys.argv) == 3 and sys.argv[1] == 'induction':
         c = yaml.load(open(sys.argv[2]))
-        print("Parameters: {}".format(c))
+        log.info("Parameters: {}".format(c))
         params       = WindowParams(c['spec_win'], c['spec_step'], c['fft_win'], c['fft_step'], c['highpass'])
         inp          = c['input']
         output       = c['output'] 
@@ -437,7 +440,7 @@ if __name__== "__main__":
         embedder        = SequenceEmbedder(enc, silence, type_classifier, params)
         sequence_clustering(inp, output, embedder)
         clustering_usage(output)
-        print('Done !!!')
+        log.info('Done !!!')
     elif len(sys.argv) == 3 and sys.argv[1] == 'annotate':        
         c = yaml.load(open(sys.argv[2]))
         work_folder  = c['work_folder']

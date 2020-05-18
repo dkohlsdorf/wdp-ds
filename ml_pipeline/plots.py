@@ -13,8 +13,8 @@ from sklearn.metrics import silhouette_samples, silhouette_score
 
 import logging
 logging.basicConfig()
-log = logging.getLogger('plots')
-log.setLevel(logging.INFO)
+logplots = logging.getLogger('plots')
+logplots.setLevel(logging.INFO)
 
 
 COLORS = list(
@@ -165,7 +165,7 @@ def visualize_embedding(img_path, embeddings, examples, k=240, figsize=(80, 60),
         l = [latent for latent, shillouette in zip(l, sample_silhouette_values)     if shillouette > th]
         examples = np.stack([x for x, shillouette in zip(examples, sample_silhouette_values) if shillouette > th])
         ids = [i for i in range(0, len(sample_silhouette_values)) if sample_silhouette_values[i] > th]
-        log.info("Shillouette TH: {} n_samples left {}".format(th, len(ids)))
+        logplots.info("Shillouette TH: {} n_samples left {}".format(th, len(ids)))
     else:
         ids = [i for i in range(0, len(c))]
     f, ax = plt.subplots(figsize=figsize)

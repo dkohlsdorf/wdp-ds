@@ -4,8 +4,8 @@ from sklearn.utils import resample
 
 import logging
 logging.basicConfig()
-log = logging.getLogger('sax')
-log.setLevel(logging.INFO)
+logsax = logging.getLogger('sax')
+logsax.setLevel(logging.INFO)
 
 
 def paa(double[:, :] sequence, int n): 
@@ -41,17 +41,17 @@ def saxnd(list sequences, int n, int m, int n_samples=10000):
     cdef int d = len(sequences[0][0])
     cdef int N = len(sequences)
     cdef int i, j = 0
-    log.info("PAA")
+    logsax.info("PAA")
     compressed = []
     for i in range(N):
         compressed_seq = paa(sequences[i], n)
         compressed.append(compressed_seq)
     samples = np.vstack(compressed)
     cluster = resample(samples, replace=False, n_samples=n_samples)
-    log.info("Clustering {} instances of {} instances".format(cluster.shape, len(compressed)))
+    logsax.info("Clustering {} instances of {} instances".format(cluster.shape, len(compressed)))
     codebook = KMeans(n_clusters=m, n_init=10, max_iter=300)
     codebook.fit(cluster) 
-    log.info("Done Clustering")
+    logsax.info("Done Clustering")
     codes = []
     counts = np.zeros(m + 1, dtype=np.int32)
     counts_at_length = np.zeros(m + 1, dtype=np.int32)
@@ -64,8 +64,8 @@ def saxnd(list sequences, int n, int m, int n_samples=10000):
                 counts_at_length[symbol] += 1
             code.append(symbol)          
         codes.append(code)
-    log.info("Cluster usage:   {}".format(counts))
-    log.info("Cluster usage@n: {}".format(counts_at_length))
+    logsax.info("Cluster usage:   {}".format(counts))
+    logsax.info("Cluster usage@n: {}".format(counts_at_length))
     return codes
 
 

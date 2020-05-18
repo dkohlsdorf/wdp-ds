@@ -2,10 +2,11 @@ import numpy as np
 import random
 import os
 import tensorflow as tf
+
 import logging
 logging.basicConfig()
-log = logging.getLogger('audio')
-log.setLevel(logging.INFO)
+logaudio = logging.getLogger('audio')
+logaudio.setLevel(logaudioging.INFO)
 
 from pydub import AudioSegment
 
@@ -75,7 +76,7 @@ def read(path):
             x = AudioSegment.from_file(f)
             x = np.array(x.get_array_of_samples()).reshape(int(x.frame_count()),  x.channels)
         except Exception as e:
-            log.info("Skip file {} = {}".format(path, e))
+            logaudio.info("Skip file {} = {}".format(path, e))
             x = None
     return x
 

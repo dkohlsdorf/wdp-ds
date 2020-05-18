@@ -176,10 +176,11 @@ def make_hmm(cluster, assignment, overlapping, min_instances = 5, max_train=10):
     x_label = [overlapping[i] for i in range(0, len(overlapping)) if assignment[i] == cluster]
     if len(x_label) > min_instances:        
         logstructure.info("MkModel: {}".format("cluster"))
-        logstructure.info("\t {} instances".format(x_label.shape))
+        logstructure.info("\t {} instances".format(len(x_label)))
         logstructure.info("\t sample {}".format(x_label[0:10]))
         random.shuffle(x_label)
         x_label = np.array(x_label[0:max_train])
+        logstructure.info("\t {} shape".format(x_label.shape))
         frames = int(np.mean([len(x) for x in x_label]))
         n = frames / 4
         l = 1 / n

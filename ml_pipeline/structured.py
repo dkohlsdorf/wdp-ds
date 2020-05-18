@@ -181,7 +181,7 @@ def make_hmm(cluster, assignment, overlapping):
     dim       = len(overlapping[0][0])
     dists     = []
     for i in range(0, 4):
-        state = x_label[:, i * int(n): (i + 1) * int(n), :]
+        state = x_label[0][i * int(n): (i + 1) * int(n)]
         mu    = np.mean(state, axis=(0, 1))
         std   = np.eye(dim) * (np.std(state, axis=(0, 1)) + 1.0)
         dists.append(MultivariateGaussianDistribution(mu, std))

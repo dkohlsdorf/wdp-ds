@@ -349,6 +349,7 @@ def sequence_clustering(inp, out, embedder, min_support=1, n_writers=10, max_ins
     pool = mp.Pool(processes=n_writers)
     results = [pool.apply_async(write_audio, args=(out, cluster_id, instances_clusters, grouped_by_cluster, 0, 1500)) for cluster_id in range(0, k)]
     outputs = [p.get() for p in results]
+    pool.close()
     print('Done Writing')
     
     for f, regions in grouped_by_filename.items():

@@ -188,6 +188,7 @@ def make_hmm(cluster, assignment, overlapping, min_instances = 5):
             dists.append(MultivariateGaussianDistribution(mu, std))
         model = HiddenMarkovModel.from_matrix(trans_mat, dists, starts, ends)
         model.fit(x_label, algorithm='baum-welch', max_iterations=50, verbose=True)
+        print(model)
         return model
     return None
 
@@ -209,7 +210,7 @@ def decode(sequence, hmms):
     return max_ll, max_hmm
 
 
-def greedy_mixture_learning(sequences, hmms, pool, th):
+def greedy_mixture_learning(sequences, hmms, th):
     '''
     Greedily learn a mixture of hidden markov models
 
@@ -227,8 +228,10 @@ def greedy_mixture_learning(sequences, hmms, pool, th):
         max_hypothesis    = 0
         for i, hmm in enumerate(openlist):
             hypothesis = models + [hmm]
+            pool = mp.Pool(processes=processes)
             results     = [pool.apply_async(decode, args=(sequence, hypothesis)) for sequence in sequences]
             decoded     = [p.get() for p in results]
+            pool.close()
             assignemnts = [assignment for _, assignment in decoded]
             likelihoods = [ll for ll, _ in decoded]
             likelihood   = sum(likelihoods)
@@ -240,9 +243,11 @@ def greedy_mixture_learning(sequences, hmms, pool, th):
         print("Greedy Mixture Learning: {}".format(max_hypothesis_ll))
         if last_ll - max_hypothesis_ll < th:
             break
+    pool        = mp.Pool(processes=processes)
     results     = [pool.apply_async(decode, args=(sequence, hmms)) for sequence in sequences]
     decoded     = [p.get() for p in results]
     assignemnts = [assignment for _, assignment in decoded]
+    pool.close()
     return models, last_ll, assignemnts
 
 
@@ -301,6 +306,8 @@ def hierarchical_clustering(
     pool = mp.Pool(processes=processes)
     results = [pool.apply_async(process_dtw, args=(assignment, overlapping, max_dist)) for assignment, overlapping in by_assignment.items()]
     outputs = [p.get() for p in results]
+    pool.close()
+
     print("Process Results")
     cur = 0
     assignments = []
@@ -315,10 +322,13 @@ def hierarchical_clustering(
             for c in range(len(set(clustering))):
                 cur += 1
     print("Build Hidden Markov Models")
+    pool = mp.Pool(processes=processes)
     results = [pool.apply_async(make_hmm, args=(c, assignments, sequences)) for c in range(len(assignments))]
     hmms    = [p.get() for p in results]
     hmms    = [hmm for hmm in hmms if hmm is not None]
-    models, last_ll, assignemnts = greedy_mixture_learning(sequences, hmms, pool, 1e-6)
+    pool.close()
+    print("Greedy Mixture Learning / Cluster Supression")
+    models, last_ll, assignemnts = greedy_mixture_learning(sequences, hmms, 1e-6)
     cluster_regions = [(start, stop, f, t, c) for c, (start, stop, f, t, _) in zip(assignments, overlapping)]
     return cluster_regions
 

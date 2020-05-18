@@ -320,6 +320,7 @@ def hierarchical_clustering(
                 cur += 1
     print("Build Hidden Markov Models")
     model_pool = list(set(assignments))
+    print("Models: {}".format(model_pool))
     with mp.Pool(processes=processes) as pool:
         hmms = pool.starmap(make_hmm, ((model, assignments, sequences) for model in model_pool))
         hmms = [hmm for hmm in hmms if hmm is not None]

@@ -191,6 +191,7 @@ def make_hmm(cluster, assignment, overlapping, min_instances = 5, max_train=150)
         dists     = []
                     
         state = np.vstack(x_label)
+        print("\t State: {}".format(state.shape))
         mu    = np.mean(state, axis=(0, 1))
         std   = np.eye(dim) * (np.std(state, axis=(0, 1)) + 1.0)
         print("\t Stats: {} / {}".format(mu.shape, std.shape))

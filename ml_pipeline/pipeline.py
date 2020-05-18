@@ -9,7 +9,9 @@ import tensorflow as tf
 import matplotlib
 matplotlib.use('Agg')
 import multiprocessing as mp
+
 import logging
+logging.basicConfig()
 log = logging.getLogger('main')
 log.setLevel(logging.INFO)
 

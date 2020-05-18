@@ -3,7 +3,7 @@ import random
 import os
 import tensorflow as tf
 import logging
-
+logging.basicConfig()
 log = logging.getLogger('audio')
 log.setLevel(logging.INFO)
 

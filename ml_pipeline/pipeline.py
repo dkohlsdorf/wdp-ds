@@ -347,7 +347,7 @@ def sequence_clustering(inp, out, embedder, min_support=1, n_writers=10, max_ins
                 instances_clusters[c] += 1
     print('Done Clustering')
     with mp.Pool(processes=processes) as pool:
-        pool.starmap(write_audio, (out, cluster_id, instances_clusters, grouped_by_cluster, 0, 1500) for cluster_id in range(0, k))
+        pool.starmap(write_audio, ((out, cluster_id, instances_clusters, grouped_by_cluster, 0, 1500) for cluster_id in range(0, k)))
     print('Done Writing')
     
     for f, regions in grouped_by_filename.items():

@@ -231,7 +231,7 @@ def greedy_mixture_learning(sequences, hmms, th):
         for i, hmm in enumerate(openlist):
             hypothesis = models + [hmm]
             with mp.Pool(processes=10) as pool:
-                decoded = pool.starmap(decode, (sequence, hypothesis) for sequence in sequences)
+                decoded = pool.starmap(decode, ((sequence, hypothesis) for sequence in sequences))
             assignemnts = [assignment for _, assignment in decoded]
             likelihoods = [ll for ll, _ in decoded]
             likelihood   = sum(likelihoods)
@@ -244,7 +244,7 @@ def greedy_mixture_learning(sequences, hmms, th):
         if last_ll - max_hypothesis_ll < th:
             break
     with mp.Pool(processes=10) as pool:
-        decoded = pool.starmap(decode, (sequence, hypothesis) for sequence in sequences)
+        decoded = pool.starmap(decode, ((sequence, hypothesis) for sequence in sequences))
     assignemnts = [assignment for _, assignment in decoded]
     return models, last_ll, assignemnts
 
@@ -303,7 +303,7 @@ def hierarchical_clustering(
     print("Bucketed Clustering")
 
     with mp.Pool(processes=processes) as pool:
-        outputs = pool.starmap(process_dtw, (assignment, overlapping, max_dist) for assignment, overlapping in by_assignment.items())
+        outputs = pool.starmap(process_dtw, ((assignment, overlapping, max_dist) for assignment, overlapping in by_assignment.items()))
 
     print("Process Results")
     cur = 0
@@ -321,7 +321,7 @@ def hierarchical_clustering(
     print("Build Hidden Markov Models")
     model_pool = list(set(assignments))
     with mp.Pool(processes=processes) as pool:
-        hmms = pool.starmap(make_hmm, (model, assignments, sequences) for model in model_pool)
+        hmms = pool.starmap(make_hmm, ((model, assignments, sequences) for model in model_pool))
         hmms = [hmm for hmm in hmms if hmm is not None]
                         
     print("Greedy Mixture Learning / Cluster Supression")

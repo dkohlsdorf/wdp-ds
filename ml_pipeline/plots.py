@@ -13,7 +13,7 @@ from sklearn.metrics import silhouette_samples, silhouette_score
 
 import logging
 log = logging.getLogger('audop')
-log.setLevel(logging.DEBUG)
+log.setLevel(logging.INFO)
 
 
 COLORS = list(

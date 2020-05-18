@@ -4,7 +4,7 @@ from audio import *
 
 import logging
 log = logging.getLogger('audop')
-log.setLevel(logging.DEBUG)
+log.setLevel(logging.INFO)
 
 class SequenceEmbedder:
     """

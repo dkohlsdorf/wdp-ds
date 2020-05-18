@@ -4,7 +4,7 @@ from sklearn.utils import resample
 
 import logging
 log = logging.getLogger('audop')
-log.setLevel(logging.DEBUG)
+log.setLevel(logging.INFO)
 
 
 def paa(double[:, :] sequence, int n): 

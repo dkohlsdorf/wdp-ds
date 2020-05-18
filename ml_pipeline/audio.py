@@ -5,7 +5,7 @@ import tensorflow as tf
 import logging
 
 log = logging.getLogger('audop')
-log.setLevel(logging.DEBUG)
+log.setLevel(logging.INFO)
 
 from pydub import AudioSegment
 

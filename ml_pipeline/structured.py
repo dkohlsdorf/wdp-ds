@@ -19,7 +19,7 @@ from sequence_hashing import similarity_bucketing
 from sklearn.cluster import AgglomerativeClustering
 
 log = logging.getLogger('structure')
-log.setLevel(logging.DEBUG)
+log.setLevel(logging.INFO)
 
 class TypeExtraction(namedtuple("Induction", "embeddings starts stops types files")):
     """

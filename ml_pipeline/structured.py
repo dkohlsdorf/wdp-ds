@@ -175,10 +175,10 @@ def make_hmm(cluster, assignment, overlapping, min_instances = 5, max_train=10):
     '''
     x_label = np.array([overlapping[i] for i in range(0, len(overlapping)) if assignment[i] == cluster])
     random.shuffle(x_label)
-    x_label = x_label[0:max_train]
+    x_label = np.array(x_label[0:max_train])
     if len(x_label) > min_instances:        
         logstructure.info("MkModel: {}".format("cluster"))
-        logstructure.info("\t {} instances".format(len(x_label)))
+        logstructure.info("\t {} instances".format(x_label.shape))
         frames = int(np.mean([len(x) for x in x_label]))
         n = frames / 4
         l = 1 / n
@@ -193,7 +193,7 @@ def make_hmm(cluster, assignment, overlapping, min_instances = 5, max_train=10):
         dists     = []
         for i in range(0, 4):
             logstructure.info("\t Init state {}".format(i))
-            state = x_label[0][i * int(n): (i + 1) * int(n)]
+            state = x_label[:, i * int(n): (i + 1) * int(n), :]
             mu    = np.mean(state, axis=(0, 1))
             std   = np.eye(dim) * (np.std(state, axis=(0, 1)) + 1.0)
             dists.append(MultivariateGaussianDistribution(mu, std))

@@ -167,7 +167,7 @@ def process_dtw(assignment, overlapping, max_dist):
     return [], []
 
 
-def make_hmm(cluster, assignment, overlapping, min_len = 4, min_instances = 5, max_train=15):
+def make_hmm(cluster, assignment, overlapping, min_len = 1, min_instances = 5, max_train=15):
     '''
     Learn a 4 state Hidden Markov Model with 2 skip states.
     Initialization is performed from using flat start (mean and variances equal for all states)
@@ -187,7 +187,7 @@ def make_hmm(cluster, assignment, overlapping, min_len = 4, min_instances = 5, m
         l = 1 / n
         s = 1 - l
 
-        trans_mat = DenseMarkovChain.from_probs([[s,   l/2, l/2, 0.0],
+        trans_mat = DenseMarkovChain.from_probs([[s,   l/3, l/3, l/3],
                                                  [0.0,   s, l,   0.0],
                                                  [0.0, 0.0, s,     l],
                                                  [0.0, 0.0, 0.0,   s]])
@@ -269,7 +269,7 @@ def greedy_mixture_learning(sequences, hmms, th):
                 decoded = pool.starmap(decode, ((sequence, hypothesis) for sequence in sequences))
             assignemnts = [assignment for _, assignment in decoded]
             likelihoods = [ll for ll, _ in decoded]
-            likelihood   = sum(likelihoods)
+            likelihood  = sum(likelihoods)
             if likelihood > max_hypothesis_ll:
                 max_hypothesis_ll = likelihood
                 max_hypothesis = i

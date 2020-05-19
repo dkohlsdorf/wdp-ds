@@ -215,7 +215,7 @@ def make_hmm(cluster, assignment, overlapping, min_len = 4, min_instances = 5, m
             transitions  = bw.markov(zetas, gammas)
             hmm.observations = obs
             hmm.transitions  = transitions
-            score = ZERO
+            score = LogProb(ZERO)
             for gamma in gammas:
                 for ll in gamma[-1]:
                     score = score + LogProb(ll)

@@ -46,7 +46,6 @@ def markov(zetas, gammas):
                     print("LOGPROB: {}".format(logprob))
                     transitions[i,j] = logprob.prob
                     scaler += LogProb(gammas[e][t, i])
-                                print("LOGPROB: {}".format(logprob))
             print("SCALER: {}".format(scaler))
             prob = LogProb(transitions[i,j]) / scaler
             transitions[i, j] = prob.prob

@@ -278,7 +278,7 @@ def greedy_mixture_learning(sequences, hmms, th):
         if last_ll - max_hypothesis_ll < th:
             break
     with mp.Pool(processes=10) as pool:
-        decoded = pool.starmap(decode, ((sequence, hypothesis) for sequence in sequences))
+        decoded = pool.starmap(decode, ((sequence, max_hypothesis_ll) for sequence in sequences))
     assignemnts = [assignment for _, assignment in decoded]
     return models, last_ll, assignemnts
 

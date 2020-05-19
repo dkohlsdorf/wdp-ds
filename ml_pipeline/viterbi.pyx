@@ -1,7 +1,6 @@
 import numpy as np
 from markov_chain import START_STATE, STOP_STATE, Transition
 from logprob import ZERO, LogProb
-from distributions import GaussianMixtureModel 
 
 
 def viterbi(hmm, sequence): 

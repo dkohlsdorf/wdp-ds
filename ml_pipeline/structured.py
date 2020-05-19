@@ -23,7 +23,7 @@ from markov_chain import DenseMarkovChain, Transition, START_STATE, STOP_STATE
 from logprob import LogProb, ZERO
 from hidden_markov_model import HiddenMarkovModel
 from viterbi import viterbi
-from hmm.distributions import Gaussian
+from distributions import Gaussian
 
 import fwd_bwd    as infer
 import baum_welch as bw
@@ -205,9 +205,8 @@ def make_hmm(cluster, assignment, overlapping, min_len = 4, min_instances = 5, m
         print("\t Stats: {} / {}".format(mu.shape, std.shape))
         dists = [Gaussian(mu, std) for i in range(0, 4)]
         logstructure.info("\t Model fit")
-        logstructure.info(model)
         hmm = HiddenMarkovModel(trans_mat, dists)
-        for _ in range(0, max_iterations):
+        for _ in range(0, max_train):
             inference    = [infer.infer(hmm, seq) for seq in x_label]
             zetas        = [bw.infer(hmm, x_label[i], inference[i][1], inference[i][2]) for i in range(0, len(x_label))]    
             inference    = [infer.infer(hmm, seq) for seq in x_label]
@@ -220,7 +219,8 @@ def make_hmm(cluster, assignment, overlapping, min_len = 4, min_instances = 5, m
             for gamma in gammas:
                 for ll in gamma[-1]:
                     score += ll
-            print(score)
+            logstructure.info(score)
+        logstructure.info(hmm.transitions)
         return hmm
     return None
 
@@ -314,7 +314,7 @@ def hierarchical_clustering(
             annotated             = [(row['start'], row['stop'], row['filename'], row['type'], row['embedding'])
                                      for _ , row in signals.iterrows()]
             overlapping += groupBy(annotated, overlap)
-            if max_instances is not None and overlapping > max_instances:
+            if max_instances is not None and len(overlapping) > max_instances:
                 break
     if max_instances is not None:
         overlapping = overlapping[:max_instances]

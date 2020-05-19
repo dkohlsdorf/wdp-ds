@@ -167,7 +167,7 @@ def process_dtw(assignment, overlapping, max_dist):
     return [], []
 
 
-def make_hmm(cluster, assignment, overlapping, min_len = 1, min_instances = 5, max_train=15):
+def make_hmm(cluster, assignment, overlapping, min_len = 1, min_instances = 1, max_train=15):
     '''
     Learn a 4 state Hidden Markov Model with 2 skip states.
     Initialization is performed from using flat start (mean and variances equal for all states)
@@ -238,7 +238,6 @@ def decode(sequence, hmms):
     max_hmm = 0
     for i, hmm in enumerate(hmms):
         _, ll = viterbi(hmm, sequence)
-        print(ll)
         ll = ll.prob
         if ll > max_ll:
             max_ll = ll
@@ -268,7 +267,7 @@ def greedy_mixture_learning(sequences, hmms, th):
             with mp.Pool(processes=10) as pool:
                 decoded = pool.starmap(decode, ((sequence, hypothesis) for sequence in sequences))
             assignemnts = [assignment for _, assignment in decoded]
-            likelihoods = [ll for ll, _ in decoded]
+            likelihoods = [ll.exp for ll, _ in decoded]
             likelihood  = sum(likelihoods)
             if likelihood > max_hypothesis_ll:
                 max_hypothesis_ll = likelihood

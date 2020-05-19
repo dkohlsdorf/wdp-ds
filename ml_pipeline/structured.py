@@ -23,6 +23,7 @@ from markov_chain import DenseMarkovChain, Transition, START_STATE, STOP_STATE
 from logprob import LogProb, ZERO
 from hidden_markov_model import HiddenMarkovModel
 from viterbi import viterbi
+from hmm.distributions import Gaussian
 
 import fwd_bwd    as infer
 import baum_welch as bw
@@ -313,6 +314,8 @@ def hierarchical_clustering(
             annotated             = [(row['start'], row['stop'], row['filename'], row['type'], row['embedding'])
                                      for _ , row in signals.iterrows()]
             overlapping += groupBy(annotated, overlap)
+            if max_instances is not None and overlapping > max_instances:
+                break
     if max_instances is not None:
         overlapping = overlapping[:max_instances]
     overlapping = [x for x in overlapping if len(x[4]) > min_th and len(x[4]) < max_th]

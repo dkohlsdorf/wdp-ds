@@ -346,9 +346,9 @@ def hierarchical_clustering(
     assignments = []
     overlapping = []
     sequences   = []
-    for clustering, overlapping in outputs:
+    for clustering, o in outputs:
         if len(clustering) > 0:
-            for c, (start, stop, f, t, sequence) in zip(clustering, overlapping):
+            for c, (start, stop, f, t, sequence) in zip(clustering, o):
                     assignments.append(c)
                     overlapping.append((start, stop, f, t, c + cur))
                     sequences.append(sequence)
@@ -366,8 +366,6 @@ def hierarchical_clustering(
     cluster_regions = [(start, stop, f, t, c) for c, (start, stop, f, t, _) in zip(assignments, overlapping) if c >= 0]
     print(assignments)
     print(overlapping)
-    print(zip(assignments, overlapping))
-
     print(cluster_regions)
     return cluster_regions
 

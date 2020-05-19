@@ -26,7 +26,8 @@ def infer(hmm, sequence, fwd, bwd):
                 
         for i in range(0, N):
             for j in range(0, N):
-                zeta[t][i][j] -= norm.prob
+                p = LogProb(zeta[t][i][j]) /  LogProb(norm.prob)
+                zeta[t][i][j] = p.prob
     return np.asarray(zeta)
 
 

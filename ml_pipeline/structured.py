@@ -238,6 +238,7 @@ def decode(sequence, hmms):
     max_hmm = 0
     for i, hmm in enumerate(hmms):
         _, ll = viterbi(hmm, sequence)
+        print(ll)
         ll = ll.prob
         if ll > max_ll:
             max_ll = ll

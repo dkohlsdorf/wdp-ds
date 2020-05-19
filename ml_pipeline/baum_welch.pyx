@@ -54,7 +54,7 @@ def continuous_obs(sequences, gammas, min_variance=1.0):
     assert len(gammas) > 0 and len(sequences) == len(gammas)
     cdef int m = len(gammas)
     cdef int n = gammas[0].shape[1]
-    cdef int d = sequences[0].shape[1]        
+    cdef int d = len(sequences[0][0])
     cdef observations = []
     cdef int i, e, t, j
     for i in range(0, n):

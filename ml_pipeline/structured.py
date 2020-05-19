@@ -167,7 +167,7 @@ def process_dtw(assignment, overlapping, max_dist):
     return [], []
 
 
-def make_hmm(cluster, assignment, overlapping, min_len = 10, min_instances = 1, max_train=15):
+def make_hmm(cluster, assignment, overlapping, min_len = 4, min_instances = 1, max_train=15):
     '''
     Learn a 4 state Hidden Markov Model with 2 skip states.
     Initialization is performed from using flat start (mean and variances equal for all states)

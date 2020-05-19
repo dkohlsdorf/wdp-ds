@@ -1,6 +1,6 @@
 import numpy as np
-from hmm.markov_chain import START_STATE, STOP_STATE, Transition
-from hmm.logprob import ZERO, LogProb
+from markov_chain import START_STATE, STOP_STATE, Transition
+from logprob import ZERO, LogProb
 
 
 def infer(hmm, sequence):

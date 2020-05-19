@@ -211,7 +211,7 @@ def make_hmm(cluster, assignment, overlapping, min_len = 4, min_instances = 5, m
             zetas        = [bw.infer(hmm, x_label[i], inference[i][1], inference[i][2]) for i in range(0, len(x_label))]    
             inference    = [infer.infer(hmm, seq) for seq in x_label]
             gammas       = [gamma for gamma, _, _ in inference]
-            obs          = bw.continuous_obs(sequences, gammas, hmm.observations)
+            obs          = bw.continuous_obs(x_label, gammas, hmm.observations)
             transitions  = bw.markov(zetas, gammas)
             hmm.observations = obs
             hmm.transitions  = transitions

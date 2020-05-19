@@ -365,6 +365,9 @@ def hierarchical_clustering(
     models, last_ll, assignemnts = greedy_mixture_learning(sequences, hmms, 1e-6)
     cluster_regions = [(start, stop, f, t, c) for c, (start, stop, f, t, _) in zip(assignments, overlapping) if c >= 0]
     print(assignments)
+    print(overlapping)
+    print(zip(assignments, overlapping))
+
     print(cluster_regions)
     return cluster_regions
 

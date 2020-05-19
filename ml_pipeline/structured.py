@@ -235,7 +235,7 @@ def decode(sequence, hmms):
     :returns: (max likelihoods, max assignment)
     '''
     max_ll  = ZERO
-    max_hmm = 0
+    max_hmm = -1
     for i, hmm in enumerate(hmms):
         _, ll = viterbi(hmm, sequence)
         ll = ll.prob
@@ -266,7 +266,6 @@ def greedy_mixture_learning(sequences, hmms, th):
             hypothesis = models + [hmm]
             with mp.Pool(processes=10) as pool:
                 decoded = pool.starmap(decode, ((sequence, hypothesis) for sequence in sequences))
-            assignemnts = [assignment for _, assignment in decoded]
             likelihoods = [LogProb(ll).exp for ll, _ in decoded]
             likelihood  = sum(likelihoods)
             if likelihood > max_hypothesis_ll:
@@ -362,7 +361,7 @@ def hierarchical_clustering(
                         
     logstructure.info("Greedy Mixture Learning / Cluster Supression")
     models, last_ll, assignemnts = greedy_mixture_learning(sequences, hmms, 1e-6)
-    cluster_regions = [(start, stop, f, t, c) for c, (start, stop, f, t, _) in zip(assignments, overlapping)]
+    cluster_regions = [(start, stop, f, t, c) for c, (start, stop, f, t, _) in zip(assignments, overlapping) if c >= 0]
     return cluster_regions
 
 

@@ -266,15 +266,15 @@ def greedy_mixture_learning(sequences, hmms, th):
             hypothesis = models + [hmm]
             with mp.Pool(processes=10) as pool:
                 decoded = pool.starmap(decode, ((sequence, hypothesis) for sequence in sequences))
-            likelihoods = [LogProb(ll).exp for ll, _ in decoded]
-            likelihood  = sum(likelihoods)
+            likelihoods = [LogProb(ll).exp for ll, c in decoded if c >= 0]
+            likelihood  = sum(likelihoods) / len(likelihoods)
             if likelihood > max_hypothesis_ll:
                 max_hypothesis_ll = likelihood
                 max_hypothesis = i
         best   = openlist.pop(max_hypothesis)
         models = models + [best]
         logstructure.info("Greedy Mixture Learning: {} {}".format(max_hypothesis_ll, len(openlist), len(models)))
-        if last_ll - max_hypothesis_ll < th:
+        if max_hypothesis_ll - last_ll < th:
             break
     with mp.Pool(processes=10) as pool:
         decoded = pool.starmap(decode, ((sequence, models) for sequence in sequences))

@@ -218,7 +218,7 @@ def make_hmm(cluster, assignment, overlapping, min_len = 4, min_instances = 5, m
             score = ZERO
             for gamma in gammas:
                 for ll in gamma[-1]:
-                    score += ll
+                    score = score + LogProb(ll)
             logstructure.info(score)
         logstructure.info(hmm.transitions)
         return hmm

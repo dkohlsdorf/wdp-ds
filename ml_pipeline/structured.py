@@ -273,7 +273,7 @@ def greedy_mixture_learning(sequences, hmms, th):
                 max_hypothesis = i
         best   = openlist.pop(max_hypothesis)
         models = models + [best]
-        logstructure.info("Greedy Mixture Learning: {}".format(max_hypothesis_ll))
+        logstructure.info("Greedy Mixture Learning: {} {}".format(max_hypothesis_ll, len(openlist), len(models)))
         if last_ll - max_hypothesis_ll < th:
             break
     with mp.Pool(processes=10) as pool:

@@ -212,6 +212,7 @@ def make_hmm(cluster, assignment, overlapping, min_len = 4, min_instances = 1, m
             zetas        = [bw.infer(hmm, x_label[i], inference[i][1], inference[i][2]) for i in range(0, len(x_label))]    
             gammas       = [gamma for gamma, _, _ in inference]
             obs          = bw.continuous_obs(x_label, gammas)
+            diff         = np.sum([np.sum(np.square(a.mean - b.mean)) for (a, b) in zip(hmm.observations, obs)])
             transitions  = bw.markov(zetas, gammas)
             hmm.observations = obs
             hmm.transitions  = DenseMarkovChain.from_probs(np.exp(transitions))
@@ -222,7 +223,7 @@ def make_hmm(cluster, assignment, overlapping, min_len = 4, min_instances = 1, m
             for gamma in gammas:
                 for ll in gamma[-1]:
                     score = score + LogProb(ll)
-            logstructure.info("Cluster: {}".format(score))
+            logstructure.info("Cluster: {} Diff: {}".format(score, diff))
         logstructure.info("Cluster: {}\n{}".format(cluster, hmm.transitions))
         return hmm
     return None

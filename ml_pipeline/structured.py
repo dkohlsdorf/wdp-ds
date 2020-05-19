@@ -360,13 +360,10 @@ def hierarchical_clustering(
     with mp.Pool(processes=processes) as pool:
         hmms = pool.starmap(make_hmm, ((model, assignments, sequences) for model in model_pool))
         hmms = [hmm for hmm in hmms if hmm is not None]
-                        
+    logstructure.info("Models: {}".format(model_pool))
     logstructure.info("Greedy Mixture Learning / Cluster Supression")
-    models, last_ll, assignemnts = greedy_mixture_learning(sequences, hmms, 1e-6)
+    models, last_ll, assignments = greedy_mixture_learning(sequences, hmms, 1e-6)
     cluster_regions = [(start, stop, f, t, c) for c, (start, stop, f, t, _) in zip(assignments, overlapping) if c >= 0]
-    print(assignments)
-    print(overlapping)
-    print(cluster_regions)
     return cluster_regions
 
 

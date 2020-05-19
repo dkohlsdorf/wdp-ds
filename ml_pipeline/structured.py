@@ -12,16 +12,20 @@ logging.basicConfig()
 logstructure = logging.getLogger('structure')
 logstructure.setLevel(logging.INFO)
 
-from scipy.sparse import lil_matrix
-
-from pomegranate import *
+from sklearn.cluster import AgglomerativeClustering
 
 from tensorflow.keras.preprocessing.sequence import pad_sequences
 from sklearn.model_selection import train_test_split
 from collections import namedtuple
 from dtw import DTW
 from sequence_hashing import similarity_bucketing
-from sklearn.cluster import AgglomerativeClustering
+from markov_chain import MarkovChain, Transition, START_STATE, STOP_STATE
+from logprob import LogProb, ZERO
+from hidden_markov_model import HiddenMarkovModel
+from hmm.viterbi import viterbi
+
+import fwd_bwd    as infer
+import baum_welch as bw
 
 
 class TypeExtraction(namedtuple("Induction", "embeddings starts stops types files")):
@@ -181,27 +185,42 @@ def make_hmm(cluster, assignment, overlapping, min_instances = 5, max_train=150)
         n = frames / 4
         l = 1 / n
         s = 1 - l
-        trans_mat = numpy.array([[s,     l/2, l/2,  0.0],
-                                [0.0,   s, l,       0.0],
-                                [0.0, 0.0, s,        l],
-                                [0.0, 0.0, 0.0,      s]])
-        starts    = numpy.array([0.5, 0.0, 0.0, 0.5])
-        ends      = numpy.array([0.0, 0.0, 0.0, 0.1])
+
+        trans_mat = DenseMarkovChain.from_probs([[s,   l/2, l/2, 0.0],
+                                                 [0.0,   s, l,   0.0],
+                                                 [0.0, 0.0, s,     l],
+                                                 [0.0, 0.0, 0.0,   s]])
+
+        trans_mat[Transition(START_STATE, 0)] = LogProb.from_float(1.0)
+        trans_mat[Transition(3, STOP_STATE)]  = LogProb.from_float(1.0)
+
         dim       = len(overlapping[0][0])
         dists     = []
                     
         state = np.vstack(x_label)
         print("\t State: {}".format(state.shape))
         mu    = np.mean(state, axis=(0, 1))
-        std   = np.eye(dim) * (np.std(state, axis=(0, 1)) + 1.0)
+        std   = np.std(state, axis=(0, 1)) + 1.0
         print("\t Stats: {} / {}".format(mu.shape, std.shape))
-        dists = [MultivariateGaussianDistribution(mu, std) for i in range(0, 4)]
+        dists = [Gaussian(mu, std) for i in range(0, 4)]
         logstructure.info("\t Model fit")
         logstructure.info(model)
-        model = HiddenMarkovModel.from_matrix(trans_mat, dists, starts, ends)
-        model.fit(x_label, algorithm='baum-welch', max_iterations=50, verbose=True)
-        logstructure.info(model)
-        return model
+        hmm = HiddenMarkovModel(trans_mat, dists)
+        for _ in range(0, max_iterations):
+            inference    = [infer.infer(hmm, seq) for seq in x_label]
+            zetas        = [bw.infer(hmm, x_label[i], inference[i][1], inference[i][2]) for i in range(0, len(x_label))]    
+            inference    = [infer.infer(hmm, seq) for seq in x_label]
+            gammas       = [gamma for gamma, _, _ in inference]
+            obs          = bw.continuous_obs(sequences, gammas, hmm.observations)
+            transitions  = bw.markov(zetas, gammas)
+            hmm.observations = obs
+            hmm.transitions  = transitions
+            score = ZERO
+            for gamma in gammas:
+                for ll in gamma[-1]:
+                    score += ll
+            print(score)
+        return hmm
     return None
 
 
@@ -212,10 +231,10 @@ def decode(sequence, hmms):
     :param hmms: a list of hidden markov model
     :returns: (max likelihoods, max assignment)
     '''
-    max_ll = 0.0
-    max_hmm     = 0
+    max_ll  = 0.0
+    max_hmm = 0
     for i, hmm in enumerate(hmms):
-        ll = hmm.log_probability(sequence)
+        _, ll = viterbi(hmm, seq)
         if ll > max_ll:
             max_ll = ll
             max_hmm = i

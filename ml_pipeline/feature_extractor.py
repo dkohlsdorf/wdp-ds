@@ -19,7 +19,7 @@ def encoder(in_shape, latent_dim):
     dft_dim = in_shape[1]
     inp = Input(in_shape)
     loc = Conv2D(N_FILTERS, kernel_size=KERNEL_SIZE, activation='relu', padding='same')(inp) 
-    loc = MaxPool2D(pool_size=(1, dft_dim))(loc)
+    #loc = MaxPool2D(pool_size=(1, dft_dim))(loc)
     loc = Reshape((in_shape[0], N_FILTERS))(loc)
     x   = BatchNormalization()(loc)
     x   = Bidirectional(LSTM(latent_dim, return_sequences=True))(x)

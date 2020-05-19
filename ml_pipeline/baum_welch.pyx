@@ -1,7 +1,7 @@
 import numpy as np
 
 from logprob import ZERO, LogProb
-from markov_chain import Transition, MarkovChain
+from markov_chain import Transition, DenseMarkovChain
 from distributions import Gaussian
 
 
@@ -30,7 +30,7 @@ def infer(hmm, sequence, fwd, bwd):
     return np.asarray(zeta)
 
 
-def markov(zetas, gammas, cls = MarkovChain):
+def markov(zetas, gammas, cls = DenseMarkovChain):
     assert len(zetas) > 0 and len(zetas) == len(gammas)
     cdef int m = len(zetas)
     cdef int n = zetas[0].shape[1]

@@ -19,7 +19,7 @@ from sklearn.model_selection import train_test_split
 from collections import namedtuple
 from dtw import DTW
 from sequence_hashing import similarity_bucketing
-from markov_chain import MarkovChain, Transition, START_STATE, STOP_STATE
+from markov_chain import DenseMarkovChain, Transition, START_STATE, STOP_STATE
 from logprob import LogProb, ZERO
 from hidden_markov_model import HiddenMarkovModel
 from viterbi import viterbi

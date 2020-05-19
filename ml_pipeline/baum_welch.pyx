@@ -1,7 +1,7 @@
 import numpy as np
 
 from logprob import ZERO, LogProb
-from markov_chain import Transition, DenseMarkovChain
+from markov_chain import Transition
 from distributions import Gaussian
 
 
@@ -30,7 +30,7 @@ def infer(hmm, sequence, fwd, bwd):
     return np.asarray(zeta)
 
 
-def markov(zetas, gammas, cls = DenseMarkovChain):
+def markov(zetas, gammas):
     assert len(zetas) > 0 and len(zetas) == len(gammas)
     cdef int m = len(zetas)
     cdef int n = zetas[0].shape[1]
@@ -47,9 +47,7 @@ def markov(zetas, gammas, cls = DenseMarkovChain):
                     scaler += LogProb(gammas[e][t, i])
             prob = LogProb(transitions[i,j]) / scaler
             transitions[i, j] = prob.prob
-    transitions = np.asarray(transitions)
-    print(transitions)
-    return cls.from_probs(np.exp(transitions))
+    return np.asarray(transitions)
 
 
 def continuous_obs(sequences, gammas, min_variance=1.0):

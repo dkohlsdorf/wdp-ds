@@ -214,7 +214,7 @@ def make_hmm(cluster, assignment, overlapping, min_len = 4, min_instances = 5, m
             obs          = bw.continuous_obs(x_label, gammas)
             transitions  = bw.markov(zetas, gammas)
             hmm.observations = obs
-            hmm.transitions  = transitions
+            hmm.transitions  = DenseMarkovChain.from_probs(np.exp(transitions))
             logstructure.info(transitions)
 
             score = LogProb(ZERO)

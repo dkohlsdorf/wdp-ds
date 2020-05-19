@@ -207,9 +207,6 @@ def make_hmm(cluster, assignment, overlapping, min_len = 4, min_instances = 5, m
         logstructure.info("\t Model fit")
         hmm = HiddenMarkovModel(trans_mat, dists)
         logstructure.info(hmm.transitions)
-        logstructure.info(mu)
-        logstructure.info(std)
-
         for _ in range(0, max_train):
             inference    = [infer.infer(hmm, seq) for seq in x_label]
             zetas        = [bw.infer(hmm, x_label[i], inference[i][1], inference[i][2]) for i in range(0, len(x_label))]    

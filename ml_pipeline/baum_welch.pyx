@@ -47,6 +47,7 @@ def markov(zetas, gammas, cls = DenseMarkovChain):
                     scaler += LogProb(gammas[e][t, i])
             prob = LogProb(transitions[i,j]) / scaler
             transitions[i, j] = prob.prob
+    print(transitions)
     return cls.from_probs(np.exp(transitions))
 
 

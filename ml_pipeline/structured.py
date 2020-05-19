@@ -22,7 +22,7 @@ from sequence_hashing import similarity_bucketing
 from markov_chain import MarkovChain, Transition, START_STATE, STOP_STATE
 from logprob import LogProb, ZERO
 from hidden_markov_model import HiddenMarkovModel
-from hmm.viterbi import viterbi
+from viterbi import viterbi
 
 import fwd_bwd    as infer
 import baum_welch as bw

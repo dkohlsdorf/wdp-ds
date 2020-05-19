@@ -44,10 +44,8 @@ def markov(zetas, gammas):
                 T = zetas[e].shape[0]
                 for t in range(0, T):
                     logprob = LogProb(zetas[e][t,i,j]) + LogProb(transitions[i, j])
-                    print("LOGPROB: {} {} {}".format(logprob, zetas[e][t,i,j], transitions[i, j]))
                     transitions[i,j] = logprob.prob
                     scaler += LogProb(gammas[e][t, i])
-            print("SCALER: {}".format(scaler))
             prob = LogProb(transitions[i,j]) / scaler
             transitions[i, j] = prob.prob
     return np.asarray(transitions)

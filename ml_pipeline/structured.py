@@ -206,7 +206,6 @@ def make_hmm(cluster, assignment, overlapping, min_len = 4, min_instances = 5, m
         dists = [Gaussian(mu, std) for i in range(0, 4)]
         logstructure.info("\t Model fit")
         hmm = HiddenMarkovModel(trans_mat, dists)
-        logstructure.info(hmm.transitions)
         for _ in range(0, max_train):
             inference    = [infer.infer(hmm, seq) for seq in x_label]
             zetas        = [bw.infer(hmm, x_label[i], inference[i][1], inference[i][2]) for i in range(0, len(x_label))]    
@@ -215,8 +214,6 @@ def make_hmm(cluster, assignment, overlapping, min_len = 4, min_instances = 5, m
             transitions  = bw.markov(zetas, gammas)
             hmm.observations = obs
             hmm.transitions  = DenseMarkovChain.from_probs(np.exp(transitions))
-            logstructure.info(transitions)
-
             score = LogProb(ZERO)
             for gamma in gammas:
                 for ll in gamma[-1]:

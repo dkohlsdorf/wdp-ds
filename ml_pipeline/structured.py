@@ -234,10 +234,11 @@ def decode(sequence, hmms):
     :param hmms: a list of hidden markov model
     :returns: (max likelihoods, max assignment)
     '''
-    max_ll  = 0.0
+    max_ll  = ZERO
     max_hmm = 0
     for i, hmm in enumerate(hmms):
         _, ll = viterbi(hmm, sequence)
+        ll = ll.prob
         if ll > max_ll:
             max_ll = ll
             max_hmm = i

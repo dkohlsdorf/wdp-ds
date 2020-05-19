@@ -200,8 +200,8 @@ def make_hmm(cluster, assignment, overlapping, min_len = 4, min_instances = 5, m
                     
         state = np.vstack(x_label)
         print("\t State: {}".format(state.shape))
-        mu    = np.mean(state, axis=1)
-        std   = np.std(state, axis=1) + 1.0
+        mu    = np.mean(state, axis=0)
+        std   = np.std(state, axis=0) + 1.0
         print("\t Stats: {} / {}".format(mu.shape, std.shape))
         dists = [Gaussian(mu, std) for i in range(0, 4)]
         logstructure.info("\t Model fit")

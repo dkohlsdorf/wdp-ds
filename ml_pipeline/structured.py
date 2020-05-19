@@ -166,7 +166,7 @@ def process_dtw(assignment, overlapping, max_dist):
     return [], []
 
 
-def make_hmm(cluster, assignment, overlapping, min_instances = 5, max_train=150):
+def make_hmm(cluster, assignment, overlapping, min_len = 4, min_instances = 5, max_train=150):
     '''
     Learn a 4 state Hidden Markov Model with 2 skip states.
     Initialization is performed from using flat start (mean and variances equal for all states)
@@ -178,10 +178,10 @@ def make_hmm(cluster, assignment, overlapping, min_instances = 5, max_train=150)
     :returns: a hidden markov model   
     '''
     x_label = [overlapping[i] for i in range(0, len(overlapping)) if assignment[i] == cluster]
-    if len(x_label) > min_instances:        
+    frames  = int(np.mean([len(x) for x in x_label]))
+    if len(x_label) > min_instances and frames > min_len:        
         logstructure.info("MkModel: {}".format("cluster"))
         logstructure.info("\t {} instances".format(len(x_label)))
-        frames = int(np.mean([len(x) for x in x_label]))
         n = frames / 4
         l = 1 / n
         s = 1 - l

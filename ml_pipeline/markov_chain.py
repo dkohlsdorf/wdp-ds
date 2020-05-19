@@ -1,6 +1,6 @@
 import numpy as np
 
-from hmm.logprob import LogProb, ZERO
+from logprob import LogProb, ZERO
 from collections import namedtuple
 
 Transition = namedtuple("Transition", "from_state to_state")

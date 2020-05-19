@@ -1,7 +1,7 @@
 import numpy as np
 import io
 from sklearn.mixture import GaussianMixture
-from hmm.logprob import LogProb, ZERO
+from logprob import LogProb, ZERO
 
 
 class Gaussian:

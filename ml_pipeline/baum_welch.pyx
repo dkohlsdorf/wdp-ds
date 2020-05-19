@@ -1,8 +1,8 @@
 import numpy as np
 
-from hmm.logprob import ZERO, LogProb
-from hmm.markov_chain import Transition, MarkovChain
-from hmm.distributions import Multinomial, Gaussian, GaussianMixtureModel
+from logprob import ZERO, LogProb
+from markov_chain import Transition, MarkovChain
+from distributions import Gaussian
 
 
 def infer(hmm, sequence, fwd, bwd):

@@ -46,8 +46,8 @@ def markov(zetas, gammas, cls = DenseMarkovChain):
                     transitions[i,j] = logprob.prob
                     scaler += LogProb(gammas[e][t, i])
             prob = LogProb(transitions[i,j]) / scaler
-            transitions[i, j] = prob.exp
-    return cls.from_probs(transitions)
+            transitions[i, j] = prob
+    return cls.from_probs(np.exp(transitions))
 
 
 def continuous_obs(sequences, gammas, min_variance=1.0):

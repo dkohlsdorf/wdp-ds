@@ -267,7 +267,7 @@ def greedy_mixture_learning(sequences, hmms, th):
             with mp.Pool(processes=10) as pool:
                 decoded = pool.starmap(decode, ((sequence, hypothesis) for sequence in sequences))
             assignemnts = [assignment for _, assignment in decoded]
-            likelihoods = [ll.exp for ll, _ in decoded]
+            likelihoods = [LogProb(ll).exp for ll, _ in decoded]
             likelihood  = sum(likelihoods)
             if likelihood > max_hypothesis_ll:
                 max_hypothesis_ll = likelihood

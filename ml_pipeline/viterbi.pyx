@@ -4,7 +4,7 @@ from logprob import ZERO, LogProb
 
 
 def viterbi(hmm, sequence): 
-    cdef int T = sequence.shape[0]
+    cdef int T = len(sequence)
     cdef int N = hmm.n_states
     
     cdef double[:, :] dp  = np.ones((T, N), dtype=np.double) * ZERO

@@ -4,7 +4,7 @@ from logprob import ZERO, LogProb
 
 
 def infer(hmm, sequence):
-    cdef int T = sequence.shape[0]
+    cdef int T = len(sequence)
     cdef int N = hmm.n_states    
     cdef double[:, :] gamma = np.ones((T, N), dtype=np.double) * ZERO
 
@@ -25,7 +25,7 @@ def infer(hmm, sequence):
 
 
 def bwd(hmm, sequence):
-    cdef int T = sequence.shape[0]
+    cdef int T = len(sequence)
     cdef int N = hmm.n_states    
     cdef double[:, :] dp = np.ones((T, N), dtype=np.double) * ZERO
     
@@ -53,7 +53,7 @@ def bwd(hmm, sequence):
 
 
 def fwd(hmm, sequence): 
-    cdef int T = sequence.shape[0]
+    cdef int T = len(sequence)
     cdef int N = hmm.n_states    
     cdef double[:, :] dp = np.ones((T, N), dtype=np.double) * ZERO
     

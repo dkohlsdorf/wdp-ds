@@ -6,7 +6,7 @@ from distributions import Gaussian
 
 
 def infer(hmm, sequence, fwd, bwd):
-    cdef int T = sequence.shape[0]
+    cdef int T = len(sequence)
     cdef int N = hmm.n_states    
     cdef double[:, :, :] zeta = np.ones((T - 1, N, N), dtype=np.double) * ZERO
     cdef int t, i, j

@@ -4,6 +4,13 @@ from logprob import ZERO, LogProb
 
 
 def infer(hmm, sequence):
+    '''
+    Forward Backward algorithm for hidden Markov models
+
+    :param hmm: a hidden Markov model
+    :param sequence: a sequence of length T and dimension d
+    :returns: forward-backward probabilities, forward probabilities and backward probabilities
+    '''
     cdef int T = len(sequence)
     cdef int N = hmm.n_states    
     cdef double[:, :] gamma = np.ones((T, N), dtype=np.double) * ZERO
@@ -25,6 +32,13 @@ def infer(hmm, sequence):
 
 
 def bwd(hmm, sequence):
+    '''
+    Calculate state probabilities backwards through HMM.
+
+    :param hmm: a hidden Markov model
+    :param sequence: a sequence of length T and dimension d
+    :returns: backward probabilities
+    '''
     cdef int T = len(sequence)
     cdef int N = hmm.n_states    
     cdef double[:, :] dp = np.ones((T, N), dtype=np.double) * ZERO
@@ -53,6 +67,13 @@ def bwd(hmm, sequence):
 
 
 def fwd(hmm, sequence): 
+    '''
+    Calculate state probabilities forwards through HMM.
+
+    :param hmm: a hidden Markov model
+    :param sequence: a sequence of length T and dimension d
+    :returns: forward probabilities
+    '''
     cdef int T = len(sequence)
     cdef int N = hmm.n_states    
     cdef double[:, :] dp = np.ones((T, N), dtype=np.double) * ZERO

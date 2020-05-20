@@ -187,7 +187,7 @@ def make_hmm(cluster, assignment, overlapping, min_len = 4, min_instances = 1, m
         l = 1 / n
         s = 1 - l
 
-        trans_mat = DenseMarkovChain.from_probs([[s,   l/3, l/3, l/3],
+        trans_mat = DenseMarkovChain.from_probs([[s,   l/2, l/2, 0.0],
                                                  [0.0,   s, l,   0.0],
                                                  [0.0, 0.0, s,     l],
                                                  [0.0, 0.0, 0.0,   s]])
@@ -201,7 +201,7 @@ def make_hmm(cluster, assignment, overlapping, min_len = 4, min_instances = 1, m
         state = np.vstack(x_label)
         print("\t State: {}".format(state.shape))
         mu    = np.mean(state, axis=0)
-        std   = np.std(state, axis=0) + 1.0
+        std   = np.std(state, axis=0) + 1e-4
         print("\t Stats: {} / {}".format(mu.shape, std.shape))
         dists = [Gaussian(mu, std) for i in range(0, 4)]
         logstructure.info("\t Model fit")

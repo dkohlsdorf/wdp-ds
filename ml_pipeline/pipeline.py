@@ -269,9 +269,9 @@ def evaluate_encoder(version_tag, input_folder, output_folder, encoder_file, par
 
 
 def test_reconstruction(folder, out, params):
-    '''
+    """
     Reconstruct 100 examples using the auto encoder
-    '''
+    """
     ae = load_model('{}/auto_encoder.h5'.format(out))
     gen = dataset(folder, params, no_label, True)
     i = 0
@@ -291,7 +291,7 @@ def test_reconstruction(folder, out, params):
 
 
 def write_audio(out, cluster_id, instances_clusters, grouped_by_cluster, min_support, max_support):
-    '''
+    """
     Write clusters as audio
     
     :param cluster_id: id to write
@@ -299,7 +299,7 @@ def write_audio(out, cluster_id, instances_clusters, grouped_by_cluster, min_sup
     :param grouped_by_cluster: dict[clusters][filename][start, stop]
     :param min_support: minimum number of instances in cluster
     :param max_support: maximum number of instances in cluster
-    '''
+    """
     if instances_clusters[cluster_id] > min_support and instances_clusters[cluster_id] < max_support:
         log.info("Audio result for cluster: {} {}".format(cluster_id, instances_clusters[cluster_id]))
         audio_bank = AudioSnippetCollection("{}/seq_cluster_{}.wav".format(out, cluster_id))
@@ -312,9 +312,9 @@ def write_audio(out, cluster_id, instances_clusters, grouped_by_cluster, min_sup
 
 
 def sequence_clustering(inp, out, embedder, min_support=1, n_writers=10, max_instances=None):    
-    '''
+    """
     Hierarchical cluster connected regions of whistles and bursts
-    '''
+    """
     log.info("Sequence Clustering")
     for filename in tf.io.gfile.listdir(inp):
         if filename.endswith('.ogg') or filename.endswith('.wav'):
@@ -367,13 +367,13 @@ def sequence_clustering(inp, out, embedder, min_support=1, n_writers=10, max_ins
 
         
 def generate_dataset(work_folder, annotations, out):
-    '''
+    """
     Generate an annotated dataset from clustering result
 
     :param work_folder: work folder
     :param annotations: annotation file
     :param out: output folder
-    '''
+    """
     log.info("Generate Dataset")
     i = 0
     for cluster, d in annotate_clustering(work_folder, annotations).items():

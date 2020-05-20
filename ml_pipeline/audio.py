@@ -64,13 +64,13 @@ class WindowParams(namedtuple('WindowParams', 'spec_win spec_step fft_win fft_st
 
     
 def read(path):
-    '''
+    """
     Read an audio file from local file system or cloud storage
     all all formats that ffmpeg supports are supported
 
     :param path: pathlike object
     :returns: audio file with shape (time, )
-    '''
+    """
     with tf.io.gfile.GFile(path, "rb") as f:
         try:
             x = AudioSegment.from_file(f)
@@ -155,14 +155,14 @@ def spectrogram_windows(filename, params, shuffle=False):
 
 
 def spectrogram_regions(filename, params, regions):
-    '''
+    """
     Spectrogram Region Extraction
 
     :param filename: the filename
     :param params: Windowing parameters
     :param regions: sequence of start, stop tuples
     :returns: spectrogram of the normalized region
-    '''
+    """
     data = read(filename)
     if len(data.shape) > 1:
         data = np.mean(data, axis=1) 
@@ -181,11 +181,11 @@ def spectrogram_regions(filename, params, regions):
         
 
 def audio_snippets(snippets):
-    '''
+    """
     Extract snippets from audio
 
     snippets: (start, stop, filename)
-    '''
+    """
     files = {}
     for snippet in snippets:
         start = snippet[0]
@@ -200,13 +200,13 @@ def audio_snippets(snippets):
 
             
 def audio_regions(filename, regions):
-    '''
+    """
     Audio Region Extraction
 
     :param filename: the filename
     :param regions: sequence of start, stop tuples
     :returns: audio snippets
-    '''
+    """
     data = read(filename)
     if data is not None:
         if len(data.shape) > 1:

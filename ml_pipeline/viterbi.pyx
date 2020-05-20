@@ -4,13 +4,13 @@ from logprob import ZERO, LogProb
 
 
 def viterbi(hmm, sequence): 
-    '''
+    """
     Align a sequence to a hidden Markov model.
 
     :param hmm: a hidden Markov model
     :param sequence: a sequence of length M and dimension d
     :returns: path and alignment score
-    '''
+    """
     cdef int T = len(sequence)
     cdef int N = hmm.n_states
     

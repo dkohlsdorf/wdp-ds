@@ -22,11 +22,11 @@ COLORS = list(
 
 
 def clustering_usage(log_path):
-    '''
+    """
     Plot the cluster usage
 
     :param log_path: path to work folder
-    '''
+    """
     n_clusters = {}
     for filename in os.listdir(log_path):
         if filename.startswith('seq_clustering_log'):

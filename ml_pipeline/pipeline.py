@@ -116,7 +116,7 @@ def train(folder, output_folder, params, enc, ae, batch_size=10, epochs=128, kee
     training_log.close()
     
     
-def train_type(version_tag, input_folder, output_folder, params, encoder_file, batch, epoch, latent, freeze, transfer=True):
+def train_type(version_tag, input_folder, output_folder, params, encoder_file, batch, epoch, latent, freeze, transfer=True, subsample=0.1):
     """
     Train a multiclass type classifier
     :param version_tag: basically the model name
@@ -140,14 +140,16 @@ def train_type(version_tag, input_folder, output_folder, params, encoder_file, b
     y_train = []
     y_test = []
     for (x, y, _, _, _) in dataset(input_folder, params, lable, True):
-        if np.random.uniform() > 0.6:
-            x_test.append(x)
-            y_test.append(y)
-        else:
-            x_train.append(x.reshape(x.shape[0], x.shape[1], 1))
-            y_train.append(y)
+        if np.random.uniform() < subsample and x is not None and y is not None:
+            if np.random.uniform() > 0.6:                
+                x_test.append(x)
+                y_test.append(y)
+            else:
+                x_train.append(x.reshape(x.shape[0], x.shape[1], 1))
+                y_train.append(y)
+    print("Split: x = {} / {}".format(len(x_train), len(x_test)))
     x_train = np.stack(x_train)
-    y_train = np.stack(y_train) 
+    y_train = np.stack(y_train)    
     cls_type.fit(x=x_train, y=y_train, batch_size=10, epochs=epoch)
     confusion = np.zeros((4,4))
     for x, y in zip(x_test, y_test):
@@ -424,9 +426,9 @@ if __name__== "__main__":
         output       = c['output']
         transfer     = c['transfer']
         freeze       = c['freeze'] 
-        train_auto_encoder(version, unsupervised, output, params, latent, batch, epochs)
-        evaluate_encoder(version, unsupervised, output, "{}/encoder.h5".format(output), params, viz_k)
-        train_silence(version, silence, output, params, "{}/encoder.h5".format(output), batch, epochs_sup, latent, freeze, transfer)
+        #train_auto_encoder(version, unsupervised, output, params, latent, batch, epochs)
+        #evaluate_encoder(version, unsupervised, output, "{}/encoder.h5".format(output), params, viz_k)
+        #train_silence(version, silence, output, params, "{}/encoder.h5".format(output), batch, epochs_sup, latent, freeze, transfer)
         train_type(version, type_class, output, params, "{}/encoder.h5".format(output), batch, epochs_sup, latent, freeze, transfer)
         test_reconstruction(reconstruct, output, params)
     elif len(sys.argv) == 3 and sys.argv[1] == 'induction':

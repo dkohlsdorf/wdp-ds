@@ -81,17 +81,17 @@ class TypeExtraction(namedtuple("Induction", "embeddings starts stops types file
 
 
 def overlap(x1, x2):
-    '''
+    """
     Do two regions (x1_start, x1_stop, file, type) and (x2_start, x2_stop, file, type) overlap?
 
     :param x1: first region tuple 
     :param x2: second reggion tuple
-    '''
+    """
     return max(x1[0],x2[0]) <= min(x1[1],x2[1]) and x1[2] == x2[2] and x1[3] == x2[3]
 
 
 def mk_region(sequences):
-    '''
+    """
     Convert a set of grouped sequences into a region
 
     :param sequences: [
@@ -99,7 +99,7 @@ def mk_region(sequences):
         [(start, stop, file, x)], 
         [(start, stop, file, x), (start, stop, file, x)]]
     :returns: [([x, x], start, stop), ([x], start, stop),([x, x], start, stop)]
-    '''
+    """
     for x in sequences:
         items = [item for _, _, _, _, item in x]
         start = x[0][0]
@@ -110,13 +110,13 @@ def mk_region(sequences):
 
 
 def groupBy(sequences, grouping_cond, window_size=None):
-    '''
+    """
     Extract groups of signals
 
     :param sequences: a sortd list of time stamped embedding sequences (seq, start, stop, file, type)
     :param grouping_cond: a function (x1, x2) returning true if two items should be grouped
     :returns: grouped sequence list
-    '''
+    """
     groups = []
     current = []
     for x in sequences:
@@ -136,14 +136,14 @@ def groupBy(sequences, grouping_cond, window_size=None):
 
 
 def process_dtw(assignment, overlapping, max_dist):
-    '''
+    """
     Cluster sequences
 
     :param assignment: Assignment id for bucket to cluster
     :param overlapping: All sequences
     :param max_dist: Distance for thresholding
     :returns: clustering and overlapping
-    '''
+    """
     n = len(overlapping)
     if n > 1:
         max_len = int(max([len(e) for _, _, _, _, e in overlapping]) + 1)
@@ -168,7 +168,7 @@ def process_dtw(assignment, overlapping, max_dist):
 
 
 def make_hmm(cluster, assignment, overlapping, min_len = 4, min_instances = 1, max_train=15):
-    '''
+    """
     Learn a 4 state Hidden Markov Model with 2 skip states.
     Initialization is performed from using flat start (mean and variances equal for all states)
     Training is performed using Baum Welch
@@ -177,7 +177,7 @@ def make_hmm(cluster, assignment, overlapping, min_len = 4, min_instances = 1, m
     :param assignment: assignment of clusters for each sequence
     :param overlapping: the overlapping sequences
     :returns: a hidden markov model   
-    '''
+    """
     x_label = [overlapping[i] for i in range(0, len(overlapping)) if assignment[i] == cluster]
     frames  = int(np.mean([len(x) for x in x_label]))
     if len(x_label) > min_instances and frames > min_len:        
@@ -187,7 +187,7 @@ def make_hmm(cluster, assignment, overlapping, min_len = 4, min_instances = 1, m
         l = 1 / n
         s = 1 - l
 
-        trans_mat = DenseMarkovChain.from_probs([[s,   l/3, l/3, l/3],
+        trans_mat = DenseMarkovChain.from_probs([[s,   l/2, l/2, 0.0],
                                                  [0.0,   s, l,   0.0],
                                                  [0.0, 0.0, s,     l],
                                                  [0.0, 0.0, 0.0,   s]])
@@ -201,7 +201,7 @@ def make_hmm(cluster, assignment, overlapping, min_len = 4, min_instances = 1, m
         state = np.vstack(x_label)
         print("\t State: {}".format(state.shape))
         mu    = np.mean(state, axis=0)
-        std   = np.std(state, axis=0) + 1.0
+        std   = np.std(state, axis=0) + 1e-4
         print("\t Stats: {} / {}".format(mu.shape, std.shape))
         dists = [Gaussian(mu, std) for i in range(0, 4)]
         logstructure.info("\t Model fit")
@@ -230,12 +230,12 @@ def make_hmm(cluster, assignment, overlapping, min_len = 4, min_instances = 1, m
 
 
 def decode(sequence, hmms):
-    '''
+    """
     Decode all sequences using a hidden Markov model
     :param sequence: a  sequences to decode
     :param hmms: a list of hidden markov model
     :returns: (max likelihoods, max assignment)
-    '''
+    """
     max_ll  = ZERO
     max_hmm = -1
     for i, hmm in enumerate(hmms):
@@ -248,7 +248,7 @@ def decode(sequence, hmms):
 
 
 def greedy_mixture_learning(sequences, hmms, th):
-    '''
+    """
     Greedily learn a mixture of hidden markov models
 
     :param sequences: a list of sequences
@@ -256,7 +256,7 @@ def greedy_mixture_learning(sequences, hmms, th):
     :param pool: a thread pool
     :param th: stop when improvement is below a threshold
     :returns: final set of hmms 
-    '''
+    """
     logstructure.info("Starting greedy mixture learning")
     last_ll = float('-inf')
     models   = []
@@ -294,7 +294,7 @@ def hierarchical_clustering(
     processes = 10,
     max_instances=None
 ):
-    '''
+    """
     Hierarchical clustering of annotations
     :param annotation_path: path to work folder
     :param max_dist: distance threshold for clustering
@@ -304,7 +304,7 @@ def hierarchical_clustering(
     :param sax: quantization codebook size
     :param processes: number of threads
     :returns: clustering result [(start, stop, filename, cluster)]
-    '''
+    """
     overlapping           = []
     for file in tf.io.gfile.listdir(annotation_path):        
         if file.startswith("embedding") and file.endswith(".csv"):
@@ -368,13 +368,13 @@ def hierarchical_clustering(
 
 
 def annotate_clustering(work_folder, annotations):
-    '''
+    """
     Annotates a clustering
 
     :param work_folder: folder with clustering results
     :param annotations: file with annotations
     :returns: dict[clusters][filename][start, stop, annotation]
-    '''
+    """
     header = ["cluster", "type"]
     df = pd.read_csv(annotations, sep=",", header = None, names=header)    
     annotations = {}

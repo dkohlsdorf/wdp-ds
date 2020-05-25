@@ -1,4 +1,5 @@
 # Models
+.idea
 secret.json
 app/static/
 *.wav

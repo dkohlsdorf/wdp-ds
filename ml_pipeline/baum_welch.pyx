@@ -6,6 +6,16 @@ from distributions import Gaussian
 
 
 def infer(hmm, sequence, fwd, bwd):
+    """
+    E-Step: Build probility of a state transition from state i to state j at 
+    time step t. 
+
+    :param hmm: the current model
+    :param sequence: a mult dimensional sequence of length T with D dimensions
+    :param fwd: forward log probabilities 
+    :param bwd: backward log probabilities
+    :returns: probabilities
+    """
     cdef int T = len(sequence)
     cdef int N = hmm.n_states    
     cdef double[:, :, :] zeta = np.ones((T - 1, N, N), dtype=np.double) * ZERO
@@ -32,6 +42,14 @@ def infer(hmm, sequence, fwd, bwd):
 
 
 def markov(zetas, gammas):
+    """
+    M-Step: Calculate state transitions from state to state transition probabilies and forward
+    backward probabilies
+
+    :param zetas: state to state transition probabilies
+    :param gamma: forward backward probabilies
+    :returns: log-transition matrix
+    """
     assert len(zetas) > 0 and len(zetas) == len(gammas)
     cdef int m = len(zetas)
     cdef int n = zetas[0].shape[1]
@@ -51,7 +69,14 @@ def markov(zetas, gammas):
     return np.asarray(transitions)
 
 
-def continuous_obs(sequences, gammas, min_variance=1.0):
+def continuous_obs(sequences, gammas, min_variance=1e-4):
+    """
+    M-Step: Calculate gaussians from sequences and forward - backward probabilities.
+
+    :param sequences: n sequences of length T and with d dimensions
+    :param gammas: forward backward probabilities
+    :returns: multiple Gaussians, one for each state
+    """
     assert len(gammas) > 0 and len(sequences) == len(gammas)
     cdef int m = len(gammas)
     cdef int n = gammas[0].shape[1]

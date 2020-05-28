@@ -116,7 +116,7 @@ def train(folder, output_folder, params, enc, ae, batch_size=10, epochs=128, kee
     training_log.close()
     
     
-def train_type(version_tag, input_folder, output_folder, params, encoder_file, batch, epoch, latent, freeze, transfer=True, subsample=0.1):
+def train_type(version_tag, input_folder, output_folder, params, encoder_file, batch, epoch, latent, freeze, transfer=True, subsample=0.5):
     """
     Train a multiclass type classifier
     :param version_tag: basically the model name
@@ -282,7 +282,7 @@ def test_reconstruction(folder, out, params):
         name = f.split('/')[-1]
         plt.subplot(10, 10, i + 1)
         plt.axis('off')
-        plt.imshow(1.0 - ae.predict(x.reshape(1, 128, 256, 1))[0, :, :, 0].T, cmap='gray')
+        plt.imshow(1.0 - ae.predict(x.reshape(1, params.spec_win, params.n_fft_bins, 1))[0, :, :, 0].T, cmap='gray')
         i += 1
         if i % 10 == 0:        
             log.info(i)
@@ -426,9 +426,9 @@ if __name__== "__main__":
         output       = c['output']
         transfer     = c['transfer']
         freeze       = c['freeze'] 
-        #train_auto_encoder(version, unsupervised, output, params, latent, batch, epochs)
-        #evaluate_encoder(version, unsupervised, output, "{}/encoder.h5".format(output), params, viz_k)
-        #train_silence(version, silence, output, params, "{}/encoder.h5".format(output), batch, epochs_sup, latent, freeze, transfer)
+        train_auto_encoder(version, unsupervised, output, params, latent, batch, epochs)
+        evaluate_encoder(version, unsupervised, output, "{}/encoder.h5".format(output), params, viz_k)
+        train_silence(version, silence, output, params, "{}/encoder.h5".format(output), batch, epochs_sup, latent, freeze, transfer)
         train_type(version, type_class, output, params, "{}/encoder.h5".format(output), batch, epochs_sup, latent, freeze, transfer)
         test_reconstruction(reconstruct, output, params)
     elif len(sys.argv) == 3 and sys.argv[1] == 'induction':

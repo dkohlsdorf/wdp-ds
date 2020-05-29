@@ -11,26 +11,30 @@ from sklearn.cluster import KMeans
 from sklearn.manifold.t_sne import TSNE
 from sklearn.metrics import silhouette_samples, silhouette_score
 
+import logging
+logging.basicConfig()
+logplots = logging.getLogger('plots')
+logplots.setLevel(logging.INFO)
+
 
 COLORS = list(
     pd.read_csv('ml_pipeline/colors.txt', sep='\t', header=None)[1])
 
 
 def clustering_usage(log_path):
-    '''
+    """
     Plot the cluster usage
 
     :param log_path: path to work folder
-    '''
+    """
     n_clusters = {}
     for filename in os.listdir(log_path):
         if filename.startswith('seq_clustering_log'):
             path = "{}/{}".format(log_path, filename) 
             key  = filename.split('.')[0]
-            df = pd.read_csv(path, names=["start", "stop", "cluster", "i"])
-            if len(df) > 5:
-                df = df.sort_values('start')
-                n_clusters[key] = list([row['cluster'] for _, row in df.iterrows()])
+            df = pd.read_csv(path)            
+            df = df.sort_values('start')
+            n_clusters[key] = list([row['cluster'] for _, row in df.iterrows()])
     clusters = {}
     for k, v in n_clusters.items():
         for c in v:
@@ -161,7 +165,7 @@ def visualize_embedding(img_path, embeddings, examples, k=240, figsize=(80, 60),
         l = [latent for latent, shillouette in zip(l, sample_silhouette_values)     if shillouette > th]
         examples = np.stack([x for x, shillouette in zip(examples, sample_silhouette_values) if shillouette > th])
         ids = [i for i in range(0, len(sample_silhouette_values)) if sample_silhouette_values[i] > th]
-        print("Shillouette TH: {} n_samples left {}".format(th, len(ids)))
+        logplots.info("Shillouette TH: {} n_samples left {}".format(th, len(ids)))
     else:
         ids = [i for i in range(0, len(c))]
     f, ax = plt.subplots(figsize=figsize)

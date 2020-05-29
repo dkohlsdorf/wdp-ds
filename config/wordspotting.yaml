@@ -1,0 +1,13 @@
+spec_win     : 64
+spec_step    : 32
+fft_win      : 128
+fft_step     : 64
+highpass     : 0
+latent       : 32 
+batch        : 10
+version      : "v3.0"
+epochs       : 5
+epochs_sup   : 10
+viz_k        : 100
+unsupervised : '../datasets/speech_rec/unsupervised/'
+output       : 'models/word_spotting/'

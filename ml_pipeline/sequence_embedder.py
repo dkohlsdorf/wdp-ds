@@ -2,6 +2,10 @@ import numpy as np
 
 from audio import *
 
+import logging
+logging.basicConfig()
+logembed = logging.getLogger('embedder')
+logembed.setLevel(logging.INFO)
 
 class SequenceEmbedder:
     """
@@ -43,7 +47,7 @@ class SequenceEmbedder:
                         filename  = batch[i][1]
                         start     = batch[i][2]
                         stop      = batch[i][3]
-                        print('- Found non silent region {} {}:{} extracting embedding of size {} / {} with [{}]'.format(filename, start / 48000, stop / 48000, embedding[i, :].shape, len(regions), t))
+                        logembed.info('- Found non silent region {} {}:{} extracting embedding of size {} / {} with [{}]'.format(filename, start / 48000, stop / 48000, embedding[i, :].shape, len(regions), t))
                         regions.append((embedding[i, :], filename, start, stop, t))
                 batch = []
         return regions

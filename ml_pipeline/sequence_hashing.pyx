@@ -2,15 +2,20 @@ import numpy as np
 from sklearn.cluster import KMeans
 from sklearn.utils import resample
 
+import logging
+logging.basicConfig()
+logsax = logging.getLogger('sax')
+logsax.setLevel(logging.INFO)
+
 
 def paa(double[:, :] sequence, int n): 
-    '''
+    """
     Multi dimensional Piecewise Aggregate Approximation
     
     :params sequence: An nd sequence
     :params n: compress to length n
     :returns: compressed
-    '''
+    """
     cdef int d = len(sequence[0])
     cdef int N = len(sequence)
     cdef int bucket = int(N / n)
@@ -25,28 +30,28 @@ def paa(double[:, :] sequence, int n):
 
 
 def saxnd(list sequences, int n, int m, int n_samples=10000):
-    '''
+    """
     Multi dimensional Piecewise Aggregate Approximation
     
     :params sequences: A list of nd sequence
     :params n: compress to length n
     :params m: quantize to m symbols
     :returns: quantized sequence
-    '''
+    """
     cdef int d = len(sequences[0][0])
     cdef int N = len(sequences)
     cdef int i, j = 0
-    print("PAA")
+    logsax.info("PAA")
     compressed = []
     for i in range(N):
         compressed_seq = paa(sequences[i], n)
         compressed.append(compressed_seq)
     samples = np.vstack(compressed)
     cluster = resample(samples, replace=False, n_samples=n_samples)
-    print("Clustering {} instances of {} instances".format(cluster.shape, len(compressed)))
+    logsax.info("Clustering {} instances of {} instances".format(cluster.shape, len(compressed)))
     codebook = KMeans(n_clusters=m, n_init=10, max_iter=300)
     codebook.fit(cluster) 
-    print("Done Clustering")
+    logsax.info("Done Clustering")
     codes = []
     counts = np.zeros(m + 1, dtype=np.int32)
     counts_at_length = np.zeros(m + 1, dtype=np.int32)
@@ -59,20 +64,20 @@ def saxnd(list sequences, int n, int m, int n_samples=10000):
                 counts_at_length[symbol] += 1
             code.append(symbol)          
         codes.append(code)
-    print("Cluster usage:   {}".format(counts))
-    print("Cluster usage@n: {}".format(counts_at_length))
+    logsax.info("Cluster usage:   {}".format(counts))
+    logsax.info("Cluster usage@n: {}".format(counts_at_length))
     return codes
 
 
 def similarity_bucketing(list sequences, int n, int m, int n_samples=10000):
-    '''
+    """
     Bueckting based on similarity
     
     :params sequences: A list of nd sequence
     :params n: compress to length n
     :params m: quantize to m symbols
     :returns: bucket id for each sequence
-    '''
+    """
     cdef int N = len(sequences)
     cdef list codes = saxnd(sequences, n, m, n_samples)
     cdef int[:] buckets = np.zeros(N, dtype=np.int32)

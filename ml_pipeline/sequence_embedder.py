@@ -20,7 +20,7 @@ class DummyDetector:
             return np.ones((n, 1)) * self.cls
         else:
             out = np.zeros((n, self.cls + 1))
-            out[self.cls] = 1.0
+            out[:, self.cls] = 1.0
             return out
     
 class SequenceEmbedder:
@@ -59,6 +59,7 @@ class SequenceEmbedder:
                 embedding  = self.encoder.predict(b)
                 for i in range(0, len(batch)):
                     if int(round(is_silence[i][0])) == 0:
+                        print(types[i])
                         t = np.argmax(types[i])                    
                         filename  = batch[i][1]
                         start     = batch[i][2]

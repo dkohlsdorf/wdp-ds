@@ -275,7 +275,7 @@ def test_reconstruction(folder, out, params):
         name = f.split('/')[-1]
         plt.subplot(10, 10, i + 1)
         plt.axis('off')
-        plt.imshow(1.0 - ae.predict(x.reshape(1, 128, 256, 1))[0, :, :, 0].T, cmap='gray')
+        plt.imshow(1.0 - ae.predict(x.reshape(1, x.shape[0], x.shape[1], 1))[0, :, :, 0].T, cmap='gray')
         i += 1
         if i % 10 == 0:        
             print(i)
@@ -423,10 +423,10 @@ if __name__== "__main__":
         output       = c['output']
         transfer     = c['transfer']
         freeze       = c['freeze'] 
-        train_auto_encoder(version, unsupervised, output, params, latent, batch, epochs)
-        evaluate_encoder(version, unsupervised, output, "{}/encoder.h5".format(output), params, viz_k)
-        train_silence(version, silence, output, params, "{}/encoder.h5".format(output), batch, epochs_sup, latent, freeze, transfer)
-        train_type(version, type_class, output, params, "{}/encoder.h5".format(output), batch, epochs_sup, latent, freeze, transfer)
+        #train_auto_encoder(version, unsupervised, output, params, latent, batch, epochs)
+        #evaluate_encoder(version, unsupervised, output, "{}/encoder.h5".format(output), params, viz_k)
+        #train_silence(version, silence, output, params, "{}/encoder.h5".format(output), batch, epochs_sup, latent, freeze, transfer)
+        #train_type(version, type_class, output, params, "{}/encoder.h5".format(output), batch, epochs_sup, latent, freeze, transfer)
         test_reconstruction(reconstruct, output, params)
     elif len(sys.argv) == 3 and sys.argv[1] == 'induction':
         c = yaml.load(open(sys.argv[2]))
@@ -446,3 +446,19 @@ if __name__== "__main__":
         annotations  = c['annotations'] 
         out          = c['out']
         generate_dataset(work_folder, annotations, out)
+    elif len(sys.argv) == 3 and sys.argv[1] == 'simplified':        
+        c = yaml.load(open(sys.argv[2]))
+        print("Parameters: {}".format(c))
+        params       = WindowParams(c['spec_win'], c['spec_step'], c['fft_win'], c['fft_step'], c['highpass'])
+        latent       = c['latent']
+        batch        = c['batch']
+        version      = c['version']
+        epochs       = c['epochs']
+        epochs_sup   = c['epochs_sup']
+        viz_k        = c['viz_k']
+        unsupervised = c['unsupervised']
+        reconstruct  = unsupervised
+        output       = c['output']
+        #train_auto_encoder(version, unsupervised, output, params, latent, batch, epochs)
+        #evaluate_encoder(version, unsupervised, output, "{}/encoder.h5".format(output), params, viz_k)
+        test_reconstruction(reconstruct, output, params)

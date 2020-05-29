@@ -4,7 +4,7 @@ from tensorflow.keras.optimizers import *
 from tensorflow.keras.losses import * 
 
 KERNEL_SIZE = (8,8)
-N_FILTERS   = 1024
+N_FILTERS   = 128
 
 
 def encoder(in_shape, latent_dim):

@@ -116,7 +116,7 @@ def train(folder, output_folder, params, enc, ae, batch_size=10, epochs=128, kee
     training_log.close()
     
     
-def train_type(version_tag, input_folder, output_folder, params, encoder_file, batch, epoch, latent, freeze, transfer=True):
+def train_type(version_tag, input_folder, output_folder, params, encoder_file, batch, epoch, latent, freeze, transfer=True, subsample=0.5):
     """
     Train a multiclass type classifier
     :param version_tag: basically the model name
@@ -140,14 +140,16 @@ def train_type(version_tag, input_folder, output_folder, params, encoder_file, b
     y_train = []
     y_test = []
     for (x, y, _, _, _) in dataset(input_folder, params, lable, True):
-        if np.random.uniform() > 0.6:
-            x_test.append(x)
-            y_test.append(y)
-        else:
-            x_train.append(x.reshape(x.shape[0], x.shape[1], 1))
-            y_train.append(y)
+        if np.random.uniform() < subsample and x is not None and y is not None:
+            if np.random.uniform() > 0.6:                
+                x_test.append(x)
+                y_test.append(y)
+            else:
+                x_train.append(x.reshape(x.shape[0], x.shape[1], 1))
+                y_train.append(y)
+    print("Split: x = {} / {}".format(len(x_train), len(x_test)))
     x_train = np.stack(x_train)
-    y_train = np.stack(y_train) 
+    y_train = np.stack(y_train)    
     cls_type.fit(x=x_train, y=y_train, batch_size=10, epochs=epoch)
     confusion = np.zeros((4,4))
     for x, y in zip(x_test, y_test):
@@ -280,7 +282,7 @@ def test_reconstruction(folder, out, params):
         name = f.split('/')[-1]
         plt.subplot(10, 10, i + 1)
         plt.axis('off')
-        plt.imshow(1.0 - ae.predict(x.reshape(1, 128, 256, 1))[0, :, :, 0].T, cmap='gray')
+        plt.imshow(1.0 - ae.predict(x.reshape(1, params.spec_win, params.n_fft_bins, 1))[0, :, :, 0].T, cmap='gray')
         i += 1
         if i % 10 == 0:        
             log.info(i)
@@ -352,7 +354,7 @@ def sequence_clustering(inp, out, embedder, min_support=1, n_writers=10, max_ins
                 instances_clusters[c] += 1
     log.info('Done Clustering')
     with mp.Pool(processes=n_writers) as pool:
-        pool.starmap(write_audio, ((out, cluster_id, instances_clusters, grouped_by_cluster, 0, 1500) for cluster_id in range(0, k)))
+        pool.starmap(write_audio, ((out, cluster_id, instances_clusters, grouped_by_cluster, 2, 1500) for cluster_id in range(0, k)))
     log.info('Done Writing')
     
     for f, regions in grouped_by_filename.items():

@@ -167,7 +167,7 @@ def process_dtw(assignment, overlapping, max_dist):
     return [], []
 
 
-def make_hmm(cluster, assignment, overlapping, min_len = 4, min_instances = 1, max_train=15):
+def make_hmm(cluster, assignment, overlapping, min_len = 8, min_instances = 1, max_train=15):
     """
     Learn a 4 state Hidden Markov Model with 2 skip states.
     Initialization is performed from using flat start (mean and variances equal for all states)
@@ -287,10 +287,10 @@ def greedy_mixture_learning(sequences, hmms, th):
 def hierarchical_clustering(
     annotation_path,
     max_dist = 15.0, 
-    min_th= 1, 
+    min_th= 8, 
     max_th= 500, 
-    paa = 3, 
-    sax = 4,
+    paa = 4, 
+    sax = 5,
     processes = 10,
     max_instances=None
 ):

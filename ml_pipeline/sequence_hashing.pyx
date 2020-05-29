@@ -71,7 +71,7 @@ def saxnd(list sequences, int n, int m, int n_samples=10000):
 
 def similarity_bucketing(list sequences, int n, int m, int n_samples=10000):
     """
-    Bueckting based on similarity
+    Bucketing based on similarity
     
     :params sequences: A list of nd sequence
     :params n: compress to length n

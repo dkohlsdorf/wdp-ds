@@ -398,10 +398,11 @@ def header():
     =================================================================
     Dolphin Machine Learning Pipeline
                 
-    usage for training:   python ml_pipeline/pipeline.py train config/default_config.yaml > train_log.txt
-    usage for induction:  python ml_pipeline/pipeline.py induction config/induction_config.yaml > induction_log.txt
-    usage for annotation: python ml_pipeline/pipeline.py annotate config/annotation.yaml
-    
+    usage for training:      python ml_pipeline/pipeline.py train config/default_config.yaml 
+    usage for induction:     python ml_pipeline/pipeline.py induction config/induction_config.yaml 
+    usage for annotation:    python ml_pipeline/pipeline.py annotate config/annotation.yaml
+    usage for word spotting: python ml_pipeline/pipeline.py simplified config/word_spotting.yaml
+
     by Daniel Kyu Hwa Kohlsdorf
     =================================================================
     """
@@ -441,7 +442,7 @@ if __name__== "__main__":
         enc             = load_model("{}/encoder.h5".format(output))
         silence         = load_model("{}/sil.h5".format(output))
         type_classifier = load_model("{}/type.h5".format(output))
-        embedder        = SequenceEmbedder(enc, silence, type_classifier, params)
+        embedder        = SequenceEmbedder(enc, params, silence, type_classifier)
         sequence_clustering(inp, output, embedder)
         clustering_usage(output)
         log.info('Done !!!')
@@ -464,6 +465,10 @@ if __name__== "__main__":
         unsupervised = c['unsupervised']
         reconstruct  = unsupervised
         output       = c['output']
-        train_auto_encoder(version, unsupervised, output, params, latent, batch, epochs)
-        evaluate_encoder(version, unsupervised, output, "{}/encoder.h5".format(output), params, viz_k)
-        test_reconstruction(reconstruct, output, params)
+        #train_auto_encoder(version, unsupervised, output, params, latent, batch, epochs)
+        #evaluate_encoder(version, unsupervised, output, "{}/encoder.h5".format(output), params, viz_k)
+        #test_reconstruction(reconstruct, output, params)
+        enc          = load_model("{}/encoder.h5".format(output))
+        embedder     = SequenceEmbedder(enc, params)
+        sequence_clustering(unsupervised, output, embedder)
+        clustering_usage(output)

@@ -62,6 +62,7 @@ class TypeExtraction(namedtuple("Induction", "embeddings starts stops types file
         files      = [] 
         logstructure.info("- Working on embedding {}".format(path))
         regions = embedder.embed(path)
+        logstructure.info("\t- found region {}".format(len(regions)))
         for x, f, start, stop, t in regions:
             embeddings.append(x)
             starts.append(start)

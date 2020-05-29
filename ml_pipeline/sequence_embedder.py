@@ -7,13 +7,29 @@ logging.basicConfig()
 logembed = logging.getLogger('embedder')
 logembed.setLevel(logging.INFO)
 
+
+class DummyDetector:
+
+    def __init__(self, cls, binary = True):
+        self.cls = cls
+        self.binary = binary
+        
+    def predict(self, x):    
+        n = x.shape[1]
+        if self.binary:
+            return np.ones((n, 1)) * self.cls
+        else:
+            out = np.zeros((n, self.cls + 1))
+            out[self.cls] = 1.0
+            return out
+    
 class SequenceEmbedder:
     """
     Cut non silent spectrogram regions and embed them using our
     embedding model
     """
 
-    def __init__(self, encoder, silence_detector, type_classifier, param):
+    def __init__(self, encoder, param, silence_detector = DummyDetector(0), type_classifier = DummyDetector(2, False)):
         """
         :param encoder: a keras model In (?, T, D, 1) out (?, Latent)
         :param silence_detector: a keras model In(?, T, D, 1) out (?, 1)
@@ -36,7 +52,7 @@ class SequenceEmbedder:
         regions = []
         for win in spectrogram_windows(filename, self.param):
             batch.append(win)
-            if len(batch) == 1000:
+            if len(batch) == 1:
                 b = np.stack([x[0].reshape(x[0].shape[0], x[0].shape[1], 1) for x in batch]) 
                 is_silence = self.silence_detector.predict(b)
                 types      = self.type_classifier.predict(b)                

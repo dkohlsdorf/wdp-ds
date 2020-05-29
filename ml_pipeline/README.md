@@ -11,3 +11,10 @@
 + `dtw.pyx`: cython implementation of dynamic programming
 + `structured.py`: structuring dolphin communication 
 + `sequence_hashing.pyx`: using symbolic aggregate approximation for bucketing
++ `baum_welch.pyx`: estimation code for hidden Markov models
++ `distributions.py`: distributions for hidden Markov models like Gaussians
++ `fwd_bwd.pyx`: exact inference
++ `hidden_markov_model.py`: implements the actual hmm
++ `logprob.py`: probability calculations in log space
++ `markov_chain.py`: implements a markov chain
++ `viterbi.pyx`: viterbi algorithm for hidden Markov model decoding

@@ -19,4 +19,5 @@ and communicate the results with domain experts.
 
 ## Running Tests
 ```
+    python -m unittest discover -s ml_pipeline/tests -v
 ```

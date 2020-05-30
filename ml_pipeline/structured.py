@@ -168,7 +168,7 @@ def process_dtw(assignment, overlapping, max_dist):
     return [], []
 
 
-def make_hmm(cluster, assignment, overlapping, min_len = 8, min_instances = 1, max_train=15):
+def make_hmm(cluster, assignment, overlapping, min_len = 8, max_train=15):
     """
     Learn a 4 state Hidden Markov Model with 2 skip states.
     Initialization is performed from using flat start (mean and variances equal for all states)
@@ -181,7 +181,7 @@ def make_hmm(cluster, assignment, overlapping, min_len = 8, min_instances = 1, m
     """
     x_label = [overlapping[i] for i in range(0, len(overlapping)) if assignment[i] == cluster]
     frames  = int(np.mean([len(x) for x in x_label]))
-    if len(x_label) > min_instances and frames > min_len:        
+    if frames > min_len:        
         logstructure.info("MkModel: {}".format("cluster"))
         logstructure.info("\t {} instances".format(len(x_label)))
         n = frames / 4
@@ -287,7 +287,8 @@ def greedy_mixture_learning(sequences, hmms, th):
 
 def hierarchical_clustering(
     annotation_path,
-    max_dist = 15.0, 
+    max_dist = 2.5, 
+    min_instances = 5,
     min_th= 8, 
     max_th= 500, 
     paa = 4, 
@@ -321,12 +322,14 @@ def hierarchical_clustering(
             overlapping += groupBy(annotated, overlap)
             if max_instances is not None and len(overlapping) > max_instances:
                 break
+
     if max_instances is not None:
         overlapping = overlapping[:max_instances]
     overlapping = [x for x in overlapping if len(x[4]) > min_th and len(x[4]) < max_th]
     max_len = int(max([len(e) for _, _, _, _, e in overlapping]) + 1)
     sequences = [np.stack(s) for _, _, _, _, s in overlapping]
-    logstructure.info("Bucketing instances")
+
+    logstructure.info("SAX Bucketing instances")
     if max_instances is not None:
         assignments = similarity_bucketing(sequences, paa, sax, max_instances)
     else:
@@ -337,8 +340,8 @@ def hierarchical_clustering(
         if s not in by_assignment:
             by_assignment[s] = []
         by_assignment[s].append(o)
+    
     logstructure.info("Bucketed Clustering")
-
     with mp.Pool(processes=processes) as pool:
         outputs = pool.starmap(process_dtw, ((assignment, overlapping, max_dist) for assignment, overlapping in by_assignment.items()))
 
@@ -347,20 +350,32 @@ def hierarchical_clustering(
     assignments = []
     overlapping = []
     sequences   = []
+    n_instances = {}
     for clustering, o in outputs:
         if len(clustering) > 0:
             for c, (start, stop, f, t, sequence) in zip(clustering, o):
-                    assignments.append(c)
+                    if c not in n_instances:
+                        n_instances[c + cur] = 1
+                    else:
+                        n_instances[c + cur] += 1                                            
+                    assignments.append(c + cur)
                     overlapping.append((start, stop, f, t, c + cur))
                     sequences.append(sequence)
             for c in range(len(set(clustering))):
                 cur += 1
+    
+    logstructure.info("Filter by cluster usage")
+    sequences   = [sequences[i]   for i in range(len(sequences))   if n_instances[assignments[i]] > min_instances]
+    overlapping = [overlapping[i] for i in range(len(overlapping)) if n_instances[assignments[i]] > min_instances]
+    assignments = [assignments[i] for i in range(len(assignments)) if n_instances[assignments[i]] > min_instances]
+
     logstructure.info("Build Hidden Markov Models")
     model_pool = list(set(assignments))
     logstructure.info("Models: {}".format(len(model_pool)))
     with mp.Pool(processes=processes) as pool:
         hmms = pool.starmap(make_hmm, ((model, assignments, sequences) for model in model_pool))
         hmms = [hmm for hmm in hmms if hmm is not None]
+        
     logstructure.info("Models: {}".format(len(hmms)))
     logstructure.info("Greedy Mixture Learning / Cluster Supression")
     models, last_ll, assignments = greedy_mixture_learning(sequences, hmms, 1e-6)

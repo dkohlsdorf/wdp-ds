@@ -16,6 +16,8 @@ def viterbi(hmm, sequence):
 
     Implements [RAB] equation 31 and [HOL] equation 9.11
 
+    Suggested efficiency improvement: Do not save the whole matrix for dynamic
+    programming but only the last time slice
 
     :param hmm: a hidden Markov model
     :param sequence: a sequence of length M and dimension d

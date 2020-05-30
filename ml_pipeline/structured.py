@@ -300,6 +300,7 @@ def hierarchical_clustering(
     Hierarchical clustering of annotations
     :param annotation_path: path to work folder
     :param max_dist: distance threshold for clustering
+    :param min_instances: minimum number of instances to start hmm
     :param min_len: minimum length of sequence
     :param max_len: maximum length of sequence
     :param paa: compressed size

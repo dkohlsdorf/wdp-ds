@@ -1,3 +1,9 @@
+# Implements Dynamic Time Warping for Sequence Alignment
+#
+# REFERENCES:
+# [HOL] John and Wendy Holmes: "Speech Synthesis and Recognition", Taylor & Francis Ltd; Second Edition, 2001
+
+
 import numpy as np
 
 def argmin(i, j, double deletion, double match, double insert):
@@ -29,12 +35,15 @@ cdef class DTW:
       cdef int[:,:,:] bp
 
     def __cinit__(self, int max_len):
-        self.dp = np.ones((max_len + 1, max_len + 1)) * float('inf')
-        self.bp = np.zeros((max_len + 1, max_len + 1, 2), dtype=np.int32)
+
+        self.dp = np.ones((max_len + 1, max_len + 1)) * float('inf')      # Dynamic Programming Matrix 
+        self.bp = np.zeros((max_len + 1, max_len + 1, 2), dtype=np.int32) # Back tracking matrix
 
     def align(self, double[:, :] x, double[:,:] y):
         """
         Align two sequences using dynamic time warping.
+
+        Implements [HOL] equation 8.2
 
         :param x: a sequence of length N and dimension d
         :param y: a sequence of length M and dimension d

@@ -1,3 +1,10 @@
+# Methods for Baum Welch Reestimation
+#
+# REFERENCES:
+# [RAB] Rabiner: "A tutorial on Hidden Markov Models and Selected Applications in Speech Recognition", Proceedins of the IEEE, 1989
+# [HOL] John and Wendy Holmes: "Speech Synthesis and Recognition", Taylor & Francis Ltd; Second Edition, 2001
+
+
 import numpy as np
 
 from logprob import ZERO, LogProb
@@ -9,6 +16,8 @@ def infer(hmm, sequence, fwd, bwd):
     """
     E-Step: Build probility of a state transition from state i to state j at 
     time step t. 
+
+    Implements [RAB] equation 37 and [HOL] equation 9.21
 
     :param hmm: the current model
     :param sequence: a mult dimensional sequence of length T with D dimensions
@@ -46,6 +55,8 @@ def markov(zetas, gammas):
     M-Step: Calculate state transitions from state to state transition probabilies and forward
     backward probabilies
 
+    Implements [RAB] equation 40b and [HOL] equation 9.24
+
     :param zetas: state to state transition probabilies
     :param gamma: forward backward probabilies
     :returns: log-transition matrix
@@ -72,6 +83,9 @@ def markov(zetas, gammas):
 def continuous_obs(sequences, gammas, min_variance=1e-4):
     """
     M-Step: Calculate gaussians from sequences and forward - backward probabilities.
+
+    Implements [HOL] equation 9.36 / 9.37
+
 
     :param sequences: n sequences of length T and with d dimensions
     :param gammas: forward backward probabilities

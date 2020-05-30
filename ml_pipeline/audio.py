@@ -3,6 +3,8 @@ import random
 import os
 import tensorflow as tf
 
+from  health_checks import *
+
 import logging
 logging.basicConfig()
 logaudio = logging.getLogger('audio')
@@ -63,7 +65,7 @@ class WindowParams(namedtuple('WindowParams', 'spec_win spec_step fft_win fft_st
         return (audio_samples - self.win_len) // self.step + 1
 
     
-def read(path):
+def read(path, sample_rate = 48000):
     """
     Read an audio file from local file system or cloud storage
     all all formats that ffmpeg supports are supported
@@ -74,7 +76,12 @@ def read(path):
     with tf.io.gfile.GFile(path, "rb") as f:
         try:
             x = AudioSegment.from_file(f)
-            x = np.array(x.get_array_of_samples()).reshape(int(x.frame_count()),  x.channels)
+            rate = x.frame_rate
+            if rate != sample_rate:
+                logaudio.info("Skip file {}: because of frame rate difference {} to {}".format(path, sample_rate, rate))
+                x = None
+            else:
+                x = np.array(x.get_array_of_samples()).reshape(int(x.frame_count()),  x.channels)
         except Exception as e:
             logaudio.info("Skip file {} = {}".format(path, e))
             x = None
@@ -154,18 +161,21 @@ def spectrogram_windows(filename, params, shuffle=False):
             yield ((spec - mu) / sigma, filename, start, stop)
 
 
-def spectrogram_regions(filename, params, regions):
+def spectrogram_regions(filename, params, regions, first_channel = True):
     """
     Spectrogram Region Extraction
 
     :param filename: the filename
     :param params: Windowing parameters
     :param regions: sequence of start, stop tuples
+    :param first_channel: pick the first channel for multi channel data or take the average
     :returns: spectrogram of the normalized region
     """
     data = read(filename)
-    if len(data.shape) > 1:
+    if len(data.shape) > 1 and not first_channel:
         data = np.mean(data, axis=1) 
+    elif len(data.shape) > 1 and first_channel
+        data = data[:, 0]
     else:
         data = data.reshape((len(data)))
 
@@ -232,4 +242,6 @@ def fwd_spectrogram(audio, win=512, step=64):
     for i in range(win, len(audio), step):
         dft = np.abs(fft(audio[i - win: i] * hanning))
         spectrogram.append(dft)
-    return np.array(spectrogram)
+    spectrogram = np.array(spectrogram)
+    logaudio.info(statistics(spectrogram))
+    return spectrogram

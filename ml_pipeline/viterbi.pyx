@@ -1,3 +1,10 @@
+# Methods for Inference
+#
+# REFERENCES:
+# [RAB] Rabiner: "A tutorial on Hidden Markov Models and Selected Applications in Speech Recognition", Proceedins of the IEEE, 1989
+# [HOL] John and Wendy Holmes: "Speech Synthesis and Recognition", Taylor & Francis Ltd; Second Edition, 2001
+
+
 import numpy as np
 from markov_chain import START_STATE, STOP_STATE, Transition
 from logprob import ZERO, LogProb
@@ -7,6 +14,11 @@ def viterbi(hmm, sequence):
     """
     Align a sequence to a hidden Markov model.
 
+    Implements [RAB] equation 31 and [HOL] equation 9.11
+
+    Suggested efficiency improvement: Do not save the whole matrix for dynamic
+    programming but only the last time slice
+
     :param hmm: a hidden Markov model
     :param sequence: a sequence of length M and dimension d
     :returns: path and alignment score
@@ -14,8 +26,8 @@ def viterbi(hmm, sequence):
     cdef int T = len(sequence)
     cdef int N = hmm.n_states
     
-    cdef double[:, :] dp  = np.ones((T, N), dtype=np.double) * ZERO
-    cdef long[:, :] bp    = np.zeros((T, N), dtype=np.int)
+    cdef double[:, :] dp  = np.ones((T, N), dtype=np.double) * ZERO # dynamic programming matrix
+    cdef long[:, :] bp    = np.zeros((T, N), dtype=np.int)          # back tracking matrix
     cdef long[:]  path    = np.zeros(T, dtype=np.int)
     
     cdef double ll  = 0.0
@@ -25,7 +37,7 @@ def viterbi(hmm, sequence):
     for i in range(0, N):
         init     = Transition(START_STATE, i)
         sample   = sequence[0]
-        logprob  = hmm.observations[i][sample] * hmm.transitions[init]
+        logprob  = hmm.observations[i][sample] * hmm.transitions[init] 
         dp[0, i] = logprob.prob
 
     for t in range(1, T):
@@ -59,4 +71,4 @@ def viterbi(hmm, sequence):
         path[t] = i
         i = bp[t, i]
         t -= 1
-    return np.asarray(path), LogProb(max_ll.prob / T)
+    return np.asarray(path), LogProb(max_ll.prob) 

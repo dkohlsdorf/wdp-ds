@@ -1,7 +1,7 @@
 import numpy as np
 import io
 from sklearn.mixture import GaussianMixture
-from logprob import LogProb, ZERO
+from ml_pipeline.logprob import LogProb, ZERO
 
 
 class Gaussian:
@@ -11,7 +11,12 @@ class Gaussian:
         self.variance = variance
 
     def __getitem__(self, x):
-        error = -0.5 * np.square(x - self.mean) / self.variance
+        '''
+        Allows the use of the distribution as pdf[x] = Normal(x|mu,sigma)
+
+        :param x: a nd-sample
+        '''
+        error = -0.5 * (np.square(x - self.mean) / self.variance)
         return LogProb(self.scaler + np.sum(error))
 
     @property

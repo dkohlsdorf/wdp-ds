@@ -1,3 +1,9 @@
+# Methods for Inference
+#
+# REFERENCES:
+# [RAB] Rabiner: "A tutorial on Hidden Markov Models and Selected Applications in Speech Recognition", Proceedins of the IEEE, 1989
+# [HOL] John and Wendy Holmes: "Speech Synthesis and Recognition", Taylor & Francis Ltd; Second Edition, 2001
+
 import numpy as np
 from markov_chain import START_STATE, STOP_STATE, Transition
 from logprob import ZERO, LogProb
@@ -6,6 +12,8 @@ from logprob import ZERO, LogProb
 def infer(hmm, sequence):
     """
     Forward Backward algorithm for hidden Markov models
+
+    Implements [RAB] equation 27 and [HOL] equation 9.19
 
     :param hmm: a hidden Markov model
     :param sequence: a sequence of length T and dimension d
@@ -34,6 +42,8 @@ def infer(hmm, sequence):
 def bwd(hmm, sequence):
     """
     Calculate state probabilities backwards through HMM.
+
+    Implements [RAB] equation 25 and [HOL] equation 9.15
 
     :param hmm: a hidden Markov model
     :param sequence: a sequence of length T and dimension d
@@ -69,6 +79,8 @@ def bwd(hmm, sequence):
 def fwd(hmm, sequence): 
     """
     Calculate state probabilities forwards through HMM.
+
+    Implements [RAB] equation 20 and [HOL] equation 9.07
 
     :param hmm: a hidden Markov model
     :param sequence: a sequence of length T and dimension d

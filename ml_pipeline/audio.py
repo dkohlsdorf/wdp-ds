@@ -161,7 +161,7 @@ def spectrogram_windows(filename, params, shuffle=False):
             yield ((spec - mu) / sigma, filename, start, stop)
 
 
-def spectrogram_regions(filename, params, regions, first_channel = True):
+def spectrogram_regions(filename, params, regions, first_channel = False):
     """
     Spectrogram Region Extraction
 
@@ -174,7 +174,7 @@ def spectrogram_regions(filename, params, regions, first_channel = True):
     data = read(filename)
     if len(data.shape) > 1 and not first_channel:
         data = np.mean(data, axis=1) 
-    elif len(data.shape) > 1 and first_channel
+    elif len(data.shape) > 1 and first_channel:
         data = data[:, 0]
     else:
         data = data.reshape((len(data)))

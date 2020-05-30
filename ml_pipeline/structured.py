@@ -294,7 +294,7 @@ def hierarchical_clustering(
     paa = 4, 
     sax = 5,
     processes = 10,
-    max_instances=1000
+    max_instances=None
 ):
     """
     Hierarchical clustering of annotations
@@ -308,6 +308,7 @@ def hierarchical_clustering(
     :param processes: number of threads
     :returns: clustering result [(start, stop, filename, cluster)]
     """
+    logstructure.info('Max Instances: {}'.format(max_instances))
     overlapping           = []
     for file in tf.io.gfile.listdir(annotation_path):        
         if file.startswith("embedding") and file.endswith(".csv"):

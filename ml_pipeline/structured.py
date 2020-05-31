@@ -276,9 +276,13 @@ def greedy_mixture_learning(sequences, hmms, th):
                 max_hypothesis = i
         best   = openlist.pop(max_hypothesis)
         models = models + [best]
-        logstructure.info("Greedy Mixture Learning: {} {}".format(max_hypothesis_ll, len(openlist), len(models)))
+        logstructure.info("Greedy Mixture Learning: {} {} {} {}".format(max_hypothesis_ll, len(openlist), len(models), max_hypothesis_ll - last_ll))
         if max_hypothesis_ll - last_ll < th:
-            break
+            with mp.Pool(processes=10) as pool:
+                decoded = pool.starmap(decode, ((sequence, models) for sequence in sequences))
+            assignemnts = [assignment for _, assignment in decoded]
+            return models, last_ll, assignemnts
+
     with mp.Pool(processes=10) as pool:
         decoded = pool.starmap(decode, ((sequence, models) for sequence in sequences))
     assignemnts = [assignment for _, assignment in decoded]
@@ -356,7 +360,7 @@ def hierarchical_clustering(
     for clustering, o in outputs:
         if len(clustering) > 0:
             for c, (start, stop, f, t, sequence) in zip(clustering, o):
-                    if c not in n_instances:
+                    if (c + cur) not in n_instances:
                         n_instances[c + cur] = 1
                     else:
                         n_instances[c + cur] += 1                                            

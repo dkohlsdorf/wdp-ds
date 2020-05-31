@@ -269,7 +269,7 @@ def greedy_mixture_learning(sequences, hmms, th):
             hypothesis = models + [hmm]
             with mp.Pool(processes=10) as pool:
                 decoded = pool.starmap(decode, ((sequence, hypothesis) for sequence in sequences))
-            likelihoods = [LogProb(ll).exp for ll, c in decoded if c >= 0]
+            likelihoods = [ll for ll, c in decoded if c >= 0]
             likelihood  = sum(likelihoods) / len(likelihoods)
             if likelihood > max_hypothesis_ll:
                 max_hypothesis_ll = likelihood
@@ -282,7 +282,7 @@ def greedy_mixture_learning(sequences, hmms, th):
                 decoded = pool.starmap(decode, ((sequence, models) for sequence in sequences))
             assignemnts = [assignment for _, assignment in decoded]
             return models, last_ll, assignemnts
-
+        last_ll = max_hypothesis_ll
     with mp.Pool(processes=10) as pool:
         decoded = pool.starmap(decode, ((sequence, models) for sequence in sequences))
     assignemnts = [assignment for _, assignment in decoded]
@@ -384,7 +384,7 @@ def hierarchical_clustering(
         
     logstructure.info("Models: {}".format(len(hmms)))
     logstructure.info("Greedy Mixture Learning / Cluster Supression")
-    models, last_ll, assignments = greedy_mixture_learning(sequences, hmms, 1e-6)
+    models, last_ll, assignments = greedy_mixture_learning(sequences, hmms, 1e-4)
     cluster_regions = [(start, stop, f, t, c) for c, (start, stop, f, t, _) in zip(assignments, overlapping) if c >= 0]
     return cluster_regions
 

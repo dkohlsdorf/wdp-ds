@@ -227,7 +227,7 @@ def make_hmm(cluster, assignment, overlapping, min_len = 8, max_train=15):
             inference    = [infer.infer(hmm, seq) for seq in x_label]
             zetas        = [bw.infer(hmm, x_label[i], inference[i][1], inference[i][2]) for i in range(0, len(x_label))]    
             gammas       = [gamma for gamma, _, _ in inference]
-            obs          = bw.continuous_obs(x_label, gammas)
+            obs          = bw.continuous_obs(x_label, gammas, 1.0)
             diff         = np.sum([np.sum(np.square(a.mean - b.mean)) for (a, b) in zip(hmm.observations, obs)])
             transitions  = bw.markov(zetas, gammas)
             hmm.observations = obs
@@ -286,7 +286,7 @@ def greedy_mixture_learning(sequences, hmms, th):
             hypothesis = models + [hmm]
             with mp.Pool(processes=10) as pool:
                 decoded = pool.starmap(decode, ((sequence, hypothesis) for sequence in sequences))
-            likelihoods = [LogProb(ll).exp for ll, c in decoded if c >= 0]
+            likelihoods = [ll for ll, c in decoded if c >= 0]
             likelihood  = sum(likelihoods) / len(likelihoods)
             if likelihood > max_hypothesis_ll:
                 max_hypothesis_ll = likelihood
@@ -295,11 +295,19 @@ def greedy_mixture_learning(sequences, hmms, th):
         # assign the best model
         best   = openlist.pop(max_hypothesis)
         models = models + [best]
+<<<<<<< HEAD
         logstructure.info("Greedy Mixture Learning: {} {}".format(max_hypothesis_ll, len(openlist), len(models)))
 
         # stop if adding the model did not change the likelihood 
+=======
+        logstructure.info("Greedy Mixture Learning: {} {} {} {}".format(max_hypothesis_ll, len(openlist), len(models), max_hypothesis_ll - last_ll))
+>>>>>>> 630e43feeec94181baa32917e45a4820ba215ee0
         if max_hypothesis_ll - last_ll < th:
-            break
+            with mp.Pool(processes=10) as pool:
+                decoded = pool.starmap(decode, ((sequence, models) for sequence in sequences))
+            assignemnts = [assignment for _, assignment in decoded]
+            return models, last_ll, assignemnts
+        last_ll = max_hypothesis_ll
     with mp.Pool(processes=10) as pool:
         decoded = pool.starmap(decode, ((sequence, models) for sequence in sequences))
     assignemnts = [assignment for _, assignment in decoded]
@@ -378,7 +386,7 @@ def hierarchical_clustering(
     for clustering, o in outputs:
         if len(clustering) > 0:
             for c, (start, stop, f, t, sequence) in zip(clustering, o):
-                    if c not in n_instances:
+                    if (c + cur) not in n_instances:
                         n_instances[c + cur] = 1
                     else:
                         n_instances[c + cur] += 1                                            
@@ -402,7 +410,7 @@ def hierarchical_clustering(
         
     logstructure.info("Models: {}".format(len(hmms)))
     logstructure.info("Greedy Mixture Learning / Cluster Supression")
-    models, last_ll, assignments = greedy_mixture_learning(sequences, hmms, 1e-6)
+    models, last_ll, assignments = greedy_mixture_learning(sequences, hmms, 1e-4)
     cluster_regions = [(start, stop, f, t, c) for c, (start, stop, f, t, _) in zip(assignments, overlapping) if c >= 0]
     return cluster_regions
 

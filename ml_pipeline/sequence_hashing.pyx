@@ -47,7 +47,7 @@ def saxnd(list sequences, int n, int m, int n_samples=10000):
         compressed_seq = paa(sequences[i], n)
         compressed.append(compressed_seq)
     samples = np.vstack(compressed)
-    cluster = resample(samples, replace=False, n_samples=n_samples)
+    cluster = resample(samples, replace=False, n_samples=min(N, n_samples))
     logsax.info("Clustering {} instances of {} instances".format(cluster.shape, len(compressed)))
     codebook = KMeans(n_clusters=m, n_init=10, max_iter=300)
     codebook.fit(cluster) 

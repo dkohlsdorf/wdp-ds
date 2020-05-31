@@ -5,6 +5,9 @@
 # 
 # REFERENCES: 
 # [MIN] Minnen, Isbel, Essa, Starner: "Discovering Multivariate Motifs using Subsequence Density Estimation and Greedy Mixture Learning", AAAI, 2007
+# [KOH1] Daniel Kohlsdorf: "Data Mining In Large Audio Collections Of Dolphin Signals", Georgia Tech, Doctoral Thesis 2015
+# [KOH2] Daniel Kohlsdorf, Denise Herzing, Thad Starner: "Feature Learning and Automatic Segmentation for Dolphin Communication Analysis", Interspeech16, 2016
+# [KOH3] Daniel Kohlsdorf, Denise Herzing and Thad Starner: "Methods for Discovering Models of Behavior: A Case Study with Wild Atlantic Spotted Dolphins", Animal Behavior and Cognition, November 2016
 
 import numpy as np
 import pandas as pd
@@ -295,13 +298,8 @@ def greedy_mixture_learning(sequences, hmms, th):
         # assign the best model
         best   = openlist.pop(max_hypothesis)
         models = models + [best]
-<<<<<<< HEAD
-        logstructure.info("Greedy Mixture Learning: {} {}".format(max_hypothesis_ll, len(openlist), len(models)))
-
         # stop if adding the model did not change the likelihood 
-=======
         logstructure.info("Greedy Mixture Learning: {} {} {} {}".format(max_hypothesis_ll, len(openlist), len(models), max_hypothesis_ll - last_ll))
->>>>>>> 630e43feeec94181baa32917e45a4820ba215ee0
         if max_hypothesis_ll - last_ll < th:
             with mp.Pool(processes=10) as pool:
                 decoded = pool.starmap(decode, ((sequence, models) for sequence in sequences))

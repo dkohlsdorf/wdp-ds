@@ -1,3 +1,9 @@
+# Classification on top of embedder
+#  
+# REFERENCES: 
+# [KOH4] Daniel Kohlsdorf, Denise Herzing, Thad Starner: "An Auto Encoder For Audio Dolphin Communication", IJCNN, 2020
+
+
 from tensorflow.keras.layers import *
 from tensorflow.keras.models import *
 from tensorflow.keras.regularizers import l2

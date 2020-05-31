@@ -1,3 +1,9 @@
+
+# Hashing Sequences. Similar Sequences should have a similar Hash
+# 
+# REFERENCES: 
+# [KOH1] Daniel Kohlsdorf: "Data Mining In Large Audio Collections Of Dolphin Signals", Georgia Tech, Doctoral Thesis 2015
+
 import numpy as np
 from sklearn.cluster import KMeans
 from sklearn.utils import resample

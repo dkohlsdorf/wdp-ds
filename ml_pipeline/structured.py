@@ -1,3 +1,11 @@
+# Structuring Embedded Sequences
+# 
+# 1) Detect Overlapping Non-Noise Subsequences
+# 2) Cluster these sequences
+# 
+# REFERENCES: 
+# [MIN] Minnen, Isbel, Essa, Starner: "Discovering Multivariate Motifs using Subsequence Density Estimation and Greedy Mixture Learning", AAAI, 2007
+
 import numpy as np
 import pandas as pd
 import os 
@@ -149,10 +157,14 @@ def process_dtw(assignment, overlapping, max_dist):
     if n > 1:
         max_len = int(max([len(e) for _, _, _, _, e in overlapping]) + 1)
         dtw = DTW(max_len)
+
+        # Compute distance matrix
         dist = np.zeros((n, n))
         for i, (start_x, stop_x, f_x, t_x, embedding_x) in enumerate(overlapping):
+            
             if i % 250 == 0 and i > 0:
                 logstructure.info("\t\t Processing: {} {}".format(i, len(overlapping)))
+            
             for j, (start_y, stop_y, f_y, t_y, embedding_y) in enumerate(overlapping):
                 if i < j:
                     x = np.array([embedding_x]).reshape(len(embedding_x), 256)
@@ -161,6 +173,8 @@ def process_dtw(assignment, overlapping, max_dist):
                     dist[i, j] = d / (len(x) * len(y))
                     dist[j, i] = d / (len(x) * len(y))
         logstructure.info("\t {} {} {} {} {} {} ".format(assignment, n, np.percentile(dist.flatten(), 5), np.percentile(dist.flatten(), 95), np.mean(dist), np.std(dist)))
+        
+        # clustering
         agg = AgglomerativeClustering(n_clusters = None, 
                                       distance_threshold = max_dist, linkage = 'average', affinity='precomputed')
         clustering = agg.fit_predict(dist)
@@ -205,6 +219,7 @@ def make_hmm(cluster, assignment, overlapping, min_len = 8, max_train=15):
         std   = np.std(state, axis=0) + 1e-4
         print("\t Stats: {} / {}".format(mu.shape, std.shape))
         dists = [Gaussian(mu, std) for i in range(0, 4)]
+
         logstructure.info("\t Model fit")
         hmm = HiddenMarkovModel(trans_mat, dists)
         for _ in range(0, max_train):
@@ -250,7 +265,7 @@ def decode(sequence, hmms):
 
 def greedy_mixture_learning(sequences, hmms, th):
     """
-    Greedily learn a mixture of hidden markov models
+    Greedily learn a mixture of hidden markov models [MIN].
 
     :param sequences: a list of sequences
     :param hmms: a list of hidden Markov models
@@ -265,6 +280,8 @@ def greedy_mixture_learning(sequences, hmms, th):
     while len(openlist) > 0:
         max_hypothesis_ll = float('-inf')
         max_hypothesis    = 0
+
+        # find the model that when added to the hidden Markov models increases the likelihood most 
         for i, hmm in enumerate(openlist):
             hypothesis = models + [hmm]
             with mp.Pool(processes=10) as pool:
@@ -274,9 +291,13 @@ def greedy_mixture_learning(sequences, hmms, th):
             if likelihood > max_hypothesis_ll:
                 max_hypothesis_ll = likelihood
                 max_hypothesis = i
+        
+        # assign the best model
         best   = openlist.pop(max_hypothesis)
         models = models + [best]
         logstructure.info("Greedy Mixture Learning: {} {}".format(max_hypothesis_ll, len(openlist), len(models)))
+
+        # stop if adding the model did not change the likelihood 
         if max_hypothesis_ll - last_ll < th:
             break
     with mp.Pool(processes=10) as pool:
@@ -309,6 +330,7 @@ def hierarchical_clustering(
     :returns: clustering result [(start, stop, filename, cluster)]
     """
     logstructure.info('Max Instances: {}'.format(max_instances))
+    # Find all overlapping sequences
     overlapping           = []
     for file in tf.io.gfile.listdir(annotation_path):        
         if file.startswith("embedding") and file.endswith(".csv"):

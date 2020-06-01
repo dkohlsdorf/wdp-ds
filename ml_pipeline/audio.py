@@ -15,6 +15,35 @@ from pydub import AudioSegment
 from numpy.fft import fft
 from collections import namedtuple
 
+
+class AudiofileParams(object):
+    """
+    Singleton saving audio file parameters globally
+    """
+    
+    __instance = None
+
+    def __new__(cls, rate, dtype, sample_width):
+        if AudiofileParams.__instance is None:
+            AudiofileParams.__instance = object.__new__(cls)            
+            AudiofileParams.__instance.rate = rate
+            AudiofileParams.__instance.dtype = dtype
+            AudiofileParams.__instance.sample_width = sample_width
+        check_params(AudiofileParams.__instance, rate, dtype, sample_width)
+        return AudiofileParams.__instance
+
+    def get(self):
+        return AudiofileParams.__instance
+    
+    def check_params(self, rate, dtype, sample_width):
+        if self.rate != rate:
+            logaudio.info('Sample rate does not match: {} != {}'.format(self.rate, rate))
+        if self.dtype != dtype:
+            logaudio.info('Sample type does not match: {} != {}'.format(self.dtype, dtype))
+        if self.sample_width != sample_width:
+            logaudio.info('Sample width does not match: {} != {}'.format(self.sample_width, sample_width))
+
+            
 class WindowParams(namedtuple('WindowParams', 'spec_win spec_step fft_win fft_step highpass')):
 
     @property
@@ -65,7 +94,7 @@ class WindowParams(namedtuple('WindowParams', 'spec_win spec_step fft_win fft_st
         return (audio_samples - self.win_len) // self.step + 1
 
     
-def read(path, sample_rate = 48000):
+def read(path):
     """
     Read an audio file from local file system or cloud storage
     all all formats that ffmpeg supports are supported
@@ -75,13 +104,12 @@ def read(path, sample_rate = 48000):
     """
     with tf.io.gfile.GFile(path, "rb") as f:
         try:
-            x = AudioSegment.from_file(f)
-            rate = x.frame_rate
-            if rate != sample_rate:
-                logaudio.info("Skip file {}: because of frame rate difference {} to {}".format(path, sample_rate, rate))
-                x = None
-            else:
-                x = np.array(x.get_array_of_samples()).reshape(int(x.frame_count()),  x.channels)
+            x    = AudioSegment.from_file(f)
+            rate = x.frame_rate            
+            sample_width = x.sample_width
+            x    = np.array(x.get_array_of_samples()).reshape(int(x.frame_count()),  x.channels)
+            dtype = x.dtype
+            params = AudiofileParams(rate, dtype, sample_width)
         except Exception as e:
             logaudio.info("Skip file {} = {}".format(path, e))
             x = None

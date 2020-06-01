@@ -25,9 +25,10 @@ class AudioSnippetCollection:
         :param data: some data to attach
         """
         params = audio.AudiofileParams.get()
-        b = bytearray(data.astype(params.dtype))
+        frames = params.rate // 10
+        b = bytearray(data)
         self.obj.writeframesraw(b)
-        b = bytearray(np.zeros(frames, dtype=params.dtype))
+        b = bytearray(np.zeros(frames))
         self.obj.writeframesraw(b)
     
     def close(self):

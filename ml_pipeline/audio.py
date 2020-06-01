@@ -3,7 +3,7 @@ import random
 import os
 import tensorflow as tf
 
-from  health_checks import *
+from ml_pipeline.health_checks import *
 
 import logging
 logging.basicConfig()
@@ -29,12 +29,25 @@ class AudiofileParams(object):
             AudiofileParams.__instance.rate = rate
             AudiofileParams.__instance.dtype = dtype
             AudiofileParams.__instance.sample_width = sample_width
-        check_params(AudiofileParams.__instance, rate, dtype, sample_width)
+        AudiofileParams.__instance.check_params(rate, dtype, sample_width)
         return AudiofileParams.__instance
 
-    def get(self):
+    @classmethod
+    def get(cls):
         return AudiofileParams.__instance
     
+    @classmethod
+    def set_rate(cls, rate):
+        AudiofileParams.__instance.rate = rate
+    
+    @classmethod
+    def set_dtype(cls, dtype):
+        AudiofileParams.__instance.dtype = dtype
+    
+    @classmethod
+    def set_sample_width(cls, sample_width)
+        AudiofileParams.__instance.sample_width = sample_width
+
     def check_params(self, rate, dtype, sample_width):
         if self.rate != rate:
             logaudio.info('Sample rate does not match: {} != {}'.format(self.rate, rate))

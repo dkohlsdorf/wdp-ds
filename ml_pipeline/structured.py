@@ -144,6 +144,8 @@ def groupBy(sequences, grouping_cond, window_size=None):
                 if window_size is None:
                     groups.append(current)
                     current = [x]
+    if len(current) > 0:
+        groups.append(current)
     return [x for x in mk_region(groups)]
 
 

@@ -1,6 +1,6 @@
 import numpy as np
 
-from logprob import LogProb, ZERO
+from ml_pipeline.logprob import LogProb, ZERO
 from collections import namedtuple
 
 Transition = namedtuple("Transition", "from_state to_state")

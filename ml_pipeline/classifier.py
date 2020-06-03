@@ -13,6 +13,8 @@ def classifier(encoder, n_labels=1, freeze=True):
     A classifier stacked on top of an encoder.
     All layers except the last are frozen.
 
+    See Figure [KOH4] Figure 2. left part as encoder
+
     :param encoder: an encoder that ouputs a vector
     :param n_labels: number of labels for the classification
 
@@ -25,6 +27,8 @@ def classifier(encoder, n_labels=1, freeze=True):
     inp = Input(shape)
     x   = encoder(inp)
     x   = BatchNormalization()(x)    
+
+    # Multi layer neural network for classification on top of the encoder
     x   = Dense(64, activation='relu')(x)
     x   = Dense(32, activation='relu')(x)
     x   = Dropout(0.5)(x)

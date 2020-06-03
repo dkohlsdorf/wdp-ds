@@ -2,9 +2,11 @@
 #
 # REFERENCES:
 # [HOL] John and Wendy Holmes: "Speech Synthesis and Recognition", Taylor & Francis Ltd; Second Edition, 2001
-
+# [SAK] Sakoe, Chiba: "Dynamic programming algorithm optimization for spoken word recognition",  IEEE T. Acoust. Speech Signal Process. 26, 43–49, 1978.
 
 import numpy as np
+import matplotlib.pyplot as plt
+
 
 def argmin(i, j, double deletion, double match, double insert):
     """
@@ -28,16 +30,19 @@ def argmin(i, j, double deletion, double match, double insert):
         res_idx = (i, j - 1) 
     return result, res_idx
 
+PERCENTAGE_BAND = 10
+
 cdef class DTW:
 
     cdef:
       cdef double[:,:] dp
       cdef int[:,:,:] bp
+      cdef int band
 
     def __cinit__(self, int max_len):
-
         self.dp = np.ones((max_len + 1, max_len + 1)) * float('inf')      # Dynamic Programming Matrix 
         self.bp = np.zeros((max_len + 1, max_len + 1, 2), dtype=np.int32) # Back tracking matrix
+        self.band = max_len // PERCENTAGE_BAND
 
     def align(self, double[:, :] x, double[:,:] y):
         """
@@ -51,13 +56,14 @@ cdef class DTW:
         """
         cdef unsigned int N = x.shape[0]
         cdef unsigned int M = y.shape[0]
-        cdef unsigned int i, j = 0
-        cdef double dist;
+        cdef int i, j = 0
+        cdef double dist
+        cdef int w = int(max(self.band, abs(N - M) + 2))
         cdef list path = []
         self.dp = np.multiply(self.dp, float('inf'))
         self.dp[0, 0] = 0.0
         for i in range(1, N + 1):
-            for j in range(1, M + 1):
+            for j in range(int(max(1, i - w)), int(min(M + 1, i + w))):
                 dist = np.sum(np.square(np.subtract(x[i-1,:], y[j-1,:])))
                 bp, (_i,_j) = argmin(i,j,self.dp[i - 1, j],self.dp[i - 1, j - 1], self.dp[i, j - 1])
                 self.dp[i, j] = bp + dist

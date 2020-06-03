@@ -14,30 +14,30 @@ logsax = logging.getLogger('sax')
 logsax.setLevel(logging.INFO)
 
 
-def paa(double[:, :] sequence, int n): 
+def paa(double[:, :] sequence, int target_length): 
     """
     Multi dimensional Piecewise Aggregate Approximation
     
     :params sequence: An nd sequence
-    :params n: compress to length n
+    :params target_length: compress to target_length
     :returns: compressed
     """
     cdef int d = len(sequence[0])
     cdef int N = len(sequence)
-    cdef int bucket = int(N / n)
+    cdef int bucket = int(N / target_length)
     cdef int i = 0
-    compressed = np.zeros((n, d))
-    if N <= n:
+    compressed = np.zeros((target_length, d))
+    if N <= target_length:
         return np.array(sequence)
-    for i in range(n):
+    for i in range(target_length):
         mu = np.mean(sequence[i * bucket : (i + 1) * bucket], axis = 0)
         compressed[i, :] = mu
     return np.array(compressed)
 
 
-def saxnd(list sequences, int n, int m, int n_samples=10000):
+def multidim_sax(list sequences, int n, int m, int n_samples=10000):
     """
-    Multi dimensional Piecewise Aggregate Approximation
+    Multi dimensional SAX
     
     :params sequences: A list of nd sequence
     :params n: compress to length n
@@ -85,7 +85,7 @@ def similarity_bucketing(list sequences, int n, int m, int n_samples=10000):
     :returns: bucket id for each sequence
     """
     cdef int N = len(sequences)
-    cdef list codes = saxnd(sequences, n, m, n_samples)
+    cdef list codes = multidim_sax(sequences, n, m, n_samples)
     cdef int[:] buckets = np.zeros(N, dtype=np.int32)
     cdef int i = 0
     cdef int cur = 0

@@ -16,6 +16,15 @@ You need to run the cython compiler for all cython parts of the library
     cythonize -if ml_pipeline/*.pyx
 ```
 
+
+## Dependencies
++ sklearn
++ tensorflow 2.0
++ numpy / scipy
++ pydub
++ cython
+
+
 ## Usage:
 The machine learning pipeline can be run in 4 modes:
 ```

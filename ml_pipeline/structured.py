@@ -411,6 +411,7 @@ def hierarchical_clustering(
     logstructure.info("Models: {}".format(len(hmms)))
     logstructure.info("Greedy Mixture Learning / Cluster Supression")
     models, last_ll, assignments = greedy_mixture_learning(sequences, hmms, 1e-4)
+    # TODO Save HMMs
     cluster_regions = [(start, stop, f, t, c) for c, (start, stop, f, t, _) in zip(assignments, overlapping) if c >= 0]
     return cluster_regions
 

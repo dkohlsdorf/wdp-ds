@@ -5,7 +5,7 @@ import numpy as np
 from ml_pipeline import audio
 from scipy.io import wavfile
 
-
+# TODO Read from config
 class AudioSnippetCollection:
 
     def __init__(self, filename):

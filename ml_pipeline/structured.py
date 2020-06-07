@@ -287,6 +287,7 @@ def greedy_iterator(so_far, openlist, sequences):
         for sequence in sequences:
             yield hypothesis, sequence
     
+    
 def greedy_read_beam(filename, path):
     '''
     Read beam result for greedy mixture learning
@@ -300,6 +301,7 @@ def greedy_read_beam(filename, path):
             lines = [line for line in tf.io.gfile.GFile(file, "r")]
             h, s = lines[0].strip()[2:-2].split(', ')
             return int(h), float(s)
+
 
 def greedy_mixture_learning(sequences, hmms, th, beam_options):
     """

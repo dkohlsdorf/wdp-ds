@@ -287,6 +287,7 @@ def greedy_mixture_learning(sequences, hmms, th):
         max_hypothesis    = 0
 
         # find the model that when added to the hidden Markov models increases the likelihood most 
+        # TODO Biggest Bottleneck
         for i, hmm in enumerate(openlist):
             hypothesis = models + [hmm]
             with mp.Pool(processes=10) as pool:
@@ -411,7 +412,7 @@ def hierarchical_clustering(
     logstructure.info("Models: {}".format(len(hmms)))
     logstructure.info("Greedy Mixture Learning / Cluster Supression")
     models, last_ll, assignments = greedy_mixture_learning(sequences, hmms, 1e-4)
-    # TODO Save HMMs
+    pkl.dump(models, open('{}/hmms.pkl'.format(annotation_path), 'wb'))
     cluster_regions = [(start, stop, f, t, c) for c, (start, stop, f, t, _) in zip(assignments, overlapping) if c >= 0]
     return cluster_regions
 

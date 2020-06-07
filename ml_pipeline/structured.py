@@ -18,6 +18,9 @@ import re
 import multiprocessing as mp
 import random
 
+import apache_beam as beam
+from apache_beam.options.pipeline_options import PipelineOptions
+
 import logging
 logging.basicConfig()
 logstructure = logging.getLogger('structure')
@@ -265,10 +268,40 @@ def decode(sequence, hmms):
         if ll > max_ll:
             max_ll = ll
             max_hmm = i
-    return max_ll, max_hmm
+    return max_hmm, max_ll
 
 
-def greedy_mixture_learning(sequences, hmms, th):
+def greedy_iterator(so_far, openlist, sequences):
+    '''
+    Build an iteator to evaluate every mixture
+    that can be built by adding a model from the open list
+    and then evaluating every sequence with it
+
+    :param so_far: mixture of hidden markov models (list of hmms)
+    :param openlist: list of models that can be added to the mixture
+    :param sequences: all sequences in the dataset
+    :returns: iterator (so_far, hmm, sequence) for hmm in openlist and sequence in sequences
+    '''
+    for i, hmm in enumerate(openlist):
+        hypothesis = so_far + [hmm]
+        for sequence in sequences:
+            yield hypothesis, sequence
+    
+def greedy_read_beam(filename, path):
+    '''
+    Read beam result for greedy mixture learning
+    
+    :param filename: filename of saved hmms
+    :param path: path to save
+    :returns: max_hmm, score
+    '''
+    for file in tf.io.gfile.listdir(path):        
+        if file.startswith(filename):
+            lines = [line for line in tf.io.gfile.GFile(file, "r")]
+            h, s = lines[0].strip()[2:-2].split(', ')
+            return int(h), float(s)
+
+def greedy_mixture_learning(sequences, hmms, th, beam_options):
     """
     Greedily learn a mixture of hidden markov models [MIN].
 
@@ -287,16 +320,18 @@ def greedy_mixture_learning(sequences, hmms, th):
         max_hypothesis    = 0
 
         # find the model that when added to the hidden Markov models increases the likelihood most 
-        # TODO Biggest Bottleneck
-        for i, hmm in enumerate(openlist):
-            hypothesis = models + [hmm]
-            with mp.Pool(processes=10) as pool:
-                decoded = pool.starmap(decode, ((sequence, hypothesis) for sequence in sequences))
-            likelihoods = [ll for ll, c in decoded if c >= 0]
-            likelihood  = sum(likelihoods) / len(likelihoods)
-            if likelihood > max_hypothesis_ll:
-                max_hypothesis_ll = likelihood
-                max_hypothesis = i
+        jobs = greedy_iterator(models, openlist, sequences)            
+        with beam.Pipeline(options=beam_options) as pipeline:
+            scored = (
+                pipeline
+                | "CreateJobs"     >> beam.Create(jobs)
+                | 'ScoreInstances' >> beam.Map(lambda x: decode(x[0], x[1]))
+                | 'ScoreModel'     >> beam.CombinePerKey(sum)
+                | 'Best'           >> beam.transforms.combiners.Top.Of(1, key=lambda kv: kv[1])
+                | 'write'          >> beam.io.WriteToText("/tmp/best_hmm.txt")
+            )
+            result = pipeline.run().wait_until_finish()
+            max_hypothesis_ll, max_hypothesis = greedy_read_beam("best_hmm.txt", "/tmp")
         
         # assign the best model
         best   = openlist.pop(max_hypothesis)
@@ -324,7 +359,8 @@ def hierarchical_clustering(
     paa = 4, 
     sax = 5,
     processes = 10,
-    max_instances=None
+    max_instances=None,
+    beam_options
 ):
     """
     Hierarchical clustering of annotations
@@ -411,7 +447,7 @@ def hierarchical_clustering(
         
     logstructure.info("Models: {}".format(len(hmms)))
     logstructure.info("Greedy Mixture Learning / Cluster Supression")
-    models, last_ll, assignments = greedy_mixture_learning(sequences, hmms, 1e-4)
+    models, last_ll, assignments = greedy_mixture_learning(sequences, hmms, 1e-4, beam_options)
     pkl.dump(models, open('{}/hmms.pkl'.format(annotation_path), 'wb'))
     cluster_regions = [(start, stop, f, t, c) for c, (start, stop, f, t, _) in zip(assignments, overlapping) if c >= 0]
     return cluster_regions

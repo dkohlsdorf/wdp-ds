@@ -17,6 +17,8 @@ log.setLevel(logging.INFO)
 
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3' 
 
+from apache_beam.options.pipeline_options import PipelineOptions
+
 from tensorflow.keras.backend import set_learning_phase
 from tensorflow.keras.models import load_model
 from feature_extractor import *
@@ -313,7 +315,7 @@ def write_audio(out, cluster_id, instances_clusters, grouped_by_cluster, min_sup
         log.info("Done: {}".format(cluster_id))
 
 
-def sequence_clustering(inp, out, embedder, min_support=1, n_writers=10, max_instances=None):    
+def sequence_clustering(inp, out, embedder, min_support=1, n_writers=10, max_instances=None, beam_options = PipelineOptions()):    
     """
     Hierarchical cluster connected regions of whistles and bursts
     """

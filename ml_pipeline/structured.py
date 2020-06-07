@@ -287,7 +287,7 @@ def greedy_iterator(so_far, openlist, sequences):
         for sequence in sequences:
             yield hypothesis, sequence
     
-    
+
 def greedy_read_beam(filename, path):
     '''
     Read beam result for greedy mixture learning

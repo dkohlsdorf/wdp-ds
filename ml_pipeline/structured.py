@@ -175,8 +175,8 @@ def process_dtw(assignment, overlapping, max_dist):
             
             for j, (start_y, stop_y, f_y, t_y, embedding_y) in enumerate(overlapping):
                 if i < j:
-                    x = np.array([embedding_x]).reshape(len(embedding_x), 256)
-                    y = np.array([embedding_y]).reshape(len(embedding_y), 256)
+                    x = np.array([embedding_x]).reshape(len(embedding_x), len(embedding_x[0]))
+                    y = np.array([embedding_y]).reshape(len(embedding_y), len(embedding_x[0]))
                     d, _       = dtw.align(x, y) 
                     dist[i, j] = d / (len(x) * len(y))
                     dist[j, i] = d / (len(x) * len(y))

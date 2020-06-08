@@ -256,6 +256,7 @@ def make_hmm(cluster, assignment, overlapping, min_len = 4, max_train=15):
 def decode(sequence, hmms):
     """
     Decode all sequences using a hidden Markov model
+    
     :param sequence: a  sequences to decode
     :param hmms: a list of hidden markov model
     :returns: (max likelihoods, max assignment)

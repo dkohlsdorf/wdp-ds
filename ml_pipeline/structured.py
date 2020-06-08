@@ -175,8 +175,8 @@ def process_dtw(assignment, overlapping, max_dist):
             
             for j, (start_y, stop_y, f_y, t_y, embedding_y) in enumerate(overlapping):
                 if i < j:
-                    x = np.array([embedding_x]).reshape(len(embedding_x), 256)
-                    y = np.array([embedding_y]).reshape(len(embedding_y), 256)
+                    x = np.array([embedding_x]).reshape(len(embedding_x), len(embedding_x[0]))
+                    y = np.array([embedding_y]).reshape(len(embedding_y), len(embedding_x[0]))
                     d, _       = dtw.align(x, y) 
                     dist[i, j] = d / (len(x) * len(y))
                     dist[j, i] = d / (len(x) * len(y))
@@ -190,7 +190,7 @@ def process_dtw(assignment, overlapping, max_dist):
     return [], []
 
 
-def make_hmm(cluster, assignment, overlapping, min_len = 8, max_train=15):
+def make_hmm(cluster, assignment, overlapping, min_len = 4, max_train=15):
     """
     Learn a 4 state Hidden Markov Model with 2 skip states.
     Initialization is performed from using flat start (mean and variances equal for all states)
@@ -298,7 +298,7 @@ def greedy_read_beam(filename, path):
     '''
     for file in tf.io.gfile.listdir(path):        
         if file.startswith(filename):
-            lines = [line for line in tf.io.gfile.GFile(file, "r")]
+            lines = [line for line in tf.io.gfile.GFile("{}/{}".format(path, file), "r")]
             h, s = lines[0].strip()[2:-2].split(', ')
             return int(h), float(s)
 
@@ -327,7 +327,7 @@ def greedy_mixture_learning(sequences, hmms, th, beam_options):
             scored = (
                 pipeline
                 | "CreateJobs"     >> beam.Create(jobs)
-                | 'ScoreInstances' >> beam.Map(lambda x: decode(x[0], x[1]))
+                | 'ScoreInstances' >> beam.Map(lambda x: decode(x[1], x[0]))
                 | 'ScoreModel'     >> beam.CombinePerKey(sum)
                 | 'Best'           >> beam.transforms.combiners.Top.Of(1, key=lambda kv: kv[1])
                 | 'write'          >> beam.io.WriteToText("/tmp/best_hmm.txt")
@@ -355,14 +355,14 @@ def greedy_mixture_learning(sequences, hmms, th, beam_options):
 def hierarchical_clustering(
     annotation_path,
     max_dist = 2.5, 
-    min_instances = 5,
-    min_th= 8, 
+    min_instances = 1,
+    min_th= 4, 
     max_th= 500, 
     paa = 4, 
     sax = 5,
     processes = 10,
     max_instances=None,
-    beam_options=PipelineOptions()
+    beam_options=PipelineOptions(['--direct_num_workers', '10', '--direct_running_mode', 'in_memory'])
 ):
     """
     Hierarchical clustering of annotations

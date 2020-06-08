@@ -333,7 +333,7 @@ def greedy_mixture_learning(sequences, hmms, th, beam_options):
                 | 'write'          >> beam.io.WriteToText("/tmp/best_hmm.txt")
             )
             result = pipeline.run().wait_until_finish()
-            max_hypothesis_ll, max_hypothesis = greedy_read_beam("best_hmm.txt", "/tmp")
+            max_hypothesis, max_hypothesis_ll = greedy_read_beam("best_hmm.txt", "/tmp")
         
         # assign the best model
         best   = openlist.pop(max_hypothesis)

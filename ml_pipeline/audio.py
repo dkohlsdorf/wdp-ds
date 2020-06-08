@@ -3,7 +3,7 @@ import random
 import os
 import tensorflow as tf
 
-from ml_pipeline.health_checks import *
+from health_checks import *
 
 import logging
 logging.basicConfig()
@@ -45,7 +45,7 @@ class AudiofileParams(object):
         AudiofileParams.__instance.dtype = dtype
     
     @classmethod
-    def set_sample_width(cls, sample_width)
+    def set_sample_width(cls, sample_width):
         AudiofileParams.__instance.sample_width = sample_width
 
     def check_params(self, rate, dtype, sample_width):

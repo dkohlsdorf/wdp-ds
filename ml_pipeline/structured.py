@@ -362,7 +362,7 @@ def hierarchical_clustering(
     sax = 5,
     processes = 10,
     max_instances=None,
-    beam_options
+    beam_options=PipelineOptions()
 ):
     """
     Hierarchical clustering of annotations

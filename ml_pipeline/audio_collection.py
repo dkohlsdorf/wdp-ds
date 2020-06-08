@@ -2,7 +2,7 @@ import wave
 import struct
 import numpy as np
 
-from ml_pipeline import audio
+import audio
 from scipy.io import wavfile
 
 

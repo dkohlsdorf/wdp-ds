@@ -327,7 +327,7 @@ def greedy_mixture_learning(sequences, hmms, th, beam_options):
             scored = (
                 pipeline
                 | "CreateJobs"     >> beam.Create(jobs)
-                | 'ScoreInstances' >> beam.Map(lambda x: decode(x[0], x[1]))
+                | 'ScoreInstances' >> beam.Map(lambda x: decode(x[1], x[0]))
                 | 'ScoreModel'     >> beam.CombinePerKey(sum)
                 | 'Best'           >> beam.transforms.combiners.Top.Of(1, key=lambda kv: kv[1])
                 | 'write'          >> beam.io.WriteToText("/tmp/best_hmm.txt")

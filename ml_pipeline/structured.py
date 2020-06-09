@@ -256,7 +256,7 @@ def make_hmm(cluster, assignment, overlapping, min_len = 4, max_train=15):
 def decode(sequence, hmms):
     """
     Decode all sequences using a hidden Markov model
-    
+
     :param sequence: a  sequences to decode
     :param hmms: a list of hidden markov model
     :returns: (max likelihoods, max assignment)
@@ -286,7 +286,7 @@ def greedy_iterator(so_far, openlist, sequences):
     for i, hmm in enumerate(openlist):
         hypothesis = so_far + [hmm]
         for sequence in sequences:
-            yield hypothesis, sequence
+            yield i, hypothesis, sequence
     
 
 def greedy_read_beam(filename, path):
@@ -328,7 +328,7 @@ def greedy_mixture_learning(sequences, hmms, th, beam_options):
             scored = (
                 pipeline
                 | "CreateJobs"     >> beam.Create(jobs)
-                | 'ScoreInstances' >> beam.Map(lambda x: decode(x[1], x[0]))
+                | 'ScoreInstances' >> beam.Map(lambda x: (x[0], decode(x[2], x[1])[1]))
                 | 'ScoreModel'     >> beam.CombinePerKey(sum)
                 | 'Best'           >> beam.transforms.combiners.Top.Of(1, key=lambda kv: kv[1])
                 | 'write'          >> beam.io.WriteToText("/tmp/best_hmm.txt")
@@ -344,8 +344,8 @@ def greedy_mixture_learning(sequences, hmms, th, beam_options):
         if max_hypothesis_ll - last_ll < th:
             with mp.Pool(processes=10) as pool:
                 decoded = pool.starmap(decode, ((sequence, models) for sequence in sequences))
-            assignemnts = [assignment for _, assignment in decoded]
-            return models, last_ll, assignemnts
+            assignment = [assignment for _, assignment in decoded]
+            return models, last_ll, assignment
         last_ll = max_hypothesis_ll
     with mp.Pool(processes=10) as pool:
         decoded = pool.starmap(decode, ((sequence, models) for sequence in sequences))

@@ -13,11 +13,8 @@ class AudioSnippetCollection:
         :param filename: audio file to save in
         """
         params = audio.AudiofileParams.get()
-        print(params)
         self.obj = wave.open(filename,'w')
         self.obj.setnchannels(1)
-        self.obj.setsampwidth(params.sample_width)
-        self.obj.setframerate(params.rate)
         
     def write(self, data):
         """
@@ -26,6 +23,10 @@ class AudioSnippetCollection:
         :param data: some data to attach
         """
         params = audio.AudiofileParams.get()
+        print(params)
+        self.obj.setsampwidth(params.sample_width)
+        self.obj.setframerate(params.rate)
+
         frames = params.rate // 10
         b = bytearray(data)
         self.obj.writeframesraw(b)

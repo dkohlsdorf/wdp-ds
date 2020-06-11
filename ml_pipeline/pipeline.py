@@ -315,7 +315,7 @@ def write_audio(out, cluster_id, instances_clusters, grouped_by_cluster, min_sup
         log.info("Done: {}".format(cluster_id))
 
 
-def sequence_clustering(inp, out, embedder, min_support=1, n_writers=10, max_instances=250, beam_options = PipelineOptions(['--direct_num_workers', '10', '--direct_running_mode', 'in_memory'])):    
+def sequence_clustering(inp, out, embedder, min_support=0, n_writers=10, max_instances=250, beam_options = PipelineOptions(['--direct_num_workers', '10', '--direct_running_mode', 'in_memory'])):    
     """
     Hierarchical cluster connected regions of whistles and bursts
     """
@@ -349,6 +349,7 @@ def sequence_clustering(inp, out, embedder, min_support=1, n_writers=10, max_ins
             k = c
         i += 1
     k = k + 1
+    log.info('n clusters: {}'.format(k))
     instances_clusters = np.zeros(k, dtype=np.int32)
     for c, collection in grouped_by_cluster.items():
         for f, regions in collection.items():
@@ -356,7 +357,7 @@ def sequence_clustering(inp, out, embedder, min_support=1, n_writers=10, max_ins
                 instances_clusters[c] += 1
     log.info('Done Clustering')
     with mp.Pool(processes=n_writers) as pool:
-        pool.starmap(write_audio, ((out, cluster_id, instances_clusters, grouped_by_cluster, 2, 1500) for cluster_id in range(0, k)))
+        pool.starmap(write_audio, ((out, cluster_id, instances_clusters, grouped_by_cluster, min_support, max_instances) for cluster_id in range(0, k)))
     log.info('Done Writing')
     
     for f, regions in grouped_by_filename.items():

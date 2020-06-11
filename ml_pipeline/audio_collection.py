@@ -13,6 +13,7 @@ class AudioSnippetCollection:
         :param filename: audio file to save in
         """
         params = audio.AudiofileParams.get()
+        print(params)
         self.obj = wave.open(filename,'w')
         self.obj.setnchannels(1)
         self.obj.setsampwidth(params.sample_width)

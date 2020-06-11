@@ -452,7 +452,7 @@ if __name__== "__main__":
             '--temp_location', 'gs://wdp-ds-data/beam_tmp/',
             '--output', 'gs://wdp-ds-data/beam_tmp/',
             '--job_name', 'hmms',
-            '--region', 'us-central1'
+            '--region', 'us-east1'
         ])
         print(options.view_as(StandardOptions))
         print(options.view_as(GoogleCloudOptions))

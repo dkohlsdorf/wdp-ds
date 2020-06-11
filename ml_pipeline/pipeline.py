@@ -448,6 +448,7 @@ if __name__== "__main__":
         embedder        = SequenceEmbedder(enc, params, silence, type_classifier)
         options = PipelineOptions([
             '--runner', 'DataflowRunner',
+            '--num_workers', '24',
             '--project', 'ace-coda-274218',
             '--temp_location', 'gs://wdp-ds-data/beam_tmp/',
             '--output', 'gs://wdp-ds-data/beam_tmp/',

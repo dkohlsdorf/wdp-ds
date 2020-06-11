@@ -315,7 +315,7 @@ def write_audio(out, cluster_id, instances_clusters, grouped_by_cluster, min_sup
         log.info("Done: {}".format(cluster_id))
 
 
-def sequence_clustering(inp, out, embedder, min_support=0, n_writers=10, max_instances=250, beam_options = PipelineOptions(['--direct_num_workers', '10', '--direct_running_mode', 'in_memory'])):    
+def sequence_clustering(inp, out, embedder, min_support=0, n_writers=10, max_instances=15000, beam_options = PipelineOptions(['--direct_num_workers', '10', '--direct_running_mode', 'in_memory'])):    
     """
     Hierarchical cluster connected regions of whistles and bursts
     """
@@ -446,6 +446,8 @@ if __name__== "__main__":
         silence         = load_model("{}/sil.h5".format(output))
         type_classifier = load_model("{}/type.h5".format(output))
         embedder        = SequenceEmbedder(enc, params, silence, type_classifier)
+
+
         sequence_clustering(inp, output, embedder)
         clustering_usage(output)
         log.info('Done !!!')

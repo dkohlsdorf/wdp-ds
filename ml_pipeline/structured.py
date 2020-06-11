@@ -231,7 +231,6 @@ def make_hmm(cluster, assignment, overlapping, min_len = 4, max_train=15):
         logstructure.info("\t Model fit")
         hmm = HiddenMarkovModel(trans_mat, dists)
         for _ in range(0, max_train):
-            logstructure.info("Cluster: {}\n{}".format(cluster, hmm.transitions))
             inference    = [infer.infer(hmm, seq) for seq in x_label]
             zetas        = [bw.infer(hmm, x_label[i], inference[i][1], inference[i][2]) for i in range(0, len(x_label))]    
             gammas       = [gamma for gamma, _, _ in inference]
@@ -247,8 +246,7 @@ def make_hmm(cluster, assignment, overlapping, min_len = 4, max_train=15):
             for gamma in gammas:
                 for ll in gamma[-1]:
                     score = score + LogProb(ll)
-            logstructure.info("Cluster: {} Diff: {}".format(score, diff))
-        logstructure.info("Cluster: {}\n{}".format(cluster, hmm.transitions))
+            logstructure.info("Cluster: {} Diff: {}".format(score, diff))    
         return hmm
     return None
 
@@ -355,12 +353,12 @@ def greedy_mixture_learning(sequences, hmms, th, beam_options):
 
 def hierarchical_clustering(
     annotation_path,
-    max_dist = 2.5, 
-    min_instances = 1,
+    max_dist = 1.5, 
+    min_instances = 5,
     min_th= 4, 
-    max_th= 500, 
-    paa = 4, 
-    sax = 5,
+    max_th= 2500, 
+    paa = 5, 
+    sax = 6,
     processes = 10,
     max_instances=None,
     beam_options=PipelineOptions(['--direct_num_workers', '10', '--direct_running_mode', 'in_memory'])

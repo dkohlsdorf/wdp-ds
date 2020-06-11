@@ -18,3 +18,4 @@
 + `logprob.py`: probability calculations in log space
 + `markov_chain.py`: implements a markov chain
 + `viterbi.pyx`: viterbi algorithm for hidden Markov model decoding
++ `integration_test_audio.py`: testing audio reading and writing

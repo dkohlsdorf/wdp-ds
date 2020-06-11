@@ -107,7 +107,7 @@ class WindowParams(namedtuple('WindowParams', 'spec_win spec_step fft_win fft_st
         return (audio_samples - self.win_len) // self.step + 1
 
     
-def read(path):
+def read(path, first_channel=True):
     """
     Read an audio file from local file system or cloud storage
     all all formats that ffmpeg supports are supported
@@ -117,12 +117,19 @@ def read(path):
     """
     with tf.io.gfile.GFile(path, "rb") as f:
         try:
-            x    = AudioSegment.from_file(f)
+            x = AudioSegment.from_file(f)
             rate = x.frame_rate            
             sample_width = x.sample_width
-            x    = np.array(x.get_array_of_samples()).reshape(int(x.frame_count()),  x.channels)
+            x    = np.array(x.get_array_of_samples(), np.int16).reshape(int(x.frame_count()), x.channels)
             dtype = x.dtype
             params = AudiofileParams(rate, dtype, sample_width)
+            if len(x.shape) > 1 and not first_channel:
+                x = np.mean(x, axis=1) 
+            elif len(x.shape) > 1 and first_channel:
+                x = x[:, 0]
+            else:
+                x = x.reshape((len(x)))
+
         except Exception as e:
             logaudio.info("Skip file {} = {}".format(path, e))
             x = None
@@ -181,10 +188,6 @@ def spectrogram_windows(filename, params, shuffle=False):
     assert isinstance(params, WindowParams)
     data = read(filename)
     if data is not None:
-        if len(data.shape) > 1:
-            data = np.mean(data, axis=1)
-        else:
-            data = data.reshape((len(data)))
         n = len(data)
         n_windows = params.len(n)
         ordered   = [i for i in range(0, n_windows)]
@@ -202,7 +205,7 @@ def spectrogram_windows(filename, params, shuffle=False):
             yield ((spec - mu) / sigma, filename, start, stop)
 
 
-def spectrogram_regions(filename, params, regions, first_channel = False):
+def spectrogram_regions(filename, params, regions):
     """
     Spectrogram Region Extraction
 
@@ -213,12 +216,6 @@ def spectrogram_regions(filename, params, regions, first_channel = False):
     :returns: spectrogram of the normalized region
     """
     data = read(filename)
-    if len(data.shape) > 1 and not first_channel:
-        data = np.mean(data, axis=1) 
-    elif len(data.shape) > 1 and first_channel:
-        data = data[:, 0]
-    else:
-        data = data.reshape((len(data)))
 
     for (start, stop) in regions:
         audio = data[start:stop]
@@ -260,10 +257,6 @@ def audio_regions(filename, regions):
     """
     data = read(filename)
     if data is not None:
-        if len(data.shape) > 1:
-            data = np.mean(data, axis=1) 
-        else:
-            data = data.reshape((len(data)))
         for (start, stop) in regions:
             yield data[start:stop]
     

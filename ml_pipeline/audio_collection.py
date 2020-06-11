@@ -23,7 +23,6 @@ class AudioSnippetCollection:
         :param data: some data to attach
         """
         params = audio.AudiofileParams.get()
-        print(params)
         self.obj.setsampwidth(params.sample_width)
         self.obj.setframerate(params.rate)
 

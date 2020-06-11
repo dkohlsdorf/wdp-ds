@@ -30,7 +30,6 @@ class DenseMarkovChain:
         return len(self.transitions)
 
     def __setitem__(self, transition, prob): 
-        assert isinstance(transition, Transition) and isinstance(prob, LogProb)  
         i, j = transition
         if i == START_STATE:
             self.start[j] = prob.prob

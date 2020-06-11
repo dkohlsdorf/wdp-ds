@@ -26,21 +26,18 @@ class LogProb:
         return exp(self.prob)
 
     def __mul__(self, other):
-        assert isinstance(other, LogProb)   
         if self.is_zero or other.is_zero:
             return LogProb(ZERO)
         logprob = self.prob + other.prob
         return LogProb(logprob)
 
     def __truediv__(self, other):
-        assert isinstance(other, LogProb) 
         if self.is_zero or other.is_zero:
             return LogProb(ZERO)
         logprob = self.prob - other.prob
         return LogProb(logprob)
 
     def __add__(self, other):
-        assert isinstance(other, LogProb)        
         if self.is_zero:
             return LogProb(other.prob)
         if other.is_zero:

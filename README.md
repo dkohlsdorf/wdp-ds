@@ -41,5 +41,5 @@ The machine learning pipeline can be run in 4 modes:
 
 ## Running Tests
 ```
-    python -m unittest discover -s ml_pipeline/tests -v
+    python -m unittest discover -s ml_pipeline/ -v
 ```

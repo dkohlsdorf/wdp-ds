@@ -17,7 +17,7 @@ log.setLevel(logging.INFO)
 
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3' 
 
-from apache_beam.options.pipeline_options import PipelineOptions
+from apache_beam.options.pipeline_options import PipelineOptions, StandardOptions
 
 from tensorflow.keras.backend import set_learning_phase
 from tensorflow.keras.models import load_model

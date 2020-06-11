@@ -322,7 +322,9 @@ def greedy_mixture_learning(sequences, hmms, th, beam_options):
 
         # find the model that when added to the hidden Markov models increases the likelihood most 
         jobs = greedy_iterator(models, openlist, sequences)            
+        print("Pipeline Options: {}".format(beam_options))
         with beam.Pipeline(options=beam_options) as pipeline:
+            print("\t Starting beam")
             scored = (
                 pipeline
                 | "CreateJobs"     >> beam.Create(jobs)
@@ -330,7 +332,7 @@ def greedy_mixture_learning(sequences, hmms, th, beam_options):
                 | 'ScoreModel'     >> beam.CombinePerKey(sum)
                 | 'Best'           >> beam.transforms.combiners.Top.Of(1, key=lambda kv: kv[1])
                 | 'write'          >> beam.io.WriteToText("/tmp/best_hmm.txt")
-            )
+            )            
             result = pipeline.run().wait_until_finish()
             max_hypothesis, max_hypothesis_ll = greedy_read_beam("best_hmm.txt", "/tmp")
         
@@ -353,15 +355,15 @@ def greedy_mixture_learning(sequences, hmms, th, beam_options):
 
 def hierarchical_clustering(
     annotation_path,
+    beam_options,
     max_dist = 1.5, 
     min_instances = 5,
     min_th= 4, 
     max_th= 2500, 
-    paa = 5, 
-    sax = 6,
+    paa = 4, 
+    sax = 5,
     processes = 10,
-    max_instances=None,
-    beam_options=PipelineOptions(['--direct_num_workers', '10', '--direct_running_mode', 'in_memory'])
+    max_instances=None
 ):
     """
     Hierarchical clustering of annotations

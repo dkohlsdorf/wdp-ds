@@ -315,7 +315,7 @@ def write_audio(out, cluster_id, instances_clusters, grouped_by_cluster, min_sup
         log.info("Done: {}".format(cluster_id))
 
 
-def sequence_clustering(inp, out, embedder, min_support=0, n_writers=10, max_instances=15000, beam_options = PipelineOptions(['--direct_num_workers', '10', '--direct_running_mode', 'in_memory'])):    
+def sequence_clustering(inp, out, embedder, min_support=0, n_writers=10, max_instances=2500, beam_options = PipelineOptions(['--direct_num_workers', '10', '--direct_running_mode', 'in_memory'])):    
     """
     Hierarchical cluster connected regions of whistles and bursts
     """
@@ -331,7 +331,7 @@ def sequence_clustering(inp, out, embedder, min_support=0, n_writers=10, max_ins
                 inducer = TypeExtraction.from_audiofile(in_path, embedder)
                 inducer.save(out_path, append=True)
     
-    clusters = hierarchical_clustering(out, max_instances=max_instances)
+    clusters = hierarchical_clustering(out, beam_options, max_instances=max_instances)
     grouped_by_filename = {}
     grouped_by_cluster  = {}
     i = 0
@@ -446,15 +446,17 @@ if __name__== "__main__":
         silence         = load_model("{}/sil.h5".format(output))
         type_classifier = load_model("{}/type.h5".format(output))
         embedder        = SequenceEmbedder(enc, params, silence, type_classifier)
-        options = PipelineOptions()
-        options.view_as(StandardOptions).runner = 'DataflowRunner'
-        google_cloud_options = options.view_as(GoogleCloudOptions)
-        google_cloud_options.project = 'ace-coda-274218'
-        google_cloud_options.job_name = 'hmms'
-        google_cloud_options.staging_location = 'gs://wdp-ds-data/beam_tmp/'
-        google_cloud_options.temp_location = 'gs://wdp-ds-data/beam_tmp/'
-        google_cloud_options.region = 'us-central1'
-                                                                
+        options = PipelineOptions([
+            '--runner', 'DataflowRunner',
+            '--project', 'ace-coda-274218',
+            '--temp_location', 'gs://wdp-ds-data/beam_tmp/',
+            '--output', 'gs://wdp-ds-data/beam_tmp/',
+            '--job_name', 'hmms',
+            '--region', 'us-central1'
+        ])
+        print(options.view_as(StandardOptions))
+        print(options.view_as(GoogleCloudOptions))
+        print(options)
         sequence_clustering(inp, output, embedder, beam_options = options)
         clustering_usage(output)
         log.info('Done !!!')

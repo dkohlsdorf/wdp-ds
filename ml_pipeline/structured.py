@@ -243,7 +243,6 @@ def make_hmm(cluster, assignment, overlapping, min_len = 4, max_train=15):
             for gamma in gammas:
                 for ll in gamma[-1]:
                     score = score + LogProb(ll)
-            logstructure.info("Cluster: {} Diff: {}".format(score, diff))    
         return hmm
     return None
 
@@ -316,7 +315,7 @@ def greedy_mixture_learning(sequences, hmms, th, n_processes):
 def hierarchical_clustering(
     annotation_path,
     max_dist = 1.5, 
-    min_instances = 1,
+    min_instances = 5,
     min_th= 4, 
     max_th= 2500, 
     paa = 4, 

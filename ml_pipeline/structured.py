@@ -255,7 +255,7 @@ def decode_all(sequences, hmms):
     :returns: ll(hmm,sequence)
     '''
     n = len(sequences)
-    m = len(hmm)
+    m = len(hmms)
     likelihoods = np.zeros((m,n))
     for i, hmm in enumerate(hmms):
         with mp.Pool(processes=n_processes) as pool:

@@ -275,7 +275,7 @@ def decode_mixture(hmms_indices, likelihoods):
     :likelihoods: matrix ll(hmm,sequence)
     :returns: score for all sequences given mixture and assignemnt
     '''
-    _, n_sequences = len(likelihoods)
+    _, n_sequences = likelihoods.shape
     mixture_score = 0.0
     assignment = np.zeros(n_sequences, dtype=np.int32)
     for j in range(n_sequences):

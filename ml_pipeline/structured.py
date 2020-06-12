@@ -247,7 +247,7 @@ def make_hmm(cluster, assignment, overlapping, min_len = 4, max_train=15):
     return None
     
 
-def decode_all(sequences, hmms):
+def decode_all(sequences, hmms, n_processes):
     '''
     Build a matrix of all likelihoods and all hmms 
     :sequences: all sequences
@@ -304,7 +304,7 @@ def greedy_mixture_learning(sequences, hmms, th, n_processes):
     models           = []
     final_assignment = None
     open_list        = list(np.arange(len(hmms)))
-    likelihoods      = decode_all(sequences, hmms)
+    likelihoods      = decode_all(sequences, hmms, n_processes)
     m, n = likelihoods.shape
     while len(openlist) > 0:
         max_hypothesis_ll = float('-inf')

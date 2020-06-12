@@ -395,12 +395,12 @@ def hierarchical_clustering(
             for c in range(len(set(clustering))):
                 cur += 1
     
-    logstructure.info("Filter by cluster usage")
-    sequences   = [sequences[i]   for i in range(len(sequences))   if n_instances[assignments[i]] > min_instances]
-    overlapping = [overlapping[i] for i in range(len(overlapping)) if n_instances[assignments[i]] > min_instances]
-    assignments = [assignments[i] for i in range(len(assignments)) if n_instances[assignments[i]] > min_instances]
+    logstructure.info("Filter by cluster usage {}".format(len(overlapping)))
+    sequences   = [sequences[i]   for i in range(len(sequences))   if n_instances[assignments[i]] >= min_instances]
+    overlapping = [overlapping[i] for i in range(len(overlapping)) if n_instances[assignments[i]] >= min_instances]
+    assignments = [assignments[i] for i in range(len(assignments)) if n_instances[assignments[i]] >= min_instances]
 
-    logstructure.info("Build Hidden Markov Models")
+    logstructure.info("Build Hidden Markov Models {}".format(len(overlapping)))
     model_pool = list(set(assignments))
     logstructure.info("Models: {}".format(len(model_pool)))
     with mp.Pool(processes=processes) as pool:

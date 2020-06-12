@@ -305,14 +305,14 @@ def greedy_mixture_learning(sequences, hmms, th, n_processes):
 
     models           = []
     final_assignment = None
-    open_list        = list(np.arange(len(hmms)))
+    openlist        = list(np.arange(len(hmms)))
     likelihoods      = decode_all(sequences, hmms, n_processes)
     m, n = likelihoods.shape
     while len(openlist) > 0:
         max_hypothesis_ll = float('-inf')
         max_hypothesis    = 0
         max_assignment    = None
-        for hmm in open_list:
+        for hmm in openlist:
             hypothesis             = models + [hmm]
             likelihood, assignment = decode_mixture(hypothesis, likelihoods)
             if likelihood > max_hypothesis_ll:

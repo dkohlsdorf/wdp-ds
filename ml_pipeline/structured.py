@@ -246,6 +246,8 @@ def make_hmm(cluster, assignment, overlapping, min_len = 4, max_train=15):
         return hmm
     return None
     
+def decode(j, hmm, sequence):
+    return j, viterbi(hmm, sequence)[1].prob
 
 def decode_all(sequences, hmms, n_processes):
     '''
@@ -259,7 +261,7 @@ def decode_all(sequences, hmms, n_processes):
     likelihoods = np.zeros((m,n))
     for i, hmm in enumerate(hmms):
         with mp.Pool(processes=n_processes) as pool:
-            decoded = pool.starmap(lambda j, hmm, sequence: j, viterbi(hmm, sequence)[1].prob, ((j, hmm, sequence) for j, sequence in enumerate(sequences)))
+            decoded = pool.starmap(decode, ((j, hmm, sequence) for j, sequence in enumerate(sequences)))
         for j, ll in decoded:  
             likelihoods[i, j] = ll
     return likelihoods

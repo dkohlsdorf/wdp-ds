@@ -316,7 +316,7 @@ def greedy_mixture_learning(sequences, hmms, th, n_processes):
 def hierarchical_clustering(
     annotation_path,
     max_dist = 1.5, 
-    min_instances = 5,
+    min_instances = 1,
     min_th= 4, 
     max_th= 2500, 
     paa = 4, 

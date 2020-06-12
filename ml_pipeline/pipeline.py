@@ -303,7 +303,7 @@ def write_audio(out, cluster_id, instances_clusters, grouped_by_cluster, min_sup
     :param min_support: minimum number of instances in cluster
     :param max_support: maximum number of instances in cluster
     """
-    if instances_clusters[cluster_id] > min_support and instances_clusters[cluster_id] < max_support:
+    if instances_clusters[cluster_id] >= min_support and instances_clusters[cluster_id] < max_support:
         log.info("Audio result for cluster: {} {}".format(cluster_id, instances_clusters[cluster_id]))
         audio_bank = AudioSnippetCollection("{}/seq_cluster_{}.wav".format(out, cluster_id))
         for f, snippets in grouped_by_cluster[cluster_id].items():

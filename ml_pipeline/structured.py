@@ -321,8 +321,8 @@ def greedy_mixture_learning(sequences, hmms, th, n_processes):
                 max_assignment    = assignment
 
         # assign the best model
-        best             = openlist.pop(max_hypothesis)
-        models           = models + [best]
+        best             = openlist.remove(max_hypothesis)
+        models           = models + [max_hypothesis]
         final_assignment = max_assignment
         
         # stop if adding the model did not change the likelihood 

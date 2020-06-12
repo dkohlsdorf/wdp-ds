@@ -24,11 +24,11 @@ class AudioSnippetCollection:
         :param data: some data to attach
         """
         params = audio.AudiofileParams.get()
-        if !self.is_writing:
+        if not self.is_writing:
             self.obj.setsampwidth(params.sample_width)
             self.obj.setframerate(params.rate)
             self.is_writing = True
-            
+
         frames = params.rate // 10
         b = bytearray(data)
         self.obj.writeframesraw(b)

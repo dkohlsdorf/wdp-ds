@@ -245,25 +245,47 @@ def make_hmm(cluster, assignment, overlapping, min_len = 4, max_train=15):
                     score = score + LogProb(ll)
         return hmm
     return None
-
-
-def decode(sequence, hmms):
-    """
-    Decode all sequences using a hidden Markov model
-    :param sequence: a  sequences to decode
-    :param hmms: a list of hidden markov model
-    :returns: (max likelihoods, max assignment)
-    """
-    max_ll  = ZERO
-    max_hmm = -1
-    for i, hmm in enumerate(hmms):
-        _, ll = viterbi(hmm, sequence)
-        ll = ll.prob
-        if ll > max_ll:
-            max_ll = ll
-            max_hmm = i
-    return max_ll, max_hmm
     
+
+def decode_all(sequences, hmms):
+    '''
+    Build a matrix of all likelihoods and all hmms 
+    :sequences: all sequences
+    :hmms: all hmms
+    :returns: ll(hmm,sequence)
+    '''
+    n = len(sequences)
+    m = len(hmm)
+    likelihoods = np.zeros((m,n))
+    for i, hmm in enumerate(hmms):
+        with mp.Pool(processes=n_processes) as pool:
+            decoded = pool.starmap(lambda x: x[0], viterbi(x[1], x[2])[1].prob, ((j, hmm, sequence) for j, sequence in enumerate(sequences)))
+        for j, ll in decoded:  
+            likelihoods[i, j] = ll
+    return likelihoods
+
+def decode_mixture(hmms_indices, likelihoods):
+    '''
+    Compute the score of a mixture as well as the assignment of each sequence to a mixture component
+
+    :hmm_indices: index of hmms in mixture
+    :likelihoods: matrix ll(hmm,sequence)
+    :returns: score for all sequences given mixture and assignemnt
+    '''
+    _, n_sequences = len(likelihoods)
+    mixture_score = 0.0
+    assignment = np.zeros(n_sequences, dtype=np.int32)
+    for j in range(n_sequences):
+        max_ll = ZERO
+        max_i  = 0
+        for i in hmms_indices:
+            if likelihoods[i, j] > max_ll:
+                max_ll = likelihoods[i, j]
+                max_i  = i 
+        assignment[j]  = max_i
+        mixture_score += max_ll
+    return mixture_score, assignment
+
 
 def greedy_mixture_learning(sequences, hmms, th, n_processes):
     """
@@ -277,39 +299,37 @@ def greedy_mixture_learning(sequences, hmms, th, n_processes):
     """
     logstructure.info("Starting greedy mixture learning")
     last_ll = float('-inf')
-    models   = []
-    openlist = hmms.copy()
+
+    models           = []
+    final_assignment = None
+    open_list        = list(np.arange(len(hmms)))
+    likelihoods      = decode_all(hmms)
+    m, n = likelihoods.shape
     while len(openlist) > 0:
         max_hypothesis_ll = float('-inf')
         max_hypothesis    = 0
-
-        # find the model that when added to the hidden Markov models increases the likelihood most 
-        for i, hmm in enumerate(openlist):
-            hypothesis = models + [hmm]
-            with mp.Pool(processes=n_processes) as pool:
-                decoded = pool.starmap(decode, ((sequence, hypothesis) for sequence in sequences))
-            likelihoods = [ll for ll, c in decoded if c >= 0]
-            likelihood  = sum(likelihoods) / len(likelihoods)
+        max_assignment    = None
+        for hmm in open_list:
+            hypothesis             = models + [hmm]
+            likelihood, assignment = decode_mixture(hypothesis, likelihoods)
             if likelihood > max_hypothesis_ll:
                 max_hypothesis_ll = likelihood
-                max_hypothesis = i
-        
-        # assign the best model
-        best   = openlist.pop(max_hypothesis)
-        models = models + [best]
+                max_hypothesis    = hmm
+                max_assignment    = assignment
 
+        # assign the best model
+        best             = openlist.pop(max_hypothesis)
+        models           = models + [best]
+        final_assignment = max_assignment
+        
         # stop if adding the model did not change the likelihood 
         logstructure.info("Greedy Mixture Learning: {} {} {} {}".format(max_hypothesis_ll, len(openlist), len(models), max_hypothesis_ll - last_ll))
         if max_hypothesis_ll - last_ll < th:
-            with mp.Pool(processes=10) as pool:
-                decoded = pool.starmap(decode, ((sequence, models) for sequence in sequences))
-            assignment = [assignment for assignment, _ in decoded]
-            return models, last_ll, assignment
-        last_ll = max_hypothesis_ll
-    with mp.Pool(processes=10) as pool:
-        decoded = pool.starmap(decode, ((sequence, models) for sequence in sequences))
-    assignemnts = [assignment for assignment, _ in decoded]
-    return models, last_ll, assignemnts
+            models = [hmms[i] for i in models]
+            return models, last_ll, final_assignment
+        last_ll = max_hypothesis_ll    
+    models = [hmms[i] for i in models]    
+    return models, last_ll, final_assignment
 
 
 def hierarchical_clustering(

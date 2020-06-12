@@ -316,7 +316,7 @@ def hierarchical_clustering(
     annotation_path,
     max_dist = 1.5, 
     min_instances = 5,
-    min_th= 4, 
+    min_th= 3, 
     max_th= 2500, 
     paa = 4, 
     sax = 5,

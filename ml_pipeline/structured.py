@@ -264,6 +264,7 @@ def decode_all(sequences, hmms):
             likelihoods[i, j] = ll
     return likelihoods
 
+
 def decode_mixture(hmms_indices, likelihoods):
     '''
     Compute the score of a mixture as well as the assignment of each sequence to a mixture component
@@ -303,7 +304,7 @@ def greedy_mixture_learning(sequences, hmms, th, n_processes):
     models           = []
     final_assignment = None
     open_list        = list(np.arange(len(hmms)))
-    likelihoods      = decode_all(hmms)
+    likelihoods      = decode_all(sequences, hmms)
     m, n = likelihoods.shape
     while len(openlist) > 0:
         max_hypothesis_ll = float('-inf')

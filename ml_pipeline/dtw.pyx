@@ -30,7 +30,6 @@ def argmin(i, j, double deletion, double match, double insert):
         res_idx = (i, j - 1) 
     return result, res_idx
 
-PERCENTAGE_BAND = 10
 
 cdef class DTW:
 
@@ -63,7 +62,10 @@ cdef class DTW:
         for i in range(1, N + 1):
             for j in range(1, M + 1):
                 dist = np.sum(np.square(np.subtract(x[i-1,:], y[j-1,:])))
-                bp, (_i,_j) = argmin(i,j,self.dp[i - 1, j],self.dp[i - 1, j - 1], self.dp[i, j - 1])
+                bp, (_i,_j) = argmin(i,j, 
+                    self.dp[i - 1, j],
+                    self.dp[i - 1, j - 1], 
+                    self.dp[i, j - 1])
                 self.dp[i, j] = bp + dist
                 self.bp[i, j, 0] = _i
                 self.bp[i, j, 1] = _j

@@ -467,9 +467,9 @@ if __name__== "__main__":
         unsupervised = c['unsupervised']
         reconstruct  = unsupervised
         output       = c['output']
-        train_auto_encoder(version, unsupervised, output, params, latent, batch, epochs)
-        evaluate_encoder(version, unsupervised, output, "{}/encoder.h5".format(output), params, viz_k)
-        test_reconstruction(reconstruct, output, params)
+        #train_auto_encoder(version, unsupervised, output, params, latent, batch, epochs)
+        #evaluate_encoder(version, unsupervised, output, "{}/encoder.h5".format(output), params, viz_k)
+        #test_reconstruction(reconstruct, output, params)
         enc          = load_model("{}/encoder.h5".format(output))
         embedder     = SequenceEmbedder(enc, params)
         sequence_clustering(unsupervised, output, embedder)

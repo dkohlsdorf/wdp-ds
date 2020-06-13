@@ -42,8 +42,7 @@ cdef class DTW:
     def __cinit__(self, int max_len):
         self.dp = np.ones((max_len + 1, max_len + 1)) * float('inf')      # Dynamic Programming Matrix 
         self.bp = np.zeros((max_len + 1, max_len + 1, 2), dtype=np.int32) # Back tracking matrix
-        self.band = max_len // PERCENTAGE_BAND
-
+	
     def align(self, double[:, :] x, double[:,:] y):
         """
         Align two sequences using dynamic time warping.
@@ -54,11 +53,12 @@ cdef class DTW:
         :param y: a sequence of length M and dimension d
         :returns: alignment score and path
         """
+        cdef int band = len(x) // PERCENTAGE_BAND
         cdef unsigned int N = x.shape[0]
         cdef unsigned int M = y.shape[0]
         cdef int i, j = 0
         cdef double dist
-        cdef int w = int(max(self.band, abs(N - M) + 2))
+        cdef int w = int(max(band, abs(N - M) + 2))
         cdef list path = []
         self.dp = np.multiply(self.dp, float('inf'))
         self.dp[0, 0] = 0.0

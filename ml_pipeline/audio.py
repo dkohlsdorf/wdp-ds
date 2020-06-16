@@ -20,12 +20,12 @@ class AudiofileParams(object):
     """
     Singleton saving audio file parameters globally
     """
-    
+
     __instance = None
 
     def __new__(cls, rate, dtype, sample_width):
         if AudiofileParams.__instance is None:
-            AudiofileParams.__instance = object.__new__(cls)            
+            AudiofileParams.__instance = object.__new__(cls)
             AudiofileParams.__instance.rate = rate
             AudiofileParams.__instance.dtype = dtype
             AudiofileParams.__instance.sample_width = sample_width
@@ -33,17 +33,21 @@ class AudiofileParams(object):
         return AudiofileParams.__instance
 
     @classmethod
+    def reset(cls):
+        AudiofileParams.__instance  = None
+
+    @classmethod
     def get(cls):
         return AudiofileParams.__instance
-    
+
     @classmethod
     def set_rate(cls, rate):
         AudiofileParams.__instance.rate = rate
-    
+
     @classmethod
     def set_dtype(cls, dtype):
         AudiofileParams.__instance.dtype = dtype
-    
+
     @classmethod
     def set_sample_width(cls, sample_width):
         AudiofileParams.__instance.sample_width = sample_width
@@ -56,7 +60,7 @@ class AudiofileParams(object):
         if self.sample_width != sample_width:
             logaudio.info('Sample width does not match: {} != {}'.format(self.sample_width, sample_width))
 
-            
+
 class WindowParams(namedtuple('WindowParams', 'spec_win spec_step fft_win fft_step highpass')):
 
     @property
@@ -69,7 +73,7 @@ class WindowParams(namedtuple('WindowParams', 'spec_win spec_step fft_win fft_st
         Pad the FFT window by the highpass so the target dimension stays the same
         """
         return self.fft_win + 2 * self.highpass
-    
+
     @property
     def win_len(self):
         """
@@ -82,8 +86,8 @@ class WindowParams(namedtuple('WindowParams', 'spec_win spec_step fft_win fft_st
         """
         Step size of spectrogram window in audio samples
         """
-        return self.spec_step * self.fft_step 
-    
+        return self.spec_step * self.fft_step
+
     def range(self, sample):
         """
         The range of a sample in a spectrogam window in the audio file
@@ -92,7 +96,7 @@ class WindowParams(namedtuple('WindowParams', 'spec_win spec_step fft_win fft_st
 
         :returns: start sample in raw audio, stop sample in raw audio
         """
-        start_audio = sample * self.step 
+        start_audio = sample * self.step
         stop_audio  = start_audio + self.win_len
         return start_audio, stop_audio
 
@@ -106,7 +110,7 @@ class WindowParams(namedtuple('WindowParams', 'spec_win spec_step fft_win fft_st
         """
         return (audio_samples - self.win_len) // self.step + 1
 
-    
+
 def read(path, first_channel=True):
     """
     Read an audio file from local file system or cloud storage
@@ -118,13 +122,14 @@ def read(path, first_channel=True):
     with tf.io.gfile.GFile(path, "rb") as f:
         try:
             x = AudioSegment.from_file(f)
-            rate = x.frame_rate            
+            rate = x.frame_rate
             sample_width = x.sample_width
-            x    = np.array(x.get_array_of_samples(), np.int16).reshape(int(x.frame_count()), x.channels)
+            raw = x.get_array_of_samples()
+            x   = np.array(raw).reshape(int(x.frame_count()), x.channels)
             dtype = x.dtype
             params = AudiofileParams(rate, dtype, sample_width)
             if len(x.shape) > 1 and not first_channel:
-                x = np.mean(x, axis=1) 
+                x = np.mean(x, axis=1)
             elif len(x.shape) > 1 and first_channel:
                 x = x[:, 0]
             else:
@@ -174,7 +179,7 @@ def labeled_spectrogram_windows(filename, params, label_func, shuffle=False):
         label = label_func(filename, spectrogram)
         yield (spectrogram, label, filename, start, stop)
 
-        
+
 def spectrogram_windows(filename, params, shuffle=False):
     """
     Extract all spectrogram windows from an audio file.
@@ -198,7 +203,7 @@ def spectrogram_windows(filename, params, shuffle=False):
             audio = data[start:stop]
             spec  = fwd_spectrogram(audio, params.fft_win_filtered, params.fft_step)
             dft_start = params.fft_win - params.n_fft_bins
-            dft_stop  = params.fft_win 
+            dft_stop  = params.fft_win
             spec  = spec[:, dft_start:dft_stop]
             mu      = np.mean(spec)
             sigma   = np.std(spec) + 1.0
@@ -221,12 +226,12 @@ def spectrogram_regions(filename, params, regions):
         audio = data[start:stop]
         spec  = fwd_spectrogram(audio, params.fft_win_filtered, params.fft_step)
         dft_start = params.fft_win - params.n_fft_bins
-        dft_stop  = params.fft_win 
+        dft_stop  = params.fft_win
         spec  = spec[:, dft_start:dft_stop]
         mu      = np.mean(spec)
         sigma   = np.std(spec) + 1.0
         yield (spec - mu) / sigma
-        
+
 
 def audio_snippets(snippets):
     """
@@ -246,7 +251,7 @@ def audio_snippets(snippets):
         for region in audio_regions(f, regions):
             yield region
 
-            
+
 def audio_regions(filename, regions):
     """
     Audio Region Extraction
@@ -259,9 +264,9 @@ def audio_regions(filename, regions):
     if data is not None:
         for (start, stop) in regions:
             yield data[start:stop]
-    
-        
-def fwd_spectrogram(audio, win=512, step=64):
+
+
+def fwd_spectrogram(audio, win=512, step=64, print_stats=False):
     """
     Compute the spectrogram of audio data
 
@@ -277,5 +282,6 @@ def fwd_spectrogram(audio, win=512, step=64):
         dft = np.abs(fft(audio[i - win: i] * hanning))
         spectrogram.append(dft)
     spectrogram = np.array(spectrogram)
-    logaudio.info(statistics(spectrogram))
+    if print_stats:
+        logaudio.info(statistics(spectrogram))
     return spectrogram

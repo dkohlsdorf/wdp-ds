@@ -33,6 +33,10 @@ class AudiofileParams(object):
         return AudiofileParams.__instance
 
     @classmethod
+    def reset(cls):
+        AudiofileParams.__instance  = None
+
+    @classmethod
     def get(cls):
         return AudiofileParams.__instance
 
@@ -120,7 +124,8 @@ def read(path, first_channel=True):
             x = AudioSegment.from_file(f)
             rate = x.frame_rate
             sample_width = x.sample_width
-            x    = np.array(x.get_array_of_samples(), np.int16).reshape(int(x.frame_count()), x.channels)
+            raw = x.get_array_of_samples()
+            x   = np.array(raw).reshape(int(x.frame_count()), x.channels)
             dtype = x.dtype
             params = AudiofileParams(rate, dtype, sample_width)
             if len(x.shape) > 1 and not first_channel:

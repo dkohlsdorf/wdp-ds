@@ -278,14 +278,14 @@ def decode_mixture(hmms_indices, likelihoods):
     _, n_sequences = likelihoods.shape
     mixture_score = 0.0
     assignment = np.zeros(n_sequences, dtype=np.int32)
-    for j in range(n_sequences):
+    for j in range(n_sequences): # for each sequence
         max_ll = ZERO
         max_i  = 0
-        for i in hmms_indices:
+        for i in hmms_indices:   # pick the best hmm in the mixture
             if likelihoods[i, j] > max_ll:
                 max_ll = likelihoods[i, j]
                 max_i  = i 
-        assignment[j]  = max_i
+        assignment[j]  = max_i   # the total score is the sum of the best scores
         mixture_score += max_ll
     return mixture_score, assignment
 

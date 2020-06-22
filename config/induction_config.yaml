@@ -7,6 +7,3 @@ output       : 'models/v3_lstm_v1/'
 input        : 'gs://wdp-ds-data/dolphin_ogg'
 version      : "v3.0"
 encoding     : 'data/encodings.csv'
-
-# TODO Audio Config
-# TODO Beam Config

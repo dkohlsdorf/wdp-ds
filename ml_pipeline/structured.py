@@ -341,8 +341,8 @@ def hierarchical_clustering(
     min_instances = 5,
     min_th= 4, 
     max_th= 2500, 
-    paa = 4, 
-    sax = 5,
+    paa = 5, 
+    sax = 6,
     processes = 10,
     max_instances=None
 ):

@@ -22,5 +22,5 @@ class ViterbiTest(unittest.TestCase):
         ])
         path, ll = viterbi(HMM_CONT, seq)
         self.assertListEqual(list(path), [0,0,0,1,1,1,2,2,2])
-        self.assertAlmostEqual(-1.5018560360449937, ll.prob, places=2)        
+        self.assertAlmostEqual(-13.516704324404943, ll.prob, places=2)        
 

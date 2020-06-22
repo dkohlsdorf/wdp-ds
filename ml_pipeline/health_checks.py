@@ -13,3 +13,17 @@ def statistics(spectrogram):
     p05 = np.percentile(spectrogram,  5, axis=0)
     return "Statistics: mu = {}, std = {}, p05 = {}, p95 = {}".format(mu, std, p05, p95)
 
+
+def hamming_distance(x, y):
+    '''
+    Hamming Distance Between Two Lists
+
+    :param x: first lists of integers
+    :param y: second lists of integers
+    :returns: distance between x and y
+    ''' 
+    distance = 0.0
+    for a, b in zip(x, y):
+        if a != b:
+            distance += 1.0
+    return distance

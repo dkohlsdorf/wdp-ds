@@ -17,7 +17,6 @@ import tensorflow as tf
 import re
 import multiprocessing as mp
 import random
-
 import logging
 logging.basicConfig()
 logstructure = logging.getLogger('structure')
@@ -35,6 +34,7 @@ from logprob import LogProb, ZERO
 from hidden_markov_model import HiddenMarkovModel
 from viterbi import viterbi
 from distributions import Gaussian
+from health_checks import hamming_distance 
 
 import fwd_bwd    as infer
 import baum_welch as bw
@@ -400,7 +400,7 @@ def hierarchical_clustering(
 
     logstructure.info("Process Results")
     cur = 0
-    assignments = []
+    assignments_dtw = []
     overlapping = []
     sequences   = []
     n_instances = {}
@@ -411,16 +411,17 @@ def hierarchical_clustering(
                         n_instances[c + cur] = 1
                     else:
                         n_instances[c + cur] += 1                                            
-                    assignments.append(c + cur)
+                    assignments_dtw.append(c + cur)
                     overlapping.append((start, stop, f, t, c + cur))
                     sequences.append(sequence)
             for c in range(len(set(clustering))):
                 cur += 1
-    
+    logstructure.info("Change in assignments SAX -> DTW: {}".format(hamming_distance(assignments, assignments_dtw)))
+
     logstructure.info("Filter by cluster usage {}".format(len(overlapping)))
-    sequences   = [sequences[i]   for i in range(len(sequences))   if n_instances[assignments[i]] >= min_instances]
-    overlapping = [overlapping[i] for i in range(len(overlapping)) if n_instances[assignments[i]] >= min_instances]
-    assignments = [assignments[i] for i in range(len(assignments)) if n_instances[assignments[i]] >= min_instances]
+    sequences   = [sequences[i]       for i in range(len(sequences))   if n_instances[assignments_dtw[i]] >= min_instances]
+    overlapping = [overlapping[i]     for i in range(len(overlapping)) if n_instances[assignments_dtw[i]] >= min_instances]
+    assignments = [assignments_dtw[i] for i in range(len(assignments)) if n_instances[assignments_dtw[i]] >= min_instances]
 
     logstructure.info("Build Hidden Markov Models {}".format(len(overlapping)))
     model_pool = list(set(assignments))
@@ -431,9 +432,10 @@ def hierarchical_clustering(
         
     logstructure.info("Models: {}".format(len(hmms)))
     logstructure.info("Greedy Mixture Learning / Cluster Supression")
-    models, last_ll, assignments = greedy_mixture_learning(sequences, hmms, 0.05, processes)
+    models, last_ll, assignments_hmm = greedy_mixture_learning(sequences, hmms, 0.05, processes)
     pkl.dump(models, open('{}/hmms.pkl'.format(annotation_path), 'wb'))
-    cluster_regions = [(start, stop, f, t, c) for c, (start, stop, f, t, _) in zip(assignments, overlapping) if c >= 0]
+    cluster_regions = [(start, stop, f, t, c) for c, (start, stop, f, t, _) in zip(assignments_hmm, overlapping) if c >= 0]
+    logstructure.info("Change in assignments DTW -> HMM: {}".format(hamming_distance(assignments, assignments_hmm)))
     return cluster_regions
 
 

@@ -1,6 +1,5 @@
 import unittest
 
-import unittest
 import numpy as np
 
 from ml_pipeline.logprob import LogProb, ZERO

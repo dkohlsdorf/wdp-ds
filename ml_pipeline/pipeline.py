@@ -404,6 +404,7 @@ def header():
     usage for induction:     python ml_pipeline/pipeline.py induction config/induction_config.yaml 
     usage for annotation:    python ml_pipeline/pipeline.py annotate config/annotation.yaml
     usage for word spotting: python ml_pipeline/pipeline.py simplified config/word_spotting.yaml
+    usage for auto tuning:   python ml_pipeline/pipeline.py autotune config/auto_tuning.yaml
 
     by Daniel Kyu Hwa Kohlsdorf
     =================================================================
@@ -474,3 +475,8 @@ if __name__== "__main__":
         embedder     = SequenceEmbedder(enc, params)
         sequence_clustering(unsupervised, output, embedder)
         clustering_usage(output)
+    elif len(sys.argv) == 3 and sys.argv[1] == 'autotune':        
+        params       = WindowParams(c['spec_win'], c['spec_step'], c['fft_win'], c['fft_step'], c['highpass'])
+        enc          = load_model("{}/encoder.h5".format(output))
+        embedder     = SequenceEmbedder(enc, params)
+        sequence_clustering(unsupervised, output, embedder)

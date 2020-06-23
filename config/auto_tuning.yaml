@@ -1,0 +1,13 @@
+spec_win     : 64
+spec_step    : 32
+fft_win      : 512
+fft_step     : 64
+highpass     : 0
+latent       : 32 
+batch        : 10
+version      : "v3.0"
+epochs       : 5
+epochs_sup   : 10
+viz_k        : 100
+inputs       : '../datasets/signature_whistles/'
+output       : 'models/auto_tune/'

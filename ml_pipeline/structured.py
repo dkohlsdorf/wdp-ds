@@ -329,7 +329,7 @@ def greedy_mixture_learning(sequences, hmms, n_processes):
         mixture_scores.append(max_hypothesis_ll)
 
     # find knee in the curve
-    kneedle = KneeLocator(np.arange(0, len(mixture_scores)), mixture_scores, S=0.1, curve='concave', direction='increasing')
+    kneedle = KneeLocator(np.arange(0, len(mixture_scores)), mixture_scores, S=1.0, curve='concave', direction='increasing')
     print("Knee In Curve: {} {}".format(kneedle.knee, kneedle.elbow))
     knee = kneedle.knee
     kneedle.plot_knee()
@@ -344,7 +344,7 @@ def greedy_mixture_learning(sequences, hmms, n_processes):
 
 def hierarchical_clustering(
     annotation_path,
-    max_dist = 1.5, 
+    max_dist = 0.5, 
     min_instances = 1,
     min_th=4, 
     max_th= 2500, 

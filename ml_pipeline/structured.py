@@ -17,6 +17,7 @@ import tensorflow as tf
 import re
 import multiprocessing as mp
 import random
+import matplotlib.pyplot as plt
 import logging
 logging.basicConfig()
 logstructure = logging.getLogger('structure')
@@ -332,6 +333,7 @@ def greedy_mixture_learning(sequences, hmms, n_processes):
     print("Knee In Curve: {} {}".format(kneedle.knee, kneedle.elbow))
     knee = kneedle.knee
     kneedle.plot_knee()
+    plt.show()
 
     # only take models up to knee point
     likelihood, assignment = decode_mixture(models[0:knee], likelihoods)

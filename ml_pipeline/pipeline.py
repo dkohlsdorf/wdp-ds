@@ -483,8 +483,5 @@ if __name__== "__main__":
         inputs       = c['inputs']
         output       = c['output']
         enc             = load_model("{}/encoder.h5".format(output))
-        silence         = load_model("{}/sil.h5".format(output))
-        type_classifier = load_model("{}/type.h5".format(output))
-        embedder        = SequenceEmbedder(enc, params, silence, type_classifier)
-
+        embedder        = SequenceEmbedder(enc, params)
         sequence_clustering(inputs, output, embedder)

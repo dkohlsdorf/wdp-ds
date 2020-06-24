@@ -323,6 +323,8 @@ def sequence_clustering(inp, out, embedder, min_support=1, n_writers=10, max_ins
         if filename.endswith('.ogg') or filename.endswith('.wav') or filename.endswith('.aiff'):
             name = filename.replace(".wav", "")
             name = name.replace(".ogg", "")            
+            name = name.replace(".aiff", "")            
+
             in_path  = "{}/{}".format(inp, filename)
             out_path = "{}/embedding_{}.csv".format(out, name)
             log.info("\t {}".format(in_path))
@@ -480,6 +482,9 @@ if __name__== "__main__":
         params       = WindowParams(c['spec_win'], c['spec_step'], c['fft_win'], c['fft_step'], c['highpass'])
         inputs       = c['inputs']
         output       = c['output']
-        enc          = load_model("{}/encoder.h5".format(output))
-        embedder     = SequenceEmbedder(enc, params)
+        enc             = load_model("{}/encoder.h5".format(output))
+        silence         = load_model("{}/sil.h5".format(output))
+        type_classifier = load_model("{}/type.h5".format(output))
+        embedder        = SequenceEmbedder(enc, params, silence, type_classifier)
+
         sequence_clustering(inputs, output, embedder)

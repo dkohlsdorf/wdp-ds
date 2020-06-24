@@ -292,7 +292,7 @@ def decode_mixture(hmms_indices, likelihoods):
     return mixture_score, assignment
 
 
-def greedy_mixture_learning(sequences, hmms, th, n_processes):
+def greedy_mixture_learning(sequences, hmms, n_processes):
     """
     Greedily learn a mixture of hidden markov models [MIN].
 
@@ -304,9 +304,8 @@ def greedy_mixture_learning(sequences, hmms, th, n_processes):
     """
     logstructure.info("Starting greedy mixture learning")
     
-    models            = []
-    final_assignment = None
-    openlist        = list(np.arange(len(hmms)))
+    models           = []
+    openlist         = list(np.arange(len(hmms)))
     likelihoods      = decode_all(sequences, hmms, n_processes)
     m, n = likelihoods.shape
     mixture_scores = []
@@ -325,19 +324,20 @@ def greedy_mixture_learning(sequences, hmms, th, n_processes):
         models           = models + [max_hypothesis]
         
         # stop if adding the model did not change the likelihood 
-        logstructure.info("Greedy Mixture Learning: {} {} {} {}".format(max_hypothesis_ll, len(openlist), len(models), max_hypothesis_ll))
+        logstructure.info("Greedy Mixture Learning: {} {} {}".format(max_hypothesis_ll, len(openlist), len(models)))
         mixture_scores.append(max_hypothesis_ll)
 
     # find knee in the curve
-    kneedle = KneeLocator(np.arange(0, len(mixture_scores)), mixture_scores, S=1.0, curve='convex', direction='decreasing')
+    kneedle = KneeLocator(np.arange(0, len(mixture_scores)), mixture_scores, S=0.1, curve='concave', direction='increasing')
     print("Knee In Curve: {} {}".format(kneedle.knee, kneedle.elbow))
     knee = kneedle.knee
+    kneedle.plot_knee()
 
     # only take models up to knee point
     likelihood, assignment = decode_mixture(models[0:knee], likelihoods)
     models = [hmms[i] for i in models[0:knee]]    
 
-    return models, likelihood, final_assignment
+    return models, likelihood, assignment
 
 
 def hierarchical_clustering(
@@ -437,7 +437,7 @@ def hierarchical_clustering(
         
     logstructure.info("Models: {}".format(len(hmms)))
     logstructure.info("Greedy Mixture Learning / Cluster Supression")
-    models, last_ll, assignments_hmm = greedy_mixture_learning(sequences, hmms, 1000.0, processes)
+    models, last_ll, assignments_hmm = greedy_mixture_learning(sequences, hmms, processes)
     pkl.dump(models, open('{}/hmms.pkl'.format(annotation_path), 'wb'))
     cluster_regions = [(start, stop, f, t, c) for c, (start, stop, f, t, _) in zip(assignments_hmm, overlapping) if c >= 0]
     logstructure.info("Change in assignments DTW -> HMM: {}".format(hamming_distance(assignments, assignments_hmm)))

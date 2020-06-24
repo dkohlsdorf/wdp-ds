@@ -23,6 +23,7 @@ logstructure = logging.getLogger('structure')
 logstructure.setLevel(logging.INFO)
 
 from sklearn.cluster import AgglomerativeClustering
+from kneed import KneeLocator
 
 from tensorflow.keras.preprocessing.sequence import pad_sequences
 from sklearn.model_selection import train_test_split
@@ -249,6 +250,7 @@ def make_hmm(cluster, assignment, overlapping, min_len = 4, max_train=15):
 def decode(j, hmm, sequence):
     return j, viterbi(hmm, sequence)[1].prob
 
+
 def decode_all(sequences, hmms, n_processes):
     '''
     Build a matrix of all likelihoods and all hmms 
@@ -301,45 +303,48 @@ def greedy_mixture_learning(sequences, hmms, th, n_processes):
     :returns: final set of hmms 
     """
     logstructure.info("Starting greedy mixture learning")
-    last_ll = float('-inf')
-
-    models           = []
+    
+    models            = []
     final_assignment = None
     openlist        = list(np.arange(len(hmms)))
     likelihoods      = decode_all(sequences, hmms, n_processes)
     m, n = likelihoods.shape
+    mixture_scores = []
     while len(openlist) > 0:
         max_hypothesis_ll = float('-inf')
         max_hypothesis    = 0
-        max_assignment    = None
         for hmm in openlist:
             hypothesis             = models + [hmm]
             likelihood, assignment = decode_mixture(hypothesis, likelihoods)
             if likelihood > max_hypothesis_ll:
                 max_hypothesis_ll = likelihood
                 max_hypothesis    = hmm
-                max_assignment    = assignment
 
         # assign the best model
         best             = openlist.remove(max_hypothesis)
         models           = models + [max_hypothesis]
-        final_assignment = max_assignment
         
         # stop if adding the model did not change the likelihood 
-        logstructure.info("Greedy Mixture Learning: {} {} {} {}".format(max_hypothesis_ll, len(openlist), len(models), max_hypothesis_ll - last_ll))
-        if max_hypothesis_ll - last_ll < th:
-            models = [hmms[i] for i in models]
-            return models, last_ll, final_assignment
-        last_ll = max_hypothesis_ll    
-    models = [hmms[i] for i in models]    
-    return models, last_ll, final_assignment
+        logstructure.info("Greedy Mixture Learning: {} {} {} {}".format(max_hypothesis_ll, len(openlist), len(models), max_hypothesis_ll))
+        mixture_scores.append(max_hypothesis_ll)
+
+    # find knee in the curve
+    kneedle = KneeLocator(np.arange(0, len(mixture_scores)), mixture_scores, S=1.0, curve='convex', direction='decreasing')
+    print("Knee In Curve: {} {}".format(kneedle.knee, kneedle.elbow))
+    knee = kneedle.knee
+
+    # only take models up to knee point
+    likelihood, assignment = decode_mixture(models[0:knee], likelihoods)
+    models = [hmms[i] for i in models[0:knee]]    
+
+    return models, likelihood, final_assignment
 
 
 def hierarchical_clustering(
     annotation_path,
     max_dist = 1.5, 
-    min_instances = 5,
-    min_th= 4, 
+    min_instances = 1,
+    min_th=4, 
     max_th= 2500, 
     paa = 5, 
     sax = 6,
@@ -419,9 +424,9 @@ def hierarchical_clustering(
     logstructure.info("Change in assignments SAX -> DTW: {}".format(hamming_distance(assignments, assignments_dtw)))
 
     logstructure.info("Filter by cluster usage {}".format(len(overlapping)))
-    sequences   = [sequences[i]       for i in range(len(sequences))   if n_instances[assignments_dtw[i]] >= min_instances]
-    overlapping = [overlapping[i]     for i in range(len(overlapping)) if n_instances[assignments_dtw[i]] >= min_instances]
-    assignments = [assignments_dtw[i] for i in range(len(assignments)) if n_instances[assignments_dtw[i]] >= min_instances]
+    sequences   = [sequences[i]       for i in range(len(sequences))       if n_instances[assignments_dtw[i]] >= min_instances]
+    overlapping = [overlapping[i]     for i in range(len(overlapping))     if n_instances[assignments_dtw[i]] >= min_instances]
+    assignments = [assignments_dtw[i] for i in range(len(assignments_dtw)) if n_instances[assignments_dtw[i]] >= min_instances]
 
     logstructure.info("Build Hidden Markov Models {}".format(len(overlapping)))
     model_pool = list(set(assignments))
@@ -432,7 +437,7 @@ def hierarchical_clustering(
         
     logstructure.info("Models: {}".format(len(hmms)))
     logstructure.info("Greedy Mixture Learning / Cluster Supression")
-    models, last_ll, assignments_hmm = greedy_mixture_learning(sequences, hmms, 0.05, processes)
+    models, last_ll, assignments_hmm = greedy_mixture_learning(sequences, hmms, 1000.0, processes)
     pkl.dump(models, open('{}/hmms.pkl'.format(annotation_path), 'wb'))
     cluster_regions = [(start, stop, f, t, c) for c, (start, stop, f, t, _) in zip(assignments_hmm, overlapping) if c >= 0]
     logstructure.info("Change in assignments DTW -> HMM: {}".format(hamming_distance(assignments, assignments_hmm)))

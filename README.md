@@ -23,7 +23,7 @@ You need to run the cython compiler for all cython parts of the library
 + numpy / scipy
 + pydub
 + cython
-
++ kneed
 
 ## Usage:
 The machine learning pipeline can be run in 4 modes:

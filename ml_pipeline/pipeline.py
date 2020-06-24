@@ -314,13 +314,13 @@ def write_audio(out, cluster_id, instances_clusters, grouped_by_cluster, min_sup
         log.info("Done: {}".format(cluster_id))
 
 
-def sequence_clustering(inp, out, embedder, min_support=0, n_writers=10, max_instances=None):    
+def sequence_clustering(inp, out, embedder, min_support=1, n_writers=10, max_instances=None):    
     """
     Hierarchical cluster connected regions of whistles and bursts
     """
     log.info("Sequence Clustering")
     for filename in tf.io.gfile.listdir(inp):
-        if filename.endswith('.ogg') or filename.endswith('.wav'):
+        if filename.endswith('.ogg') or filename.endswith('.wav') or filename.endswith('.aiff'):
             name = filename.replace(".wav", "")
             name = name.replace(".ogg", "")            
             in_path  = "{}/{}".format(inp, filename)
@@ -476,7 +476,10 @@ if __name__== "__main__":
         sequence_clustering(unsupervised, output, embedder)
         clustering_usage(output)
     elif len(sys.argv) == 3 and sys.argv[1] == 'autotune':        
+        c = yaml.load(open(sys.argv[2]))
         params       = WindowParams(c['spec_win'], c['spec_step'], c['fft_win'], c['fft_step'], c['highpass'])
+        inputs       = c['inputs']
+        output       = c['output']
         enc          = load_model("{}/encoder.h5".format(output))
         embedder     = SequenceEmbedder(enc, params)
-        sequence_clustering(unsupervised, output, embedder)
+        sequence_clustering(inputs, output, embedder)

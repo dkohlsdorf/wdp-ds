@@ -9,5 +9,5 @@ version      : "v3.0"
 epochs       : 5
 epochs_sup   : 10
 viz_k        : 100
-inputs       : '../datasets/signature_whistles/'
-output       : 'models/auto_tune/'
+inputs       : 'data/signature_whistles/'
+output       : 'models/auto_tuning/'

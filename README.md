@@ -38,6 +38,7 @@ The machine learning pipeline can be run in 4 modes:
 + induction:  learn clustering using quantization, hierarchical clustering and hidden Markov models
 + annotation: given an annotation file assigning names to clusters, get new audio files for each snippet
 + word spotting: run training and induction without the silence detector and type classifier
++ auto tuning:   python ml_pipeline/pipeline.py autotune config/auto_tuning.yaml
 
 ## Running Tests
 ```

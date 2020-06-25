@@ -21,6 +21,7 @@ os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 from tensorflow.keras.backend import set_learning_phase
 from tensorflow.keras.models import load_model
 from feature_extractor import *
+from variational_feature_extractor import *
 from classifier import *
 from plots import *
 from sequence_embedder import *

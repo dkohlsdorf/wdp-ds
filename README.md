@@ -24,6 +24,7 @@ You need to run the cython compiler for all cython parts of the library
 + pydub
 + cython
 + kneed
++ tensorflow-probability
 
 ## Usage:
 The machine learning pipeline can be run in 4 modes:
@@ -44,3 +45,10 @@ The machine learning pipeline can be run in 4 modes:
 ```
     python -m unittest discover -s ml_pipeline/ -v
 ```
+
+## TODO
+
++ Typing Clusters.
++ Look at a better / different clustering model.
+    - Variational
+    - Soft k-means

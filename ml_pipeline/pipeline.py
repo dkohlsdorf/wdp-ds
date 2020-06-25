@@ -9,7 +9,7 @@ import tensorflow as tf
 import matplotlib
 matplotlib.use('Agg')
 import multiprocessing as mp
-
+import re
 import logging
 logging.basicConfig()
 log = logging.getLogger('main')
@@ -368,7 +368,8 @@ def sequence_clustering(inp, out, embedder, min_support=1, n_writers=10, max_ins
         with open(log_path, "w") as fp:
             fp.write("start,stop,file,cluster,type,region_id\n")
             for start, stop, c, t, i in regions:
-                fp.write("{},{},{},{},{},{}\n".format(start, stop, f, c, t, i))
+                if instances_clusters[c] >= min_support:
+                    fp.write("{},{},{},{},{},{}\n".format(start, stop, f, c, t, i))
     log.info('Done Logs')
 
         
@@ -397,6 +398,30 @@ def generate_dataset(work_folder, annotations, out):
                 i += 1
 
                 
+def classes_to_cluster_matrix(working_folder):
+    labels   = []
+    clusters = []        
+    for filename in tf.io.gfile.listdir(working_folder):
+        if filename.startswith('seq_clustering_log'):
+            path = "{}/{}".format(working_folder, filename) 
+            df = pd.read_csv(path)         
+            for i, row in df.iterrows():
+                label   = re.sub(r"[0-9]*.aiff", "", row['file'].split("/")[-1].split('_')[0])
+                cluster = row['cluster']
+                labels.append(label)
+                clusters.append(cluster)
+    label_ids   = [(l, i) for i, l in enumerate(list(set(labels)))]
+    cluster_ids = [(c, i) for i, c in enumerate(list(set(clusters)))]
+    label_dict   = dict(label_ids)
+    cluster_dict = dict(cluster_ids)
+    print("#labels: {} / #clusters: {}".format(len(label_dict), len(cluster_dict)))
+    confusion   = np.zeros(( len(label_dict), len(cluster_dict)), dtype=np.int32)
+    for l, c in zip(labels, clusters):
+        confusion[label_dict[l]][cluster_dict[c]] += 1
+    plot_result_matrix(confusion, [l for l, _ in label_ids], [c for c, _ in cluster_ids], "Cluster Assignment")
+    plt.savefig('{}/cluster_assignment.png'.format(working_folder))
+
+
 def header():
     return """
     =================================================================
@@ -485,3 +510,4 @@ if __name__== "__main__":
         enc             = load_model("{}/encoder.h5".format(output))
         embedder        = SequenceEmbedder(enc, params)
         sequence_clustering(inputs, output, embedder)
+        classes_to_cluster_matrix(output)

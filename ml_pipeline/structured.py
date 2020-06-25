@@ -191,7 +191,7 @@ def process_dtw(assignment, overlapping, max_dist):
 
 def make_hmm(cluster, assignment, overlapping, min_len = 4, max_train=15):
     """
-    Learn a 4 state Hidden Markov Model with 2 skip states.
+    Learn a 8 state Hidden Markov Model with 2 skip states.
     Initialization is performed from using flat start (mean and variances equal for all states)
     Training is performed using Baum Welch
 
@@ -205,17 +205,19 @@ def make_hmm(cluster, assignment, overlapping, min_len = 4, max_train=15):
     if frames > min_len:        
         logstructure.info("MkModel: {}".format("cluster"))
         logstructure.info("\t {} instances".format(len(x_label)))
-        n = frames / 4
-        l = 1 / n
-        s = 1 - l
-
-        trans_mat = DenseMarkovChain.from_probs([[s,   l/2, l/2, 0.0],
-                                                 [0.0,   s, l,   0.0],
-                                                 [0.0, 0.0, s,     l],
-                                                 [0.0, 0.0, 0.0,   s]])
+        l = 0.9
+        s = 0.1
+        trans_mat = DenseMarkovChain.from_probs([[s,  l/3, 0.0, 0.0, l/3, 0.0, 0.0, l/3],
+                                                 [0.0,   s,  l, 0.0, 0.0, 0.0, 0.0, 0.0],
+                                                 [0.0, 0.0,  s,   l, 0.0, 0.0, 0.0, 0.0],
+                                                 [0.0, 0.0,  0.0, s,   l, 0.0, 0.0, 0.0],
+                                                 [0.0, 0.0,  0.0, 0.0, s,   l, 0.0, 0.0],
+                                                 [0.0, 0.0,  0.0, 0.0, 0.0, s,   l, 0.0],
+                                                 [0.0, 0.0,  0.0, 0.0, 0.0, 0.0, s,  l],
+                                                 [0.0, 0.0,  0.0, 0.0, 0.0, 0.0, 0.0,s]])
 
         trans_mat[Transition(START_STATE, 0)] = LogProb.from_float(1.0)
-        trans_mat[Transition(3, STOP_STATE)]  = LogProb.from_float(1.0)
+        trans_mat[Transition(7, STOP_STATE)]  = LogProb.from_float(1.0)
 
         dim       = len(overlapping[0][0])
         dists     = []
@@ -225,7 +227,7 @@ def make_hmm(cluster, assignment, overlapping, min_len = 4, max_train=15):
         mu    = np.mean(state, axis=0)
         std   = np.std(state, axis=0) + 1e-4
         print("\t Stats: {} / {}".format(mu.shape, std.shape))
-        dists = [Gaussian(mu, std) for i in range(0, 4)]
+        dists = [Gaussian(mu, std) for i in range(0, 8)]
 
         logstructure.info("\t Model fit")
         hmm = HiddenMarkovModel(trans_mat, dists)
@@ -239,7 +241,7 @@ def make_hmm(cluster, assignment, overlapping, min_len = 4, max_train=15):
             hmm.observations = obs
             hmm.transitions  = DenseMarkovChain.from_probs(np.exp(transitions))
             hmm.transitions[Transition(START_STATE, 0)] = LogProb.from_float(1.0)
-            hmm.transitions[Transition(3, STOP_STATE)]  = LogProb.from_float(1.0)
+            hmm.transitions[Transition(7, STOP_STATE)]  = LogProb.from_float(1.0)
 
             score = LogProb(ZERO)
             for gamma in gammas:
@@ -338,16 +340,15 @@ def greedy_mixture_learning(sequences, hmms, n_processes):
     # only take models up to knee point
     likelihood, assignment = decode_mixture(models[0:knee], likelihoods)
     models = [hmms[i] for i in models[0:knee]]    
-
     return models, likelihood, assignment
 
 
 def hierarchical_clustering(
     annotation_path,
-    max_dist = 0.5, 
+    max_dist = 0.8, 
     min_instances = 1,
-    min_th=4, 
-    max_th= 2500, 
+    min_th=2, 
+    max_th=2500, 
     paa = 5, 
     sax = 6,
     processes = 10,

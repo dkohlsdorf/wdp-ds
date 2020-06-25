@@ -71,13 +71,13 @@ def plot_result_matrix(confusion, classes, predictions, title, cmap=plt.cm.Blues
     ax.set(xticks=np.arange(confusion.shape[1]),
            yticks=np.arange(confusion.shape[0]),
            # ... and label them with the respective list entries
-           xticklabels=classes, yticklabels=predictions,
+           xticklabels=predictions, yticklabels=classes,
            title=title,
-           ylabel='True label',
-           xlabel='Predicted label')
+           ylabel='True Label',
+           xlabel='Predicted Label')
     plt.setp(ax.get_xticklabels(), rotation=45, ha="right",
              rotation_mode="anchor")
-    fmt = '.2f'
+    fmt = '.1f'
     thresh = confusion.max() / 2.
     for i in range(confusion.shape[0]):
         for j in range(confusion.shape[1]):

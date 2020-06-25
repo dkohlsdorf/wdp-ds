@@ -120,7 +120,7 @@ def train(folder, output_folder, params, model, batch_size=10, epochs=128, keep=
     training_log.close()
     
     
-def train_type(version_tag, input_folder, output_folder, params, encoder_file, batch, epoch, latent, freeze, transfer=True, subsample=0.5):
+def train_type(version_tag, input_folder, output_folder, params, encoder_file, batch, epoch, subsample=0.5):
     """
     Train a multiclass type classifier
     :param version_tag: basically the model name
@@ -131,13 +131,8 @@ def train_type(version_tag, input_folder, output_folder, params, encoder_file, b
     :param batch: batch size
     :param epochs: number of training epochs
     """
-    if transfer:
-        log.info(encoder_file)
-        enc = load_model(encoder_file)
-    else:
-        _, enc = auto_encoder(
-            (params.spec_win, params.n_fft_bins, 1), latent
-        )
+    log.info(encoder_file)
+    enc = pkl.load(open(encoder_file, 'rb')).latent
     cls_type = classifier(enc, 4, freeze)
     x_train = []
     x_test = []
@@ -169,7 +164,7 @@ def train_type(version_tag, input_folder, output_folder, params, encoder_file, b
     plt.close()
 
 
-def train_silence(version_tag, input_folder, output_folder, params, encoder_file, batch, epoch, latent, freeze, transfer=True):
+def train_silence(version_tag, input_folder, output_folder, params, encoder_file, batch, epoch):
     """
     Train a silence dectector on top of an encoder
 
@@ -182,12 +177,7 @@ def train_silence(version_tag, input_folder, output_folder, params, encoder_file
     :param epochs: number of training epochs
     """
     log.info("Training Silence Detector: {} {}".format(version_tag, epoch))
-    if transfer:
-        enc = load_model(encoder_file)
-    else:
-        _, enc = auto_encoder(
-            (params.spec_win, params.n_fft_bins, 1), latent
-        )    
+    enc = pkl.load(open(encoder_file, 'rb')).latent
     cls_sil = classifier(enc, 1, freeze)
     x_train = []
     x_test = []
@@ -256,7 +246,8 @@ def evaluate_encoder(version_tag, input_folder, output_folder, encoder_file, par
     :param k: number of clusters
     """
     log.info("Evaluate Encoder: {}".format(version_tag))
-    enc = load_model(encoder_file)
+    enc = pkl.load(open(encoder_file, 'rb')).latent
+
     visualize_2dfilters(output_folder, enc, [1], n_rows = 8)    
     x = np.stack([x.reshape(x.shape[0], x.shape[1], 1) for (x,_,_,_,_) in dataset(
         input_folder, params, no_label, False
@@ -270,7 +261,7 @@ def test_reconstruction(folder, out, params):
     """
     Reconstruct 100 examples using the auto encoder
     """
-    ae = load_model('{}/auto_encoder.h5'.format(out))
+    model = pkl.load(open('{}/model.pkl'.format(folder), 'rb'))
     gen = dataset(folder, params, no_label, True)
     i = 0
     plt.figure(figsize=(40, 40))
@@ -278,7 +269,7 @@ def test_reconstruction(folder, out, params):
         name = f.split('/')[-1]
         plt.subplot(10, 10, i + 1)
         plt.axis('off')
-        plt.imshow(1.0 - ae.predict(x.reshape(1, params.spec_win, params.n_fft_bins, 1))[0, :, :, 0].T, cmap='gray')
+        plt.imshow(1.0 - model.reconstruct(x.reshape(1, params.spec_win, params.n_fft_bins, 1))[0, :, :, 0].T, cmap='gray')
         i += 1
         if i % 10 == 0:        
             log.info(i)
@@ -453,10 +444,10 @@ if __name__== "__main__":
         transfer     = c['transfer']
         freeze       = c['freeze'] 
         train_auto_encoder(version, unsupervised, output, params, latent, batch, epochs)
-        #evaluate_encoder(version, unsupervised, output, "{}/encoder.h5".format(output), params, viz_k)
-        #train_silence(version, silence, output, params, "{}/encoder.h5".format(output), batch, epochs_sup, latent, freeze, transfer)
-        #train_type(version, type_class, output, params, "{}/encoder.h5".format(output), batch, epochs_sup, latent, freeze, transfer)
-        #test_reconstruction(reconstruct, output, params)
+        evaluate_encoder(version, unsupervised, output, "{}/model.pkl".format(output), params, viz_k)
+        train_silence(version, silence, output, params, "{}/model.pkl".format(output), batch, epochs_sup, latent, freeze, transfer)
+        train_type(version, type_class, output, params, "{}/model.pkl".format(output), batch, epochs_sup, latent, freeze, transfer)
+        test_reconstruction(reconstruct, output, params)
     elif len(sys.argv) == 3 and sys.argv[1] == 'induction':
         c = yaml.load(open(sys.argv[2]))
         log.info("Parameters: {}".format(c))
@@ -464,7 +455,7 @@ if __name__== "__main__":
         inp          = c['input']
         output       = c['output'] 
         enc_path     = c['encoding']
-        enc             = load_model("{}/encoder.h5".format(output))
+        enc          = pkl.load(open('{}/model.pkl'.format(output), 'rb')).latent
         silence         = load_model("{}/sil.h5".format(output))
         type_classifier = load_model("{}/type.h5".format(output))
         embedder        = SequenceEmbedder(enc, params, silence, type_classifier)
@@ -493,7 +484,7 @@ if __name__== "__main__":
         train_auto_encoder(version, unsupervised, output, params, latent, batch, epochs)
         evaluate_encoder(version, unsupervised, output, "{}/encoder.h5".format(output), params, viz_k)
         test_reconstruction(reconstruct, output, params)
-        enc          = load_model("{}/encoder.h5".format(output))
+        enc          = pkl.load(open('{}/model.pkl'.format(output), 'rb')).latent
         embedder     = SequenceEmbedder(enc, params)
         sequence_clustering(unsupervised, output, embedder)
         clustering_usage(output)
@@ -502,7 +493,7 @@ if __name__== "__main__":
         params       = WindowParams(c['spec_win'], c['spec_step'], c['fft_win'], c['fft_step'], c['highpass'])
         inputs       = c['inputs']
         output       = c['output']
-        enc             = load_model("{}/encoder.h5".format(output))
+        enc          = pkl.load(open('{}/model.pkl'.format(output), 'rb')).latent
         embedder        = SequenceEmbedder(enc, params)
         sequence_clustering(inputs, output, embedder)
         classes_to_cluster_matrix(output)

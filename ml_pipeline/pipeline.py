@@ -1,6 +1,8 @@
 import sys
 import yaml
 
+import pickle as pkl
+
 import numpy as np
 import subprocess  
 import os
@@ -77,7 +79,7 @@ def auto_encode(f, x):
     return x
 
 
-def train(folder, output_folder, params, enc, ae, batch_size=10, epochs=128, keep=lambda x: True):
+def train(folder, output_folder, params, model, batch_size=10, epochs=128, keep=lambda x: True):
     """
     Train the model for some epochs with a specific batch size
 
@@ -90,6 +92,7 @@ def train(folder, output_folder, params, enc, ae, batch_size=10, epochs=128, kee
     n_processed = 0
     history = []
     training_log = open('{}/loss.csv'.format(output_folder), 'w') 
+    optimizer = tf.keras.optimizers.Adam(1e-4)
     for epoch in range(epochs):
         batch = []
         epoch_loss = 0.0
@@ -98,9 +101,9 @@ def train(folder, output_folder, params, enc, ae, batch_size=10, epochs=128, kee
                 batch.append((x,y))
                 total_loss = 0.0
                 if len(batch) == batch_size:
-                    x = np.stack([x.reshape(x.shape[0], x.shape[1], 1) for x, _ in batch])
-                    y = np.stack([y.reshape(y.shape[0], y.shape[1], 1) for _, y in batch])
-                    loss = ae.train_on_batch(x=x, y=y)
+                    x = np.stack([x.reshape(x.shape[0], x.shape[1], 1) for x, _ in batch]).astype(np.float32)
+                    loss = train_step(model, x, optimizer)
+
                     history.append(loss)
                     total_loss += loss
                     batch = []
@@ -113,8 +116,7 @@ def train(folder, output_folder, params, enc, ae, batch_size=10, epochs=128, kee
         training_log.flush()
         plt.plot(history)
         plt.savefig('{}/history_{}.png'.format(output_folder, epoch))
-        enc.save('{}/encoder_{}.h5'.format(output_folder, epoch))
-        ae.save('{}/auto_encoder_{}.h5'.format(output_folder, epoch))
+        pkl.dump(models, open('{}/model{}.pkl'.format(output_folder, epoch), 'wb'))
     training_log.close()
     
     
@@ -231,23 +233,15 @@ def train_auto_encoder(version_tag, input_folder, output_folder, params, latent,
     :param epochs: number of training epochs
     """
     log.info("Training Auto Encoder: {}".format(version_tag))
-    ae, enc = auto_encoder(
+    model = FeatureVAE(
         (params.spec_win, params.n_fft_bins, 1), latent
     )
-    enc.summary()
-    if os.path.exists('{}/encoder.h5'.format(output_folder)) and os.path.exists('{}/auto_encoder.h5'.format(output_folder)):
-        log.info("\tloading previous weights")
-        _enc = load_model('{}/encoder.h5'.format(output_folder))
-        _enc.summary()
-        _ae  = load_model('{}/auto_encoder.h5'.format(output_folder))
-        enc.set_weights(_enc.get_weights())
-        ae.set_weights(_ae.get_weights())
-    w_before = enc.layers[1].get_weights()[0].flatten()
-    train(input_folder, output_folder, params, enc, ae, batch, epochs)
-    w_after = enc.layers[1].get_weights()[0].flatten()
+    model.latent.summary()
+    w_before = model.latent.layers[1].get_weights()[0].flatten()
+    train(input_folder, output_folder, params, model, batch, epochs)
+    w_after = model.latent.layers[1].get_weights()[0].flatten()
     log.info("DELTA W:", np.sum(np.square(w_before - w_after)))
-    enc.save('{}/encoder.h5'.format(output_folder))
-    ae.save('{}/auto_encoder.h5'.format(output_folder))
+    pkl.dump(models, open('{}/model.pkl'.format(output_folder), 'wb'))
 
 
 def evaluate_encoder(version_tag, input_folder, output_folder, encoder_file, params, k):
@@ -459,10 +453,10 @@ if __name__== "__main__":
         transfer     = c['transfer']
         freeze       = c['freeze'] 
         train_auto_encoder(version, unsupervised, output, params, latent, batch, epochs)
-        evaluate_encoder(version, unsupervised, output, "{}/encoder.h5".format(output), params, viz_k)
-        train_silence(version, silence, output, params, "{}/encoder.h5".format(output), batch, epochs_sup, latent, freeze, transfer)
-        train_type(version, type_class, output, params, "{}/encoder.h5".format(output), batch, epochs_sup, latent, freeze, transfer)
-        test_reconstruction(reconstruct, output, params)
+        #evaluate_encoder(version, unsupervised, output, "{}/encoder.h5".format(output), params, viz_k)
+        #train_silence(version, silence, output, params, "{}/encoder.h5".format(output), batch, epochs_sup, latent, freeze, transfer)
+        #train_type(version, type_class, output, params, "{}/encoder.h5".format(output), batch, epochs_sup, latent, freeze, transfer)
+        #test_reconstruction(reconstruct, output, params)
     elif len(sys.argv) == 3 and sys.argv[1] == 'induction':
         c = yaml.load(open(sys.argv[2]))
         log.info("Parameters: {}".format(c))

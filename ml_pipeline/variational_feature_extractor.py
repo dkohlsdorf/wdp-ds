@@ -7,9 +7,8 @@ from tensorflow.keras.optimizers import *
 from tensorflow.keras.losses import * 
 
 from feature_extractor import * 
-
+import numpy as np
 import tensorflow as tf
-import tensorflow_probability as tfp
 
 
 class FeatureVAE(Model):
@@ -17,8 +16,11 @@ class FeatureVAE(Model):
   def __init__(self, input_shape, latent_dim):
     super(FeatureVAE, self).__init__()
     self.latent_dim = latent_dim
-    # make variational here
-    self.encoder = encoder(input_shape, latent_dim)
+    self.latent  = encoder(input_shape, latent_dim)
+    inp          = Input(input_shape)
+    x            = self.latent(inp)
+    x            = Dense(2 * latent_dim)(x)
+    self.encoder = Model(inputs = [inp], outputs = [x])
     self.decoder = decoder(input_shape[0], latent_dim, input_shape[1])  
 
   @tf.function
@@ -36,6 +38,10 @@ class FeatureVAE(Model):
 
   def predict(self, x):
     return self.encode(x)[0]    
+
+  def encode(self, x):
+    mean, logvar = tf.split(self.encoder(x), num_or_size_splits=2, axis=1)
+    return mean, logvar
 
 
 def log_normal_pdf(sample, mean, logvar, raxis=1):
@@ -60,3 +66,4 @@ def train_step(model, x, optimizer):
     loss = compute_loss(model, x)
   gradients = tape.gradient(loss, model.trainable_variables)
   optimizer.apply_gradients(zip(gradients, model.trainable_variables))
+  return loss

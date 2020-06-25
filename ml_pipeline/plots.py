@@ -53,13 +53,13 @@ def clustering_usage(log_path):
     plt.show()
 
 
-
-def plot_confusion_matrix(confusion, classes, title, cmap=plt.cm.Blues):
+def plot_result_matrix(confusion, classes, predictions, title, cmap=plt.cm.Blues):
     """
-    Plot confusion matrix
+    Plot cluster to label matrix
 
     :param confusion: confusion matrix
     :param classes: class label
+    :param predictions: cluster labels
     :param title: plot title
     :param cmap: color map
 
@@ -71,7 +71,7 @@ def plot_confusion_matrix(confusion, classes, title, cmap=plt.cm.Blues):
     ax.set(xticks=np.arange(confusion.shape[1]),
            yticks=np.arange(confusion.shape[0]),
            # ... and label them with the respective list entries
-           xticklabels=classes, yticklabels=classes,
+           xticklabels=classes, yticklabels=predictions,
            title=title,
            ylabel='True label',
            xlabel='Predicted label')
@@ -86,6 +86,18 @@ def plot_confusion_matrix(confusion, classes, title, cmap=plt.cm.Blues):
                     color="white" if confusion[i, j] > thresh else "black")
     fig.tight_layout()
     return ax
+
+
+def plot_confusion_matrix(confusion, classes, title, cmap=plt.cm.Blues):
+    """
+    Plot confusion matrix
+
+    :param confusion: confusion matrix
+    :param classes: class label
+    :param title: plot title
+    :param cmap: color map
+    """
+    plot_result_matrix(confusion, classes, classes, title, cmap)
 
 
 def imscatter(x, y, c, img, ax=None, zoom=1):

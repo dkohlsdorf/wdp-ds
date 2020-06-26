@@ -116,7 +116,7 @@ def train(folder, output_folder, params, model, batch_size=10, epochs=128, keep=
         training_log.flush()
         plt.plot(history)
         plt.savefig('{}/history_{}.png'.format(output_folder, epoch))
-        pkl.dump(models, open('{}/model{}.pkl'.format(output_folder, epoch), 'wb'))
+        pkl.dump(model, open('{}/model{}.pkl'.format(output_folder, epoch), 'wb'))
     training_log.close()
     
     
@@ -231,7 +231,7 @@ def train_auto_encoder(version_tag, input_folder, output_folder, params, latent,
     train(input_folder, output_folder, params, model, batch, epochs)
     w_after = model.latent.layers[1].get_weights()[0].flatten()
     log.info("DELTA W:", np.sum(np.square(w_before - w_after)))
-    pkl.dump(models, open('{}/model.pkl'.format(output_folder), 'wb'))
+    pkl.dump(model, open('{}/model.pkl'.format(output_folder), 'wb'))
 
 
 def evaluate_encoder(version_tag, input_folder, output_folder, encoder_file, params, k):

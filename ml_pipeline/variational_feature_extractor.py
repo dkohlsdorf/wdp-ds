@@ -23,6 +23,29 @@ class FeatureVAE(Model):
     self.encoder = Model(inputs = [inp], outputs = [x])
     self.decoder = decoder(input_shape[0], latent_dim, input_shape[1])  
 
+  def save(self, output_folder, epoch=None):
+    if epoch is not None:
+      self.latent.save('{}/encoder_{}.h5'.format(output_folder, epoch))
+      self.encoder.save('{}/va_encoder_{}.h5'.format(output_folder, epoch))
+      self.decoder.save('{}/decoder_{}.h5'.format(output_folder, epoch))
+    else:
+      self.latent.save('{}/encoder.h5'.format(output_folder))
+      self.encoder.save('{}/va_encoder.h5'.format(output_folder))
+      self.decoder.save('{}/decoder.h5'.format(output_folder))
+
+  @classmethod
+  def from_files(cls, output_folder):    
+    latent  = load_model('{}/encoder.h5'.format(output_folder))
+    encoder = load_model('{}/va_encoder.h5'.format(output_folder))
+    decoder = load_model('{}/decoder.h5'.format(output_folder))
+    input_shape = (latent.layers[0].input.shape[1], latent.layers[0].input.shape[2], latent.layers[0].input.shape[3])
+    latent_dim  = m.layers[-1].output.shape[1]
+    vae = cls(input_shape, latent_dim)
+    vae.latent  = latent
+    vae.encoder = encoder
+    vae.decoder = decoder 
+    return vae
+
 
   def reconstruct(self, x):
     mean, logvar = self.encode(x)

@@ -1,8 +1,6 @@
 import sys
 import yaml
 
-import pickle as pkl
-
 import numpy as np
 import subprocess  
 import os
@@ -116,23 +114,23 @@ def train(folder, output_folder, params, model, batch_size=10, epochs=128, keep=
         training_log.flush()
         plt.plot(history)
         plt.savefig('{}/history_{}.png'.format(output_folder, epoch))
-        pkl.dump(model, open('{}/model{}.pkl'.format(output_folder, epoch), 'wb'))
+        model.save(output_folder, epoch=epoch)
     training_log.close()
     
     
-def train_type(version_tag, input_folder, output_folder, params, encoder_file, batch, epoch, subsample=0.5):
+def train_type(version_tag, input_folder, output_folder, params, batch, epoch, subsample=0.5):
     """
     Train a multiclass type classifier
     :param version_tag: basically the model name
     :param input_folder: the folder with the training data
     :param output_folder: the folder to save the model
     :param params: window parameters
-    :param encoder_file: a saved encoder
     :param batch: batch size
     :param epochs: number of training epochs
     """
     log.info(encoder_file)
-    enc = pkl.load(open(encoder_file, 'rb')).latent
+    enc = FeatureVAE.from_files(output_folder).latent
+    
     cls_type = classifier(enc, 4, freeze)
     x_train = []
     x_test = []
@@ -177,7 +175,7 @@ def train_silence(version_tag, input_folder, output_folder, params, encoder_file
     :param epochs: number of training epochs
     """
     log.info("Training Silence Detector: {} {}".format(version_tag, epoch))
-    enc = pkl.load(open(encoder_file, 'rb')).latent
+    enc = FeatureVAE.from_files(output_folder).latent
     cls_sil = classifier(enc, 1, freeze)
     x_train = []
     x_test = []
@@ -231,7 +229,7 @@ def train_auto_encoder(version_tag, input_folder, output_folder, params, latent,
     train(input_folder, output_folder, params, model, batch, epochs)
     w_after = model.latent.layers[1].get_weights()[0].flatten()
     log.info("DELTA W:", np.sum(np.square(w_before - w_after)))
-    pkl.dump(model, open('{}/model.pkl'.format(output_folder), 'wb'))
+    model.save(output_folder)
 
 
 def evaluate_encoder(version_tag, input_folder, output_folder, encoder_file, params, k):
@@ -246,7 +244,7 @@ def evaluate_encoder(version_tag, input_folder, output_folder, encoder_file, par
     :param k: number of clusters
     """
     log.info("Evaluate Encoder: {}".format(version_tag))
-    enc = pkl.load(open(encoder_file, 'rb')).latent
+    enc = FeatureVAE.from_files(output_folder).latent
 
     visualize_2dfilters(output_folder, enc, [1], n_rows = 8)    
     x = np.stack([x.reshape(x.shape[0], x.shape[1], 1) for (x,_,_,_,_) in dataset(
@@ -261,7 +259,7 @@ def test_reconstruction(folder, out, params):
     """
     Reconstruct 100 examples using the auto encoder
     """
-    model = pkl.load(open('{}/model.pkl'.format(folder), 'rb'))
+    model = FeatureVAE.from_files(output_folder)
     gen = dataset(folder, params, no_label, True)
     i = 0
     plt.figure(figsize=(40, 40))
@@ -444,9 +442,9 @@ if __name__== "__main__":
         transfer     = c['transfer']
         freeze       = c['freeze'] 
         train_auto_encoder(version, unsupervised, output, params, latent, batch, epochs)
-        evaluate_encoder(version, unsupervised, output, "{}/model.pkl".format(output), params, viz_k)
-        train_silence(version, silence, output, params, "{}/model.pkl".format(output), batch, epochs_sup, latent, freeze, transfer)
-        train_type(version, type_class, output, params, "{}/model.pkl".format(output), batch, epochs_sup, latent, freeze, transfer)
+        evaluate_encoder(version, unsupervised, output, params, viz_k)
+        train_silence(version, silence, output, params, batch, epochs_sup, latent, freeze, transfer)
+        train_type(version, type_class, output, params, batch, epochs_sup, latent, freeze, transfer)
         test_reconstruction(reconstruct, output, params)
     elif len(sys.argv) == 3 and sys.argv[1] == 'induction':
         c = yaml.load(open(sys.argv[2]))
@@ -455,7 +453,7 @@ if __name__== "__main__":
         inp          = c['input']
         output       = c['output'] 
         enc_path     = c['encoding']
-        enc          = pkl.load(open('{}/model.pkl'.format(output), 'rb')).latent
+        enc             = FeatureVAE.from_files(output_folder).latent
         silence         = load_model("{}/sil.h5".format(output))
         type_classifier = load_model("{}/type.h5".format(output))
         embedder        = SequenceEmbedder(enc, params, silence, type_classifier)
@@ -484,7 +482,7 @@ if __name__== "__main__":
         train_auto_encoder(version, unsupervised, output, params, latent, batch, epochs)
         evaluate_encoder(version, unsupervised, output, "{}/encoder.h5".format(output), params, viz_k)
         test_reconstruction(reconstruct, output, params)
-        enc          = pkl.load(open('{}/model.pkl'.format(output), 'rb')).latent
+        enc          = FeatureVAE.from_files(output_folder).latent
         embedder     = SequenceEmbedder(enc, params)
         sequence_clustering(unsupervised, output, embedder)
         clustering_usage(output)
@@ -493,7 +491,7 @@ if __name__== "__main__":
         params       = WindowParams(c['spec_win'], c['spec_step'], c['fft_win'], c['fft_step'], c['highpass'])
         inputs       = c['inputs']
         output       = c['output']
-        enc          = pkl.load(open('{}/model.pkl'.format(output), 'rb')).latent
+        enc             = FeatureVAE.from_files(output_folder).latent
         embedder        = SequenceEmbedder(enc, params)
         sequence_clustering(inputs, output, embedder)
         classes_to_cluster_matrix(output)

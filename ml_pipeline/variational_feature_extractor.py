@@ -34,10 +34,16 @@ class FeatureVAE(Model):
       self.decoder.save('{}/decoder.h5'.format(output_folder))
 
   @classmethod
-  def from_files(cls, output_folder):    
-    latent  = load_model('{}/encoder.h5'.format(output_folder))
-    encoder = load_model('{}/va_encoder.h5'.format(output_folder))
-    decoder = load_model('{}/decoder.h5'.format(output_folder))
+  def from_files(cls, output_folder, epoch=None):    
+    if epoch is None:
+      latent  = load_model('{}/encoder.h5'.format(output_folder))
+      encoder = load_model('{}/va_encoder.h5'.format(output_folder))
+      decoder = load_model('{}/decoder.h5'.format(output_folder))
+    else:
+      latent  = load_model('{}/encoder_{}.h5'.format(output_folder, epoch))
+      encoder = load_model('{}/va_encoder_{}.h5'.format(output_folder, epoch))
+      decoder = load_model('{}/decoder_{}.h5'.format(output_folder, epoch))
+
     input_shape = (latent.layers[0].input.shape[1], latent.layers[0].input.shape[2], latent.layers[0].input.shape[3])
     latent_dim  = m.layers[-1].output.shape[1]
     vae = cls(input_shape, latent_dim)

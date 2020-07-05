@@ -162,7 +162,7 @@ def train_type(version_tag, input_folder, output_folder, params, batch, epoch, s
     plt.close()
 
 
-def train_silence(version_tag, input_folder, output_folder, params, encoder_file, batch, epoch):
+def train_silence(version_tag, input_folder, output_folder, params, batch, epoch):
     """
     Train a silence dectector on top of an encoder
 
@@ -170,7 +170,6 @@ def train_silence(version_tag, input_folder, output_folder, params, encoder_file
     :param input_folder: the folder with the training data
     :param output_folder: the folder to save the model
     :param params: window parameters
-    :param encoder_file: a saved encoder
     :param batch: batch size
     :param epochs: number of training epochs
     """
@@ -440,10 +439,10 @@ if __name__== "__main__":
         output       = c['output']
         transfer     = c['transfer']
         freeze       = c['freeze'] 
-        train_auto_encoder(version, unsupervised, output, params, latent, batch, epochs)
-        evaluate_encoder(version, unsupervised, output, params, viz_k)
-        train_silence(version, silence, output, params, batch, epochs_sup, latent, freeze, transfer)
-        train_type(version, type_class, output, params, batch, epochs_sup, latent, freeze, transfer)
+        #train_auto_encoder(version, unsupervised, output, params, latent, batch, epochs)
+        #evaluate_encoder(version, unsupervised, output, params, viz_k)
+        train_silence(version, silence, output, params, batch, epochs_sup)
+        train_type(version, type_class, output, params, batch, epochs_sup)
         test_reconstruction(reconstruct, output, params)
     elif len(sys.argv) == 3 and sys.argv[1] == 'induction':
         c = yaml.load(open(sys.argv[2]))

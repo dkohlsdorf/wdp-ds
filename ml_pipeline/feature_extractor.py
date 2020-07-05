@@ -8,9 +8,9 @@ from tensorflow.keras.models import *
 from tensorflow.keras.optimizers import * 
 from tensorflow.keras.losses import * 
 
-
-KERNEL_SIZE = (8, 8)
-N_FILTERS   = 1024
+CONV_STRIDE = 16
+KERNEL_SIZE = (8, 32)
+N_FILTERS   = 256
 
 
 def encoder(in_shape, latent_dim):
@@ -26,8 +26,8 @@ def encoder(in_shape, latent_dim):
     """
     dft_dim = in_shape[1]
     inp = Input(in_shape)
-    loc = Conv2D(N_FILTERS, kernel_size=KERNEL_SIZE, activation='relu', padding='same')(inp) # Shape (Time, DFT, Filters)
-    loc = MaxPool2D(pool_size=(1, dft_dim))(loc) # Pool in time (Time, DFT, Filters) -> (Time, 1, Filters)
+    loc = Conv2D(N_FILTERS, strides = (1, CONV_STRIDE), kernel_size=KERNEL_SIZE, activation='relu', padding='same')(inp) # Shape (Time, DFT, Filters)
+    loc = MaxPool2D(pool_size=(1, dft_dim/CONV_STRIDE))(loc) # Pool in time (Time, DFT, Filters) -> (Time, 1, Filters)
     loc = Reshape((in_shape[0], N_FILTERS))(loc) # Reshape for temporal model (Time, 1, Filters)  -> (Time, Filters)
     x   = BatchNormalization()(loc)
     x   = Bidirectional(LSTM(latent_dim, return_sequences=True))(x)

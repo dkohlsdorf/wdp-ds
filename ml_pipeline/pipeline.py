@@ -1,6 +1,6 @@
 import sys
 import yaml
-
+import glob
 import numpy as np
 import subprocess  
 import os
@@ -314,7 +314,7 @@ def write_audio(out, cluster_id, instances_clusters, grouped_by_cluster, min_sup
         log.info("Done: {}".format(cluster_id))
 
 
-def sequence_clustering(inp, out, embedder, min_support=1, n_writers=10, max_instances=None):    
+def sequence_clustering(inp, out, embedder, min_support=1, n_writers=10, max_instances=None, write_audio=True, max_dist=0.25, paa=5, sax=6):    
     """
     Hierarchical cluster connected regions of whistles and bursts
     """
@@ -332,7 +332,7 @@ def sequence_clustering(inp, out, embedder, min_support=1, n_writers=10, max_ins
                 inducer = TypeExtraction.from_audiofile(in_path, embedder)
                 inducer.save(out_path, append=True)
     
-    clusters = hierarchical_clustering(out, max_instances=max_instances)
+    clusters, last_ll = hierarchical_clustering(out, max_instances=max_instances)
     grouped_by_filename = {}
     grouped_by_cluster  = {}
     i = 0
@@ -357,9 +357,10 @@ def sequence_clustering(inp, out, embedder, min_support=1, n_writers=10, max_ins
             for r in regions:
                 instances_clusters[c] += 1
     log.info('Done Clustering')
-    with mp.Pool(processes=n_writers) as pool:
-        pool.starmap(write_audio, ((out, cluster_id, instances_clusters, grouped_by_cluster, min_support, 500) for cluster_id in range(0, k)))
-    log.info('Done Writing')
+    if write_audio: 
+        with mp.Pool(processes=n_writers) as pool:
+            pool.starmap(write_audio, ((out, cluster_id, instances_clusters, grouped_by_cluster, min_support, 500) for cluster_id in range(0, k)))
+        log.info('Done Writing')
     
     for f, regions in grouped_by_filename.items():
         filename = f.split(".")[0].split("/")[-1]
@@ -371,6 +372,7 @@ def sequence_clustering(inp, out, embedder, min_support=1, n_writers=10, max_ins
                 if instances_clusters[c] >= min_support:
                     fp.write("{},{},{},{},{},{}\n".format(start, stop, f, c, t, i))
     log.info('Done Logs')
+    return last_ll
 
         
 def generate_dataset(work_folder, annotations, out):
@@ -398,28 +400,23 @@ def generate_dataset(work_folder, annotations, out):
                 i += 1
 
                 
-def classes_to_cluster_matrix(working_folder):
-    labels   = []
-    clusters = []        
-    for filename in tf.io.gfile.listdir(working_folder):
-        if filename.startswith('seq_clustering_log'):
-            path = "{}/{}".format(working_folder, filename) 
-            df = pd.read_csv(path)         
-            for i, row in df.iterrows():
-                label   = re.sub(r"[0-9]*.aiff", "", row['file'].split("/")[-1].split('_')[0])
-                cluster = row['cluster']
-                labels.append(label)
-                clusters.append(cluster)
-    label_ids   = [(l, i) for i, l in enumerate(list(set(labels)))]
-    cluster_ids = [(c, i) for i, c in enumerate(list(set(clusters)))]
-    label_dict   = dict(label_ids)
-    cluster_dict = dict(cluster_ids)
-    print("#labels: {} / #clusters: {}".format(len(label_dict), len(cluster_dict)))
-    confusion   = np.zeros(( len(label_dict), len(cluster_dict)), dtype=np.int32)
-    for l, c in zip(labels, clusters):
-        confusion[label_dict[l]][cluster_dict[c]] += 1
-    plot_result_matrix(confusion, [l for l, _ in label_ids], [c for c, _ in cluster_ids], "Cluster Assignment")
-    plt.savefig('{}/cluster_assignment.png'.format(working_folder))
+def autotune(input_folder, working_folder, embedder):
+    with open('auto_tuning.csv', 'w') as fp:
+        fp.write('distance, paa, sax, accuracy, log_likelihood\n')
+        for dist_i in range(0, 100):
+            dist_th = (dist_i + 1) / 20
+            for paa_i in range(2, 10):
+                for sax_i in range(2, 50):
+                    last_ll = sequence_clustering(input_folder, working_folder, embedder, write_audio=False, max_dist=dist_th, paa=paa_i, sax=sax_i)
+                    acc = label_clusters(output)
+                    fp.write('{}, {}, {}, {}, {}\n'.format(dist_th, paa_i, sax_i, acc, last_ll))
+                    fp.flush()
+                    file_list = glob.glob('{}/seq_clustering_log*.csv'.format(working_folder))
+                    for fp in file_list:
+                        try:
+                            os.remove(fp)
+                        except:
+                            print("Error while deleting file : ", filePath)
 
 
 def header():
@@ -509,5 +506,4 @@ if __name__== "__main__":
         output       = c['output']
         enc             = load_model("{}/encoder.h5".format(output))
         embedder        = SequenceEmbedder(enc, params)
-        sequence_clustering(inputs, output, embedder)
-        classes_to_cluster_matrix(output)
+        autotune(inputs, output, embedder)

@@ -232,14 +232,13 @@ def train_auto_encoder(version_tag, input_folder, output_folder, params, latent,
     model.save(output_folder)
 
 
-def evaluate_encoder(version_tag, input_folder, output_folder, encoder_file, params, k):
+def evaluate_encoder(version_tag, input_folder, output_folder, params, k):
     """
     Evaluate an encoder for feature embedding
 
     :param version_tag: basically the model name
     :param input_folder: the folder with the data to embed
     :param output_folder: the folder to save the plots
-    :param encoder_file: a saved encoder
     :param params: window parameters
     :param k: number of clusters
     """

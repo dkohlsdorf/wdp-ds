@@ -39,7 +39,7 @@ class FeatureVAE(Model):
     encoder = load_model('{}/va_encoder.h5'.format(output_folder))
     decoder = load_model('{}/decoder.h5'.format(output_folder))
     input_shape = (latent.layers[0].input.shape[1], latent.layers[0].input.shape[2], latent.layers[0].input.shape[3])
-    latent_dim  = m.layers[-1].output.shape[1]
+    latent_dim  = latent.layers[-1].output.shape[1]
     vae = cls(input_shape, latent_dim)
     vae.latent  = latent
     vae.encoder = encoder

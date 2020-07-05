@@ -401,6 +401,12 @@ def generate_dataset(work_folder, annotations, out):
 
                 
 def autotune(input_folder, working_folder, embedder):
+    '''
+    If we have labeled data we label each cluster by the majority of labels in it.
+    Auto tuning for the maximum distance during hierarchical clustering, the paa compression factor
+    and the sax quantization factor can then be tuned against the greedy mixture learning likelihood or
+    the labeled accuracy.
+    '''
     with open('auto_tuning.csv', 'w') as fp:
         fp.write('distance, paa, sax, accuracy, log_likelihood\n')
         for dist_i in range(0, 100):
@@ -412,11 +418,11 @@ def autotune(input_folder, working_folder, embedder):
                     fp.write('{}, {}, {}, {}, {}\n'.format(dist_th, paa_i, sax_i, acc, last_ll))
                     fp.flush()
                     file_list = glob.glob('{}/seq_clustering_log*.csv'.format(working_folder))
-                    for fp in file_list:
+                    for file_path in file_list:
                         try:
-                            os.remove(fp)
+                            os.remove(file_path)
                         except:
-                            print("Error while deleting file : ", filePath)
+                            print("Error while deleting file : ", file_path)
 
 
 def header():

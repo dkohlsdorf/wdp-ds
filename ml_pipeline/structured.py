@@ -448,6 +448,15 @@ def hierarchical_clustering(
 
 
 def label_clusters(result_folder):
+    '''
+    Compute the accuracy for the result folder.
+    For each cluster assignment, get the label from the
+    filename the cluster was found in, then compute the
+    accuracy for each cluster by majority vote.
+
+    :result_folder: folder with clustering results 
+    :returns: accuracy
+    '''
     clusters = []
     labels   = []
     for filename in tf.io.gfile.listdir(result_folder):        
@@ -477,13 +486,11 @@ def label_clusters(result_folder):
                 max_label = l
         cluster_assignment[c] = max_label
     
-    confusion_label = np.zeros(( len(label_dict), len(label_dict)), dtype=np.int32)
     correct = 0.0
     total   = 0.0 
     for l, c in zip(labels, clusters):
         true = label_dict[l]
         predicted = cluster_assignment[cluster_dict[c]]
-        confusion_label[true][predicted] += 1
         if true == predicted:
             correct += 1
         total += 1

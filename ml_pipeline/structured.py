@@ -455,7 +455,7 @@ def label_clusters(result_folder):
     accuracy for each cluster by majority vote.
 
     :result_folder: folder with clustering results 
-    :returns: accuracy
+    :returns: accuracy and segmentation factor
     '''
     clusters = []
     labels   = []
@@ -472,7 +472,7 @@ def label_clusters(result_folder):
     cluster_ids = [(c, i) for i, c in enumerate(list(set(clusters)))]
     label_dict   = dict(label_ids)
     cluster_dict = dict(cluster_ids)
-
+    segmentation_factor = len(label_dict) / len(cluster_dict)
     confusion   = np.zeros(( len(label_dict), len(cluster_dict)), dtype=np.int32)
     for l, c in zip(labels, clusters):
         confusion[label_dict[l]][cluster_dict[c]] += 1
@@ -495,7 +495,7 @@ def label_clusters(result_folder):
             correct += 1
         total += 1
     acc = correct / total
-    return acc
+    return acc, segmentation_factor
 
 
 def annotate_clustering(work_folder, annotations):

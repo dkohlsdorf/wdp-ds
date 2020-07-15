@@ -411,7 +411,7 @@ def autotune(input_folder, working_folder, embedder):
         fp.write('distance, paa, sax, accuracy, log_likelihood, segmentation_factor\n')
         for dist_i in range(1, 100):
             dist_th = (dist_i + 1) / 20
-            for paa_i in range(1, 4):
+            for paa_i in range(1, 8):
                 for sax_i in range(2, 15):
                     last_ll = sequence_clustering(input_folder, working_folder, embedder, write_audio=False, max_dist=dist_th, paa=paa_i, sax=sax_i)
                     acc, segmentation_factor = label_clusters(output)

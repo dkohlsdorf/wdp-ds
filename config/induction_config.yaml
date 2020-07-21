@@ -2,7 +2,7 @@ spec_win     : 64
 spec_step    : 16
 fft_win      : 512
 fft_step     : 64
-highpass     : 25
+highpass     : 0
 output       : 'models/v4_lstm_v1/'
 input        : 'gs://wdp-ds-data/dolphin_ogg'
 version      : "v4.0"

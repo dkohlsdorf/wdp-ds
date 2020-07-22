@@ -349,8 +349,8 @@ def hierarchical_clustering(
     min_instances = 1,
     min_th=2, 
     max_th=2500, 
-    paa = 5, 
-    sax = 6,
+    paa = 5,  
+    sax = 6,  
     processes = 10,
     max_instances=None
 ):
@@ -444,7 +444,58 @@ def hierarchical_clustering(
     pkl.dump(models, open('{}/hmms.pkl'.format(annotation_path), 'wb'))
     cluster_regions = [(start, stop, f, t, c) for c, (start, stop, f, t, _) in zip(assignments_hmm, overlapping) if c >= 0]
     logstructure.info("Change in assignments DTW -> HMM: {}".format(hamming_distance(assignments, assignments_hmm)))
-    return cluster_regions
+    return cluster_regions, last_ll
+
+
+def label_clusters(result_folder):
+    '''
+    Compute the accuracy for the result folder.
+    For each cluster assignment, get the label from the
+    filename the cluster was found in, then compute the
+    accuracy for each cluster by majority vote.
+
+    :result_folder: folder with clustering results 
+    :returns: accuracy and segmentation factor
+    '''
+    clusters = []
+    labels   = []
+    for filename in tf.io.gfile.listdir(result_folder):        
+        if filename.startswith('seq_clustering'):
+            df = pd.read_csv('{}/{}'.format(result_folder, filename))
+            df = df[['file', 'cluster']]
+            for _, row in df.iterrows():
+                label   = re.sub('[0-9]+\.[a-z]+', '', row['file'].split('/')[-1])
+                cluster = row['cluster']
+                clusters.append(cluster)
+                labels.append(label) 
+    label_ids   = [(l, i) for i, l in enumerate(list(set(labels)))]
+    cluster_ids = [(c, i) for i, c in enumerate(list(set(clusters)))]
+    label_dict   = dict(label_ids)
+    cluster_dict = dict(cluster_ids)
+    segmentation_factor = len(label_dict) / len(cluster_dict)
+    confusion   = np.zeros(( len(label_dict), len(cluster_dict)), dtype=np.int32)
+    for l, c in zip(labels, clusters):
+        confusion[label_dict[l]][cluster_dict[c]] += 1
+    cluster_assignment = np.zeros(int(max(cluster_dict.values()) + 1), dtype=np.int32)
+    for c in range(int(max(cluster_dict.values())) + 1):
+        max_label = 0
+        max_count = 0
+        for l in range(int(max(label_dict.values())) + 1):
+            if confusion[l][c] > max_count:
+                max_count = confusion[l][c]
+                max_label = l
+        cluster_assignment[c] = max_label
+    
+    correct = 0.0
+    total   = 0.0 
+    for l, c in zip(labels, clusters):
+        true = label_dict[l]
+        predicted = cluster_assignment[cluster_dict[c]]
+        if true == predicted:
+            correct += 1
+        total += 1
+    acc = correct / total
+    return acc, segmentation_factor
 
 
 def annotate_clustering(work_folder, annotations):

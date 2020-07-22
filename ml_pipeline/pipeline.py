@@ -407,7 +407,7 @@ def autotune(input_folder, working_folder, embedder):
     and the sax quantization factor can then be tuned against the greedy mixture learning likelihood or
     the labeled accuracy.
     '''
-    with open('auto_tuning.csv', 'a') as fp:
+    with open('{}/auto_tuning.csv'.format(working_folder), 'a') as fp:
         fp.write('distance, paa, sax, accuracy, log_likelihood, segmentation_factor\n')
         for dist_i in range(1, 100):
             dist_th = (dist_i + 1) / 20
@@ -423,6 +423,7 @@ def autotune(input_folder, working_folder, embedder):
                             os.remove(file_path)
                         except:
                             print("Error while deleting file : ", file_path)
+    plot_autotuning(working_folder, "auto_tuning.csv")
 
 
 def header():

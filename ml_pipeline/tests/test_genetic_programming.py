@@ -35,6 +35,7 @@ class GeneticProgrammingTest(unittest.TestCase):
         e, s, l = evolve(examples, labels, cost)
         x = [(tree, score, label) for tree, score, label in zip(e, s, l)]
         x.sort(key=lambda x: -x[1])
-        df = pd.DataFrame(data=[[e, s, l] for e, s, l in x[0:2]], columns=["expression", "score", "label"])
+        df = pd.DataFrame(data=[[e, s, l] for e, s, l in x[0:10]], columns=["expression", "score", "label"])
+        print(df.head())
         self.assertTrue(str(df['expression'][0]) ==  "(0)+(1)+" or str(df['expression'][0]) ==  "1(0)+1")
         self.assertTrue(str(df['expression'][1]) ==  "(0)+(1)+" or str(df['expression'][1]) ==  "1(0)+1")

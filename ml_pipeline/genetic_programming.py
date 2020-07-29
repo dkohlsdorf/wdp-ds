@@ -8,6 +8,8 @@ logging.basicConfig()
 log = logging.getLogger('gp')
 log.setLevel(logging.INFO)
 
+import multiprocessing as mp
+
 AND_SYMBOL    = -1
 OR_SYMBOL     = -2
 DONT_CARE     = -3
@@ -283,7 +285,7 @@ def dedup(expressions):
     return deduplicated
 
 
-def evolve(examples, labels, cost, n_labels = 2, symbols=[0, 1, DONT_CARE], epochs=25, n_candidates=128, pop_size=1024):
+def evolve(examples, labels, cost, n_labels = 2, symbols=[0, 1, DONT_CARE], epochs=25, n_candidates=128, pop_size=1024, n_jobs=10):
     '''
     Evolve regular expression to match labeled strings.
     
@@ -295,10 +297,13 @@ def evolve(examples, labels, cost, n_labels = 2, symbols=[0, 1, DONT_CARE], epoc
     :param epochs: how many iterations do we use
     :param n_candidates: number of candidates selected for mutation / crossover
     :param pop_size: the total population size
+    :param n_jobs: number of worker jobs
     :returns: `pop_size` many solutions ranked by the score
     '''
     expressions   = [RegexpNode.from_string(example) for example in examples]
-    scores_labels = [score(expression, examples, labels, cost, n_labels) for expression in expressions] 
+    with mp.Pool(processes=n_jobs) as pool:
+        scores_labels = pool.starmap(score, ((expression, examples, labels, cost, n_labels) for expression in expressions))
+        
     scores        = [s for s, _ in scores_labels]
     labeling      = [l for _, l in scores_labels]
                         
@@ -317,7 +322,8 @@ def evolve(examples, labels, cost, n_labels = 2, symbols=[0, 1, DONT_CARE], epoc
     
         # Rescore the offspring together with the parents and select the top population, discard the rest
         expressions = dedup(expressions + mutants + children)    
-        scores_labels = [score(expression, examples, labels, cost, n_labels) for expression in expressions] 
+        with mp.Pool(processes=n_jobs) as pool:
+            scores_labels = pool.starmap(score, ((expression, examples, labels, cost, n_labels) for expression in expressions))
         scores        = [s for s, _ in scores_labels]
         labeling      = [l for _, l in scores_labels]
         result        = [(e, s, l) for e, s, l in zip(expressions, scores, labeling)]

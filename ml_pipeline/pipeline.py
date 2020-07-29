@@ -435,7 +435,6 @@ def header():
     usage for training:      python ml_pipeline/pipeline.py train config/default_config.yaml 
     usage for induction:     python ml_pipeline/pipeline.py induction config/induction_config.yaml 
     usage for annotation:    python ml_pipeline/pipeline.py annotate config/annotation.yaml
-    usage for word spotting: python ml_pipeline/pipeline.py simplified config/word_spotting.yaml
     usage for auto tuning:   python ml_pipeline/pipeline.py autotune config/auto_tuning.yaml
 
     by Daniel Kyu Hwa Kohlsdorf
@@ -462,10 +461,10 @@ if __name__== "__main__":
         output       = c['output']
         transfer     = c['transfer']
         freeze       = c['freeze'] 
-        #train_auto_encoder(version, unsupervised, output, params, latent, batch, epochs)
-        #evaluate_encoder(version, unsupervised, output, "{}/encoder.h5".format(output), params, viz_k)
-        #train_silence(version, silence, output, params, "{}/encoder.h5".format(output), batch, epochs_sup, latent, freeze, transfer)
-        #train_type(version, type_class, output, params, "{}/encoder.h5".format(output), batch, epochs_sup, latent, freeze, transfer)
+        train_auto_encoder(version, unsupervised, output, params, latent, batch, epochs)
+        evaluate_encoder(version, unsupervised, output, "{}/encoder.h5".format(output), params, viz_k)
+        train_silence(version, silence, output, params, "{}/encoder.h5".format(output), batch, epochs_sup, latent, freeze, transfer)
+        train_type(version, type_class, output, params, "{}/encoder.h5".format(output), batch, epochs_sup, latent, freeze, transfer)
         test_reconstruction(reconstruct, output, params)
     elif len(sys.argv) == 3 and sys.argv[1] == 'induction':
         c = yaml.load(open(sys.argv[2]))
@@ -487,26 +486,6 @@ if __name__== "__main__":
         annotations  = c['annotations'] 
         out          = c['out']
         generate_dataset(work_folder, annotations, out)
-    elif len(sys.argv) == 3 and sys.argv[1] == 'simplified':        
-        c = yaml.load(open(sys.argv[2]))
-        print("Parameters: {}".format(c))
-        params       = WindowParams(c['spec_win'], c['spec_step'], c['fft_win'], c['fft_step'], c['highpass'])
-        latent       = c['latent']
-        batch        = c['batch']
-        version      = c['version']
-        epochs       = c['epochs']
-        epochs_sup   = c['epochs_sup']
-        viz_k        = c['viz_k']
-        unsupervised = c['unsupervised']
-        reconstruct  = unsupervised
-        output       = c['output']
-        train_auto_encoder(version, unsupervised, output, params, latent, batch, epochs)
-        evaluate_encoder(version, unsupervised, output, "{}/encoder.h5".format(output), params, viz_k)
-        test_reconstruction(reconstruct, output, params)
-        enc          = load_model("{}/encoder.h5".format(output))
-        embedder     = SequenceEmbedder(enc, params)
-        sequence_clustering(unsupervised, output, embedder)
-        clustering_usage(output)
     elif len(sys.argv) == 3 and sys.argv[1] == 'autotune':        
         c = yaml.load(open(sys.argv[2]))
         params       = WindowParams(c['spec_win'], c['spec_step'], c['fft_win'], c['fft_step'], c['highpass'])

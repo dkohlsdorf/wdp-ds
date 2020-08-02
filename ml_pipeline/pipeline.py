@@ -178,7 +178,8 @@ def train_silence(version_tag, input_folder, output_folder, params, encoder_file
     :param batch: batch size
     :param epochs: number of training epochs
     """
-    log.info("Training Silence Detector: {} {}".format(version_tag, epoch))
+    
+    log.info("Training Silence Detector: {} {} {}".format(version_tag, epoch, subsample))
     if transfer:
         enc = load_model(encoder_file)
     else:
@@ -464,7 +465,7 @@ if __name__== "__main__":
         freeze       = c['freeze'] 
         train_auto_encoder(version, unsupervised, output, params, latent, batch, epochs)
         evaluate_encoder(version, unsupervised, output, "{}/encoder.h5".format(output), params, viz_k)
-        train_silence(version, silence, output, params, "{}/encoder.h5".format(output), batch, epochs_sup, latent, freeze, transfer)
+        train_silence(version, silence, output, params, "{}/encoder.h5".format(output), batch, epochs_sup, latent, freeze, transfer=transfer)
         train_type(version, type_class, output, params, "{}/encoder.h5".format(output), batch, epochs_sup, latent, freeze, transfer)
         test_reconstruction(reconstruct, output, params)
     elif len(sys.argv) == 3 and sys.argv[1] == 'induction':

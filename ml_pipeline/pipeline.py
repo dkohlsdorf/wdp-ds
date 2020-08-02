@@ -316,7 +316,7 @@ def write_audio(out, cluster_id, instances_clusters, grouped_by_cluster, min_sup
         log.info("Done: {}".format(cluster_id))
 
 
-def sequence_clustering(inp, out, embedder, min_support=1, n_writers=10, max_instances=None, do_write_audio=True, max_dist=0.65, paa=4, sax=3):    
+def sequence_clustering(inp, out, embedder, min_support=1, n_writers=10, max_instances=None, do_write_audio=True, max_dist=0.8, paa=4, sax=3):    
     """
     Hierarchical cluster connected regions of whistles and bursts
     """
@@ -415,7 +415,7 @@ def autotune(input_folder, working_folder, embedder):
             dist_th = (dist_i + 1) / 20
             for paa_i in range(1, 8):
                 for sax_i in range(2, 15):
-                    last_ll = sequence_clustering(input_folder, working_folder, embedder, write_audio=False, max_dist=dist_th, paa=paa_i, sax=sax_i)
+                    last_ll = sequence_clustering(input_folder, working_folder, embedder, do_write_audio=False, max_dist=dist_th, paa=paa_i, sax=sax_i)
                     acc, segmentation_factor = label_clusters(output)
                     fp.write('{}, {}, {}, {}, {}, {}\n'.format(dist_th, paa_i, sax_i, acc, last_ll, segmentation_factor))
                     fp.flush()
@@ -489,7 +489,7 @@ if __name__== "__main__":
     elif len(sys.argv) == 3 and sys.argv[1] == 'autotune':        
         c = yaml.load(open(sys.argv[2]))
         params       = WindowParams(c['spec_win'], c['spec_step'], c['fft_win'], c['fft_step'], c['highpass'])
-        inputs       = c['inputs']
+        inputs       = c['input']
         output       = c['output']
         enc             = load_model("{}/encoder.h5".format(output))
         embedder        = SequenceEmbedder(enc, params)

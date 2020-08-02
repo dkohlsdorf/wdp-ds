@@ -189,7 +189,7 @@ def process_dtw(assignment, overlapping, max_dist):
     return [], []
 
 
-def make_hmm(cluster, assignment, overlapping, min_len = 6, max_train=25):
+def make_hmm(cluster, assignment, overlapping, min_len = 6, max_train=10):
     """
     Learn a 8 state Hidden Markov Model with 2 skip states.
     Initialization is performed from using flat start (mean and variances equal for all states)
@@ -205,8 +205,8 @@ def make_hmm(cluster, assignment, overlapping, min_len = 6, max_train=25):
     if frames > min_len:        
         logstructure.info("MkModel: {}".format("cluster"))
         logstructure.info("\t {} instances".format(len(x_label)))
-        l = 0.9
-        s = 0.1
+        l = 0.1
+        s = 0.9
         trans_mat = DenseMarkovChain.from_probs([[s,  l/3, 0.0, 0.0, l/3, 0.0, 0.0, l/3],
                                                  [0.0,   s,  l, 0.0, 0.0, 0.0, 0.0, 0.0],
                                                  [0.0, 0.0,  s,   l, 0.0, 0.0, 0.0, 0.0],
@@ -331,7 +331,7 @@ def greedy_mixture_learning(sequences, hmms, n_processes):
         mixture_scores.append(max_hypothesis_ll)
 
     # find knee in the curve
-    kneedle = KneeLocator(np.arange(0, len(mixture_scores)), mixture_scores, S=5.0, curve='concave', direction='increasing')
+    kneedle = KneeLocator(np.arange(0, len(mixture_scores)), mixture_scores, S=1.0, curve='concave', direction='increasing')
     print("Knee In Curve: {} {}".format(kneedle.knee, kneedle.elbow))
     knee = kneedle.knee
     kneedle.plot_knee()
@@ -346,8 +346,8 @@ def greedy_mixture_learning(sequences, hmms, n_processes):
 def hierarchical_clustering(
     annotation_path,
     max_dist = 0.25, 
-    min_instances = 1,
-    min_th=2, 
+    min_instances = 4,
+    min_th=8, 
     max_th=2500, 
     paa = 5,  
     sax = 6,  

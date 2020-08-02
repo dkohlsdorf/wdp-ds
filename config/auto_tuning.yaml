@@ -5,9 +5,10 @@ fft_step     : 64
 highpass     : 0
 latent       : 32 
 batch        : 10
-version      : "v3.0"
+version      : "v4.0"
 epochs       : 5
 epochs_sup   : 10
 viz_k        : 100
 inputs       : 'data/signature_whistles/'
 output       : 'models/auto_tuning/'
+

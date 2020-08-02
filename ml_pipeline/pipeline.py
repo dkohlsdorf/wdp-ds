@@ -166,7 +166,7 @@ def train_type(version_tag, input_folder, output_folder, params, encoder_file, b
     plt.close()
 
 
-def train_silence(version_tag, input_folder, output_folder, params, encoder_file, batch, epoch, latent, freeze, transfer=True):
+def train_silence(version_tag, input_folder, output_folder, params, encoder_file, batch, epoch, latent, freeze, subsample = {0:0.85, 1: 0.0}, transfer=True):
     """
     Train a silence dectector on top of an encoder
 
@@ -191,12 +191,13 @@ def train_silence(version_tag, input_folder, output_folder, params, encoder_file
     y_train = []
     y_test = []
     for (x, y, f, _, _) in dataset(input_folder, params, sil, True):
-        if np.random.uniform() > 0.6:
-            x_test.append(x)
-            y_test.append(y)
-        else:
-            x_train.append(x.reshape(x.shape[0], x.shape[1], 1))
-            y_train.append(y)
+        if np.random.uniform() > subsample[int(y)]:
+            if np.random.uniform() > 0.6:
+                x_test.append(x)
+                y_test.append(y)
+            else:
+                x_train.append(x.reshape(x.shape[0], x.shape[1], 1))
+                y_train.append(y)
     x_train = np.stack(x_train)
     y_train = np.stack(y_train) 
     cls_sil.fit(x=x_train, y=y_train, batch_size=5, epochs=epoch)
@@ -211,7 +212,7 @@ def train_silence(version_tag, input_folder, output_folder, params, encoder_file
     accuracy = np.sum(confusion * np.eye(2)) / np.sum(confusion)
     log.info(accuracy)
     log.info(confusion)
-    plot_confusion_matrix(confusion, ["noise", "dolphin"], 'Noise Classification')
+    plot_confusion_matrix(confusion, ["dolphin", "noise"], 'Noise Classification')
     plt.savefig('{}/confusion.png'.format(output_folder))
     plt.close()
 
@@ -315,7 +316,7 @@ def write_audio(out, cluster_id, instances_clusters, grouped_by_cluster, min_sup
         log.info("Done: {}".format(cluster_id))
 
 
-def sequence_clustering(inp, out, embedder, min_support=1, n_writers=10, max_instances=None, write_audio=True, max_dist=0.25, paa=5, sax=6):    
+def sequence_clustering(inp, out, embedder, min_support=1, n_writers=10, max_instances=None, do_write_audio=True, max_dist=0.65, paa=4, sax=3):    
     """
     Hierarchical cluster connected regions of whistles and bursts
     """
@@ -333,7 +334,7 @@ def sequence_clustering(inp, out, embedder, min_support=1, n_writers=10, max_ins
                 inducer = TypeExtraction.from_audiofile(in_path, embedder)
                 inducer.save(out_path, append=True)
     
-    clusters, last_ll = hierarchical_clustering(out, max_instances=max_instances)
+    clusters, last_ll = hierarchical_clustering(out, max_instances=max_instances, max_dist = max_dist, paa = paa, sax = sax)
     grouped_by_filename = {}
     grouped_by_cluster  = {}
     i = 0
@@ -358,7 +359,7 @@ def sequence_clustering(inp, out, embedder, min_support=1, n_writers=10, max_ins
             for r in regions:
                 instances_clusters[c] += 1
     log.info('Done Clustering')
-    if write_audio: 
+    if do_write_audio: 
         with mp.Pool(processes=n_writers) as pool:
             pool.starmap(write_audio, ((out, cluster_id, instances_clusters, grouped_by_cluster, min_support, 500) for cluster_id in range(0, k)))
         log.info('Done Writing')
@@ -472,7 +473,6 @@ if __name__== "__main__":
         params       = WindowParams(c['spec_win'], c['spec_step'], c['fft_win'], c['fft_step'], c['highpass'])
         inp          = c['input']
         output       = c['output'] 
-        enc_path     = c['encoding']
         enc             = load_model("{}/encoder.h5".format(output))
         silence         = load_model("{}/sil.h5".format(output))
         type_classifier = load_model("{}/type.h5".format(output))

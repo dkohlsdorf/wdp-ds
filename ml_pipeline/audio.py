@@ -4,8 +4,9 @@ import os
 import tensorflow as tf
 
 from health_checks import *
-
+import librosa
 import logging
+
 logging.basicConfig()
 logaudio = logging.getLogger('audio')
 logaudio.setLevel(logging.INFO)
@@ -180,7 +181,7 @@ def labeled_spectrogram_windows(filename, params, label_func, shuffle=False):
         yield (spectrogram, label, filename, start, stop)
 
 
-def spectrogram_windows(filename, params, shuffle=False):
+def spectrogram_windows(filename, params, shuffle=False, pcen=True):
     """
     Extract all spectrogram windows from an audio file.
     Also z-normalizes the spectrograms
@@ -205,12 +206,15 @@ def spectrogram_windows(filename, params, shuffle=False):
             dft_start = params.fft_win - params.n_fft_bins
             dft_stop  = params.fft_win
             spec  = spec[:, dft_start:dft_stop]
-            mu      = np.mean(spec)
-            sigma   = np.std(spec) + 1.0
-            yield ((spec - mu) / sigma, filename, start, stop)
+            if pcen:
+                yield (librosa.pcen(spec, gain=0.5, bias=5), filename, start, stop) 
+            else:
+                mu      = np.mean(spec)
+                sigma   = np.std(spec) + 1.0
+                yield ((spec - mu) / sigma, filename, start, stop)
+    
 
-
-def spectrogram_regions(filename, params, regions):
+def spectrogram_regions(filename, params, regions, pcen=True):
     """
     Spectrogram Region Extraction
 
@@ -228,10 +232,13 @@ def spectrogram_regions(filename, params, regions):
         dft_start = params.fft_win - params.n_fft_bins
         dft_stop  = params.fft_win
         spec  = spec[:, dft_start:dft_stop]
-        mu      = np.mean(spec)
-        sigma   = np.std(spec) + 1.0
-        yield (spec - mu) / sigma
-
+        if pcen:
+            yield librosa.pcen(spec, gain=0.5, bias=5)
+        else:
+            mu      = np.mean(spec)
+            sigma   = np.std(spec) + 1.0
+            yield (spec - mu) / sigma
+        
 
 def audio_snippets(snippets):
     """

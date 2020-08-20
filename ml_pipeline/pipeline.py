@@ -377,57 +377,6 @@ def sequence_clustering(inp, out, embedder, min_support=1, n_writers=10, max_ins
     log.info('Done Logs')
     return last_ll
 
-        
-def generate_dataset(work_folder, annotations, out):
-    """
-    Generate an annotated dataset from clustering result
-
-    :param work_folder: work folder
-    :param annotations: annotation file
-    :param out: output folder
-    """
-    log.info("Generate Dataset")
-    i = 0
-    for cluster, d in annotate_clustering(work_folder, annotations).items():
-        log.info("\t\t{}".format(cluster))
-        for filename, regions in d.items():
-            log.info("\t\t{}".format(filename))
-            r = [(start, stop) for start, stop, _ in regions]
-            a = [a for _, _, a in regions]
-            for annotation, audio_snippet in zip(a, audio_regions(filename, r)):
-                fp = "{}/{}_clustering_{}.wav".format(out, annotation, i)
-                log.info("\t\t{}".format(fp))
-                audio_bank = AudioSnippetCollection(fp)
-                audio_bank.write(audio_snippet)
-                audio_bank.close()
-                i += 1
-
-                
-def autotune(input_folder, working_folder, embedder):
-    '''
-    If we have labeled data we label each cluster by the majority of labels in it.
-    Auto tuning for the maximum distance during hierarchical clustering, the paa compression factor
-    and the sax quantization factor can then be tuned against the greedy mixture learning likelihood or
-    the labeled accuracy.
-    '''
-    with open('{}/auto_tuning.csv'.format(working_folder), 'a') as fp:
-        fp.write('distance, paa, sax, accuracy, log_likelihood, segmentation_factor\n')
-        for dist_i in range(1, 100):
-            dist_th = (dist_i + 1) / 20
-            for paa_i in range(1, 8):
-                for sax_i in range(2, 15):
-                    last_ll = sequence_clustering(input_folder, working_folder, embedder, do_write_audio=False, max_dist=dist_th, paa=paa_i, sax=sax_i)
-                    acc, segmentation_factor = label_clusters(output)
-                    fp.write('{}, {}, {}, {}, {}, {}\n'.format(dist_th, paa_i, sax_i, acc, last_ll, segmentation_factor))
-                    fp.flush()
-                    file_list = glob.glob('{}/seq_clustering_log*.csv'.format(working_folder))
-                    for file_path in file_list:
-                        try:
-                            os.remove(file_path)
-                        except:
-                            print("Error while deleting file : ", file_path)
-    plot_autotuning(working_folder, "auto_tuning.csv")
-
 
 def header():
     return """

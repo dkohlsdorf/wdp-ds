@@ -385,8 +385,6 @@ def header():
                 
     usage for training:      python ml_pipeline/pipeline.py train config/default_config.yaml 
     usage for induction:     python ml_pipeline/pipeline.py induction config/induction_config.yaml 
-    usage for annotation:    python ml_pipeline/pipeline.py annotate config/annotation.yaml
-    usage for auto tuning:   python ml_pipeline/pipeline.py autotune config/auto_tuning.yaml
 
     by Daniel Kyu Hwa Kohlsdorf
     =================================================================
@@ -430,17 +428,3 @@ if __name__== "__main__":
         sequence_clustering(inp, output, embedder)
         clustering_usage(output)
         log.info('Done !!!')
-    elif len(sys.argv) == 3 and sys.argv[1] == 'annotate':        
-        c = yaml.load(open(sys.argv[2]))
-        work_folder  = c['work_folder']
-        annotations  = c['annotations'] 
-        out          = c['out']
-        generate_dataset(work_folder, annotations, out)
-    elif len(sys.argv) == 3 and sys.argv[1] == 'autotune':        
-        c = yaml.load(open(sys.argv[2]))
-        params       = WindowParams(c['spec_win'], c['spec_step'], c['fft_win'], c['fft_step'], c['highpass'])
-        inputs       = c['input']
-        output       = c['output']
-        enc             = load_model("{}/encoder.h5".format(output))
-        embedder        = SequenceEmbedder(enc, params)
-        autotune(inputs, output, embedder)

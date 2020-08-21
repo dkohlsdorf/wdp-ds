@@ -30,7 +30,7 @@ class AudiofileParams(object):
             AudiofileParams.__instance.rate = rate
             AudiofileParams.__instance.dtype = dtype
             AudiofileParams.__instance.sample_width = sample_width
-        AudiofileParams.__instance.check_params(rate, dtype, sample_width)
+        #AudiofileParams.__instance.check_params(rate, dtype, sample_width)
         return AudiofileParams.__instance
 
     @classmethod

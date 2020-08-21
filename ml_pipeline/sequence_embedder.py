@@ -41,7 +41,7 @@ class SequenceEmbedder:
         self.param = param
         self.type_classifier = type_classifier
 
-    def embed(self, filename, batch_sze=10):
+    def embed(self, filename, batch_sze=1000):
         """
         Embeds non silent regions from a file
 

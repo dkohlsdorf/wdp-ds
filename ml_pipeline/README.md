@@ -8,4 +8,3 @@
 + `colors.txt`: the xkcd color scheme
 + `pipeline.py`: the training pipeline for silence detector and embedder including evaluation
 + `sequence_embedder.py`: apply the model to larger files
-+ `integration_test_audio.py`: testing audio reading and writing

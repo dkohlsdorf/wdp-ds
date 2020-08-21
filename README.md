@@ -23,4 +23,4 @@ The machine learning pipeline can be run in 4 modes:
 ```
 
 + training:   learn the auto encoder as well as the silence detector and type classifier 
-+ induction:  learn clustering using quantization, hierarchical clustering and hidden Markov models
+

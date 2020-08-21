@@ -26,7 +26,6 @@ from plots import *
 from sequence_embedder import *
 from audio_collection import *
 from audio import * 
-from structured import *
 
 
 def no_label(f,x):
@@ -447,7 +446,7 @@ if __name__== "__main__":
         silence      = c['sil']
         type_class   = c['type_class']
         unsupervised = c['unsupervised']
-        reconstruct  = c['reconstruct'] 
+        reconstruct  = c['unsupervised'] 
         output       = c['output']
         inp          = c['input']
         transfer     = c['transfer']
@@ -464,4 +463,4 @@ if __name__== "__main__":
         clusterer       = pkl.load(open('{}/clusterer.pkl', "rb"))
         
         embedder        = SequenceEmbedder(enc, params, silence, type_classifier, clusterer)
-        sequence_clustering(inp, output, embedder, min_support=1, n_writers=10, max_instances=None, do_write_audio=True, max_dist=0.5, paa=8, sax=15):    
+        sequence_clustering(inp, output, embedder, min_support=1, n_writers=10)    

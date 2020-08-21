@@ -1,8 +1,0 @@
-spec_win     : 128
-spec_step    : 64
-fft_win      : 512
-fft_step     : 64
-highpass     : 25
-version      : "v5.0"
-input        : 'data/signature_whistles/'
-output       : 'models/v5_lstm_v1/'

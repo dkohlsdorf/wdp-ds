@@ -1,35 +1,20 @@
 import numpy as np
 
 from audio import *
-
+from collections import namedtuple
 import logging
 logging.basicConfig()
 logembed = logging.getLogger('embedder')
 logembed.setLevel(logging.INFO)
 
 
-class DummyDetector:
-
-    def __init__(self, cls, binary = True):
-        self.cls = cls
-        self.binary = binary
-        
-    def predict(self, x):    
-        n = x.shape[1]
-        if self.binary:
-            return np.ones((n, 1)) * self.cls
-        else:
-            out = np.zeros((n, self.cls + 1))
-            out[:, self.cls] = 1.0
-            return out
-    
 class SequenceEmbedder:
     """
     Cut non silent spectrogram regions and embed them using our
     embedding model
     """
 
-    def __init__(self, encoder, param, silence_detector = DummyDetector(0), type_classifier = DummyDetector(2, False)):
+    def __init__(self, encoder, param, silence_detector, type_classifier, clusterer):
         """
         :param encoder: a keras model In (?, T, D, 1) out (?, Latent)
         :param silence_detector: a keras model In(?, T, D, 1) out (?, 1)
@@ -40,6 +25,8 @@ class SequenceEmbedder:
         self.silence_detector = silence_detector
         self.param = param
         self.type_classifier = type_classifier
+        self.clusterer = clusterer
+
 
     def embed(self, filename, batch_sze=1000):
         """
@@ -57,12 +44,68 @@ class SequenceEmbedder:
                 is_silence = self.silence_detector.predict(b)
                 types      = self.type_classifier.predict(b)                
                 embedding  = self.encoder.predict(b)
+                clustering = self.clusterer.predict(b)
                 for i in range(0, len(batch)):
                     if int(round(is_silence[i][0])) == 0:
-                        t = np.argmax(types[i])                    
+                        c         = clustering[i] 
+                        t         = np.argmax(types[i])                    
                         filename  = batch[i][1]
                         start     = batch[i][2]
-                        stop      = batch[i][3]                    
-                        regions.append((embedding[i, :], filename, start, stop, t))
+                        stop      = batch[i][3]            
+                        regions.append((embedding[i, :], filename, start, stop, t, c))
                 batch = []
         return regions
+
+
+class TypeExtraction(namedtuple("Induction", "clustering starts stops types files")):
+    """
+    Type annotations for dolphin communication   
+    """
+
+    @property
+    def len(self):
+        return len(self.starts)
+
+    def items(self):        
+        """
+        Iterate annotated tuples (filename, start, stop, type, embedding vector)
+        """
+        n = self.len
+        for i in range(n):
+            yield self.files[i], self.starts[i], self.stops[i], self.types[i], self.embeddings[i]
+
+    @classmethod
+    def from_audiofile(cls, path, embedder):
+        """
+        Construct type annotations from folder with audio files
+
+        :param folder: folder with audio files
+        :param embedder: a sequence embedder
+        :returns: type annotation
+        """
+        clustering = []
+        starts     = []
+        stops      = []
+        types      = []
+        files      = [] 
+        logstructure.info("- Working on embedding {}".format(path))
+        regions = embedder.embed(path)
+        logstructure.info("\t- found region {}".format(len(regions)))
+        for x, f, start, stop, t in regions:
+            clustering.append(x)
+            starts.append(start)
+            stops.append(stop)
+            types.append(t)
+            files.append(f)
+        return cls(clustering, starts, stops, types, files) 
+
+    def save(self, path, append=False):
+        mode = "w"
+        if append:
+            mode += "+"
+        with open(path, mode) as fp:
+            fp.write("filename\tstart\tstop\ttype\tcluster\n".format(filename, start, stop, t, c))
+            for filename, start, stop, t, c in self.items():
+                fp.write("{}\t{}\t{}\t{}\t{}\n".format(filename, start, stop, t, c))
+
+

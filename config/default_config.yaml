@@ -14,5 +14,6 @@ type_class   : 'data/classification'
 unsupervised : 'data/unsupervised'
 reconstruct  : 'data/reconstruction'
 output       : 'models/v6_lstm_v1/'
+input        : 'gs://wdp-ds-data/dolphin_ogg'
 transfer     : true
 freeze       : false

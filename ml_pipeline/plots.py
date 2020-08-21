@@ -7,7 +7,7 @@ import numpy as np
 
 from matplotlib.offsetbox import OffsetImage, AnnotationBbox
 
-from sklearn.cluster import KMeans
+from sklearn.cluster import OPTICS
 from sklearn.manifold.t_sne import TSNE
 from sklearn.metrics import silhouette_samples, silhouette_score
 
@@ -19,37 +19,6 @@ logplots.setLevel(logging.INFO)
 
 COLORS = list(
     pd.read_csv('ml_pipeline/colors.txt', sep='\t', header=None)[1])
-
-def clustering_usage(log_path):
-    """
-    Plot the cluster usage
-
-    :param log_path: path to work folder
-    """
-    n_clusters = {}
-    for filename in os.listdir(log_path):
-        if filename.startswith('seq_clustering_log'):
-            path = "{}/{}".format(log_path, filename) 
-            key  = filename.split('.')[0]
-            df = pd.read_csv(path)            
-            df = df.sort_values('start')
-            n_clusters[key] = list([row['cluster'] for _, row in df.iterrows()])
-    clusters = {}
-    for k, v in n_clusters.items():
-        for c in v:
-            if c in clusters:
-                clusters[c] += 1
-            else:
-                clusters[c]  = 1
-    clusters = sorted([(c, count) for c, count in clusters.items() if count > 3], key=lambda x: -x[1])
-    plt.figure(figsize=(30, 5))
-    plt.bar(np.arange(len(clusters)), [c for i, c in clusters])
-    plt.title('Cluster Usage')
-    plt.xticks(np.arange(len(clusters)), [str(i) for i, c in clusters], rotation=90)
-    plt.xlabel("clusters")
-    plt.ylabel("#occurance")
-    plt.savefig('{}/occurance.png'.format(log_path))
-    plt.show()
 
 
 def plot_result_matrix(confusion, classes, predictions, title, cmap=plt.cm.Blues):
@@ -151,7 +120,7 @@ def visualize_2dfilters(img_path, encoder, layers, n_rows = 8):
         plt.close()
         
             
-def visualize_embedding(img_path, embeddings, examples, k=240, figsize=(80, 60), zoom=0.15, sparse=False):
+def visualize_embedding(img_path, embeddings, examples, figsize=(80, 60), zoom=0.15, sparse=False):
     """
     Plot the examples in the embedding space projected to 2D using
     t-sne
@@ -165,9 +134,9 @@ def visualize_embedding(img_path, embeddings, examples, k=240, figsize=(80, 60),
     :param sparse: sparsify clusters by shillouette 
     :returns: clusters    
     """
-    km   = KMeans(n_clusters=k, max_iter=1024, n_jobs=-1)
     tsne = TSNE()
-    c = km.fit_predict(embeddings)
+    clustering = OPTICS(min_samples=2).fit(X)
+    c = clustering.fit_predict(embeddings)
     l = tsne.fit_transform(embeddings)
     if sparse:
         sample_silhouette_values = silhouette_samples(embeddings, c)
@@ -183,4 +152,4 @@ def visualize_embedding(img_path, embeddings, examples, k=240, figsize=(80, 60),
     imscatter([a[0] for a in l], [a[1] for a in l], c, examples, ax, zoom=zoom)
     plt.savefig(img_path)
     plt.close()
-    return c, km, ids
+    return clustering

@@ -8,9 +8,9 @@ from tensorflow.keras.models import *
 from tensorflow.keras.optimizers import * 
 from tensorflow.keras.losses import * 
 
-CONV_STRIDE = 1
+CONV_STRIDE = 4
 KERNEL_SIZE = (8, 8)
-N_FILTERS   = 512
+N_FILTERS   = 128
 
 
 def encoder(in_shape, latent_dim):

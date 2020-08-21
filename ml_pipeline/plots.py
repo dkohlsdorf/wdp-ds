@@ -20,31 +20,6 @@ logplots.setLevel(logging.INFO)
 COLORS = list(
     pd.read_csv('ml_pipeline/colors.txt', sep='\t', header=None)[1])
 
-
-def plot_autotuning(working_folder, filename): 
-    """
-    Plot the auto tuning results
-    :param filename: filename auto tuning
-    """
-    df = pd.read_csv("{}/{}".format(working_folder, filename), sep=', ')
-    y = df['accuracy']
-    x = df['log_likelihood']
-    z = ["{}, {}, {}".format(r['distance'], r['paa'],r['sax']) for i,r in df.iterrows()]
-
-    plt.figure(figsize=(80, 80))
-    plt.scatter(x, y)
-    for i in range(len(x)):
-        plt.annotate(z[i], # this is the text
-                    (x[i],y[i]), # this is the point to label
-                    textcoords="offset points", # how to position the text
-                    xytext=(0,10), # distance from text to points (x,y)
-                    ha='center') # horizontal alignment can be left, right or center
-    plt.title('Parameter sweep')
-    plt.xlabel('likelihood')
-    plt.ylabel('accuracy')
-    plt.savefig('{}/auto_tuning.png'.format(working_folder))
-
-
 def clustering_usage(log_path):
     """
     Plot the cluster usage

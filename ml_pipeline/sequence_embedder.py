@@ -41,7 +41,7 @@ class SequenceEmbedder:
         self.param = param
         self.type_classifier = type_classifier
 
-    def embed(self, filename):
+    def embed(self, filename, batch_sze=10):
         """
         Embeds non silent regions from a file
 
@@ -52,7 +52,7 @@ class SequenceEmbedder:
         regions = []
         for win in spectrogram_windows(filename, self.param):
             batch.append(win)
-            if len(batch) == 1:
+            if len(batch) == batch_sze:
                 b = np.stack([x[0].reshape(x[0].shape[0], x[0].shape[1], 1) for x in batch]) 
                 is_silence = self.silence_detector.predict(b)
                 types      = self.type_classifier.predict(b)                

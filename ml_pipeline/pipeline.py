@@ -317,6 +317,48 @@ def write_audio(out, cluster_id, instances_clusters, grouped_by_cluster, min_sup
         log.info("Done: {}".format(cluster_id))
 
 
+def n_gaps(starts, stops):
+    """
+    Number of gaps 
+
+    :param starts: start times
+    :param stops: stop times
+    :return: #(start[t] > stop[i - 1])
+    """
+    n = 0
+    for i in range(1, len(starts)):
+        if starts[i] > stops[i - 1]:
+            n += 1
+    return n
+
+
+def n_types(types):
+    """
+    The types found in a file
+
+    :param type: list of types
+    :return: array with counts
+    """
+    x = np.zeros(4)
+    for t in types:
+        x[t] += 1
+    return x
+
+
+def analysis(path):
+    """
+    Statistics about a file
+
+    :param path: path to file
+    """
+    header                = ["filename", "start", "stop", "type", "embedding"]
+    df                    = pd.read_csv(path, sep="\t", header = None, names=header)
+    starts = df['start']
+    stops  = df['stop']
+    types  = df['type']
+    log.info(" - gaps: {} type_dist: {}".format(n_gaps(starts, stops), n_types(types)))
+
+        
 def sequence_clustering(inp, out, embedder, min_support=1, n_writers=10, max_instances=None, do_write_audio=True, max_dist=0.5, paa=8, sax=15):    
     """
     Hierarchical cluster connected regions of whistles and bursts
@@ -334,7 +376,8 @@ def sequence_clustering(inp, out, embedder, min_support=1, n_writers=10, max_ins
             if not os.path.isfile(out_path):
                 inducer = TypeExtraction.from_audiofile(in_path, embedder)
                 inducer.save(out_path, append=True)
-    
+                analysis(out_path)
+                
     clusters, last_ll = hierarchical_clustering(out, max_instances=max_instances, max_dist = max_dist, paa = paa, sax = sax)
     grouped_by_filename = {}
     grouped_by_cluster  = {}

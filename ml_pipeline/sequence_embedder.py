@@ -62,8 +62,7 @@ class SequenceEmbedder:
                         t = np.argmax(types[i])                    
                         filename  = batch[i][1]
                         start     = batch[i][2]
-                        stop      = batch[i][3]
-                        logembed.info('- Found non silent region {} {}:{} extracting embedding of size {} / {} with [{}]'.format(filename, start / 48000, stop / 48000, embedding[i, :].shape, len(regions), t))
+                        stop      = batch[i][3]                    
                         regions.append((embedding[i, :], filename, start, stop, t))
                 batch = []
         return regions

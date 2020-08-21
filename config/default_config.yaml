@@ -6,7 +6,7 @@ highpass     : 25
 latent       : 64
 batch        : 100
 version      : "v6.0"
-epochs       : 15
+epochs       : 5
 epochs_sup   : 15
 viz_k        : 100
 sil          : 'data/classification_noise'
@@ -14,5 +14,6 @@ type_class   : 'data/classification'
 unsupervised : 'data/unsupervised'
 reconstruct  : 'data/reconstruction'
 output       : 'models/v6_lstm_v1/'
+input        : 'gs://wdp-ds-data/dolphin_ogg'
 transfer     : true
 freeze       : false

@@ -1,3 +1,0 @@
-work_folder: 'models/v3_lstm_v1'
-annotations: 'models/v3_lstm_v1/annotations.csv'
-out: 'data/clustering'

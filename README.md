@@ -9,34 +9,18 @@ and communicate the results with domain experts.
 + 1) `ml_pipeline`: Training and Evaluation of Machine Learning Models
 + 2) `config`: Config files to run pipeline
 
-
-## Setup
-You need to run the cython compiler for all cython parts of the library
-```
-    cythonize -if ml_pipeline/*.pyx
-```
-
-
 ## Dependencies
 + sklearn
 + tensorflow 2.0
 + numpy / scipy
 + pydub
-+ cython
-+ kneed
 + librosa
 
 ## Usage:
 The machine learning pipeline can be run in 4 modes:
 ```
     usage for training:      python ml_pipeline/pipeline.py train config/default_config.yaml
-    usage for induction:     python ml_pipeline/pipeline.py induction config/induction_config.yaml
 ```
 
 + training:   learn the auto encoder as well as the silence detector and type classifier 
-+ induction:  learn clustering using quantization, hierarchical clustering and hidden Markov models
 
-## Running Tests
-```
-    python -m unittest discover -s ml_pipeline/ -v
-```

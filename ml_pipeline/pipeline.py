@@ -26,7 +26,6 @@ from plots import *
 from sequence_embedder import *
 from audio_collection import *
 from audio import * 
-from structured import *
 
 
 def no_label(f,x):
@@ -270,7 +269,8 @@ def evaluate_encoder(version_tag, input_folder, output_folder, encoder_file, par
     ) if np.random.uniform() < 0.1])
     log.info(x.shape)
     h = enc.predict(x)
-    visualize_embedding("{}/embeddings.png".format(output_folder), h, x, k)
+    clustering = visualize_embedding("{}/embeddings.png".format(output_folder), h, x)
+    pkl.dump(clustering, open("{}/clusterer.pkl", "wb"))
 
 
 def test_reconstruction(folder, out, params):
@@ -359,7 +359,7 @@ def analysis(path):
     log.info(" - gaps: {} type_dist: {}".format(n_gaps(starts, stops), n_types(types)))
 
         
-def sequence_clustering(inp, out, embedder, min_support=1, n_writers=10, max_instances=None, do_write_audio=True, max_dist=0.5, paa=8, sax=15):    
+def sequence_clustering(inp, out, embedder, min_support=1, n_writers=10):    
     """
     Hierarchical cluster connected regions of whistles and bursts
     """
@@ -369,7 +369,6 @@ def sequence_clustering(inp, out, embedder, min_support=1, n_writers=10, max_ins
             name = filename.replace(".wav", "")
             name = name.replace(".ogg", "")            
             name = name.replace(".aiff", "")            
-
             in_path  = "{}/{}".format(inp, filename)
             out_path = "{}/embedding_{}.csv".format(out, name)
             log.info("\t {}".format(in_path))
@@ -377,8 +376,19 @@ def sequence_clustering(inp, out, embedder, min_support=1, n_writers=10, max_ins
                 inducer = TypeExtraction.from_audiofile(in_path, embedder)
                 inducer.save(out_path, append=True)
                 analysis(out_path)
+
+    clusters = []
+    for file in tf.io.gfile.listdir(out):        
+        if file.startswith("embedding") and file.endswith(".csv"):
+            path = "{}/{}".format(out, file)
+            logstructure.info("\tReading {} {}".format(path, len(overlapping)))
+            df                    = pd.read_csv(path, sep="\t")
+            signals               = df[df['type'] > 1]
+            for _, row in signals:
+                clusters.append((
+                    row['start'], row['stop'], row['filename'], row['type'], row['cluster']  
+                ))
                 
-    clusters, last_ll = hierarchical_clustering(out, max_instances=max_instances, max_dist = max_dist, paa = paa, sax = sax)
     grouped_by_filename = {}
     grouped_by_cluster  = {}
     i = 0
@@ -408,18 +418,6 @@ def sequence_clustering(inp, out, embedder, min_support=1, n_writers=10, max_ins
             pool.starmap(write_audio, ((out, cluster_id, instances_clusters, grouped_by_cluster, min_support, 500) for cluster_id in range(0, k)))
         log.info('Done Writing')
     
-    for f, regions in grouped_by_filename.items():
-        filename = f.split(".")[0].split("/")[-1]
-        log_path = "{}/seq_clustering_log_{}.csv".format(out, filename)
-        log.info("writing: {}".format(log_path))
-        with open(log_path, "w") as fp:
-            fp.write("start,stop,file,cluster,type,region_id\n")
-            for start, stop, c, t, i in regions:
-                if instances_clusters[c] >= min_support:
-                    fp.write("{},{},{},{},{},{}\n".format(start, stop, f, c, t, i))
-    log.info('Done Logs')
-    return last_ll
-
 
 def header():
     return """
@@ -427,7 +425,6 @@ def header():
     Dolphin Machine Learning Pipeline
                 
     usage for training:      python ml_pipeline/pipeline.py train config/default_config.yaml 
-    usage for induction:     python ml_pipeline/pipeline.py induction config/induction_config.yaml 
 
     by Daniel Kyu Hwa Kohlsdorf
     =================================================================
@@ -449,8 +446,9 @@ if __name__== "__main__":
         silence      = c['sil']
         type_class   = c['type_class']
         unsupervised = c['unsupervised']
-        reconstruct  = c['reconstruct'] 
+        reconstruct  = c['unsupervised'] 
         output       = c['output']
+        inp          = c['input']
         transfer     = c['transfer']
         freeze       = c['freeze'] 
         train_auto_encoder(version, unsupervised, output, params, latent, batch, epochs)
@@ -458,16 +456,11 @@ if __name__== "__main__":
         train_silence(version, silence, output, params, "{}/encoder.h5".format(output), batch, epochs_sup, latent, freeze, transfer=transfer)
         train_type(version, type_class, output, params, "{}/encoder.h5".format(output), batch, epochs_sup, latent, freeze, transfer)
         test_reconstruction(reconstruct, output, params)
-    elif len(sys.argv) == 3 and sys.argv[1] == 'induction':
-        c = yaml.load(open(sys.argv[2]))
-        log.info("Parameters: {}".format(c))
-        params       = WindowParams(c['spec_win'], c['spec_step'], c['fft_win'], c['fft_step'], c['highpass'])
-        inp          = c['input']
-        output       = c['output'] 
+
         enc             = load_model("{}/encoder.h5".format(output))
         silence         = load_model("{}/sil.h5".format(output))
         type_classifier = load_model("{}/type.h5".format(output))
-        embedder        = SequenceEmbedder(enc, params, silence, type_classifier)
-        sequence_clustering(inp, output, embedder)
-        clustering_usage(output)
-        log.info('Done !!!')
+        clusterer       = pkl.load(open('{}/clusterer.pkl', "rb"))
+        
+        embedder        = SequenceEmbedder(enc, params, silence, type_classifier, clusterer)
+        sequence_clustering(inp, output, embedder, min_support=1, n_writers=10)    

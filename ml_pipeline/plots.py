@@ -135,7 +135,7 @@ def visualize_embedding(img_path, embeddings, examples, figsize=(80, 60), zoom=0
     :returns: clusters    
     """
     tsne = TSNE()
-    clustering = OPTICS(min_samples=2).fit(X)
+    clustering = OPTICS(min_samples=2)
     c = clustering.fit_predict(embeddings)
     l = tsne.fit_transform(embeddings)
     if sparse:

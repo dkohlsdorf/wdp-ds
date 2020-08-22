@@ -324,6 +324,7 @@ def write_audio(out, cluster_id, instances_clusters, grouped_by_cluster, min_sup
         log.info("Done: {}".format(cluster_id))
         return False
 
+    
 def n_gaps(starts, stops):
     """
     Number of gaps 
@@ -387,10 +388,10 @@ def sequence_clustering(inp, out, embedder, min_support=1, n_writers=10):
     for file in tf.io.gfile.listdir(out):        
         if file.startswith("embedding") and file.endswith(".csv"):
             path = "{}/{}".format(out, file)
-            logstructure.info("\tReading {} {}".format(path, len(overlapping)))
+            log.info("\tReading {}".format(path))
             df                    = pd.read_csv(path, sep="\t")
             signals               = df[df['type'] > 1]
-            for _, row in signals:
+            for _, row in signals.iterrows():
                 clusters.append((
                     row['start'], row['stop'], row['filename'], row['type'], row['cluster']  
                 ))
@@ -419,10 +420,9 @@ def sequence_clustering(inp, out, embedder, min_support=1, n_writers=10):
             for r in regions:
                 instances_clusters[c] += 1
     log.info('Done Clustering')
-    if do_write_audio: 
-        with mp.Pool(processes=n_writers) as pool:
-            pool.starmap(write_audio, ((out, cluster_id, instances_clusters, grouped_by_cluster, min_support, 500) for cluster_id in range(0, k)))
-        log.info('Done Writing')
+    with mp.Pool(processes=n_writers) as pool:
+        pool.starmap(write_audio, ((out, cluster_id, instances_clusters, grouped_by_cluster, min_support, 500) for cluster_id in range(0, k)))
+    log.info('Done Writing')
     
 
 def header():
@@ -457,12 +457,12 @@ if __name__== "__main__":
         inp          = c['input']
         transfer     = c['transfer']
         freeze       = c['freeze'] 
-        #train_auto_encoder(version, unsupervised, output, params, latent, batch, epochs)
-        #evaluate_encoder(version, unsupervised, output, "{}/encoder.h5".format(output), params, viz_k)
+        train_auto_encoder(version, unsupervised, output, params, latent, batch, epochs)
+        evaluate_encoder(version, unsupervised, output, "{}/encoder.h5".format(output), params, viz_k)
         
-        #train_silence(version, silence, output, params, "{}/encoder.h5".format(output), batch, epochs_sup, latent, freeze, transfer=transfer)
-        #train_type(version, type_class, output, params, "{}/encoder.h5".format(output), batch, epochs_sup, latent, freeze, transfer)
-        #test_reconstruction(reconstruct, output, params)
+        train_silence(version, silence, output, params, "{}/encoder.h5".format(output), batch, epochs_sup, latent, freeze, transfer=transfer)
+        train_type(version, type_class, output, params, "{}/encoder.h5".format(output), batch, epochs_sup, latent, freeze, transfer)
+        test_reconstruction(reconstruct, output, params)
 
         enc             = load_model("{}/encoder.h5".format(output))
         silence         = load_model("{}/sil.h5".format(output))

@@ -7,7 +7,7 @@ import numpy as np
 
 from matplotlib.offsetbox import OffsetImage, AnnotationBbox
 
-from sklearn.cluster import OPTICS
+from sklearn.cluster import *
 from sklearn.manifold.t_sne import TSNE
 from sklearn.metrics import silhouette_samples, silhouette_score
 
@@ -134,8 +134,10 @@ def visualize_embedding(img_path, embeddings, examples, figsize=(80, 60), zoom=0
     :param sparse: sparsify clusters by shillouette 
     :returns: clusters    
     """
+    
     tsne = TSNE()
-    clustering = OPTICS(min_samples=2)
+    #clustering = OPTICS(min_samples=5, max_eps = 5.0, metric='euclidean')
+    clustering = AgglomerativeClustering(n_clusters=None, affinity='euclidean', linkage='average', distance_threshold=1.5)
     c = clustering.fit_predict(embeddings)
     l = tsne.fit_transform(embeddings)
     if sparse:

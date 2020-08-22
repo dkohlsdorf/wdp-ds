@@ -271,7 +271,7 @@ def evaluate_encoder(version_tag, input_folder, output_folder, encoder_file, par
     log.info(x.shape)
     h = enc.predict(x)
     clustering = visualize_embedding("{}/embeddings.png".format(output_folder), h, x)
-    pkl.dump(clustering, open("{}/clusterer.pkl", "wb"))
+    pkl.dump(clustering, open("{}/clusterer.pkl".format(output_folder), "wb"))
 
 
 def test_reconstruction(folder, out, params):
@@ -306,17 +306,23 @@ def write_audio(out, cluster_id, instances_clusters, grouped_by_cluster, min_sup
     :param grouped_by_cluster: dict[clusters][filename][start, stop]
     :param min_support: minimum number of instances in cluster
     :param max_support: maximum number of instances in cluster
+    :param returns: true if we stopped writing early
     """
-    if instances_clusters[cluster_id] >= min_support and instances_clusters[cluster_id] < max_support:
+    if instances_clusters[cluster_id] >= min_support:
         log.info("Audio result for cluster: {} {}".format(cluster_id, instances_clusters[cluster_id]))
         audio_bank = AudioSnippetCollection("{}/seq_cluster_{}.wav".format(out, cluster_id))
+        n_written = 0
         for f, snippets in grouped_by_cluster[cluster_id].items():
             log.info("Cluster: {}, {}, {}".format(cluster_id, f, len(snippets)))
             for audio_snippet in audio_regions(f, snippets):                  
                 audio_bank.write(audio_snippet)
+                n_written += 1
+                if n_written > max_support:
+                    audio_bank.close()
+                    return True
         audio_bank.close()
         log.info("Done: {}".format(cluster_id))
-
+        return False
 
 def n_gaps(starts, stops):
     """
@@ -452,8 +458,9 @@ if __name__== "__main__":
         inp          = c['input']
         transfer     = c['transfer']
         freeze       = c['freeze'] 
-        train_auto_encoder(version, unsupervised, output, params, latent, batch, epochs)
+        #train_auto_encoder(version, unsupervised, output, params, latent, batch, epochs)
         evaluate_encoder(version, unsupervised, output, "{}/encoder.h5".format(output), params, viz_k)
+        '''
         train_silence(version, silence, output, params, "{}/encoder.h5".format(output), batch, epochs_sup, latent, freeze, transfer=transfer)
         train_type(version, type_class, output, params, "{}/encoder.h5".format(output), batch, epochs_sup, latent, freeze, transfer)
         test_reconstruction(reconstruct, output, params)
@@ -465,3 +472,4 @@ if __name__== "__main__":
         
         embedder        = SequenceEmbedder(enc, params, silence, type_classifier, clusterer)
         sequence_clustering(inp, output, embedder, min_support=1, n_writers=10)    
+        '''

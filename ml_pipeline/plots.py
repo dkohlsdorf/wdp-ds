@@ -120,7 +120,7 @@ def visualize_2dfilters(img_path, encoder, layers, n_rows = 8):
         plt.close()
         
             
-def visualize_embedding(img_path, embeddings, examples, figsize=(80, 60), zoom=0.15, sparse=False):
+def visualize_embedding(img_path, embeddings, examples, k, figsize=(80, 60), zoom=0.15, sparse=False):
     """
     Plot the examples in the embedding space projected to 2D using
     t-sne
@@ -135,9 +135,7 @@ def visualize_embedding(img_path, embeddings, examples, figsize=(80, 60), zoom=0
     :returns: clusters    
     """
     tsne = TSNE()
-    #clustering = OPTICS(min_samples=5, eps=1.5, metric='euclidean')
-    clustering = AgglomerativeClustering(n_clusters=None, affinity='euclidean', linkage='average', distance_threshold=1.5)
-    
+    clustering = KMeans(n_clusters=k, max_iter=1024)
     c = clustering.fit_predict(embeddings)
     l = tsne.fit_transform(embeddings)
     if sparse:

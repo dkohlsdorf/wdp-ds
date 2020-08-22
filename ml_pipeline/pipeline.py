@@ -270,7 +270,7 @@ def evaluate_encoder(version_tag, input_folder, output_folder, encoder_file, par
     ) if np.random.uniform() < 1.0])
     log.info(x.shape)
     h = enc.predict(x)
-    clustering = visualize_embedding("{}/embeddings.png".format(output_folder), h, x)
+    clustering = visualize_embedding("{}/embeddings.png".format(output_folder), h, x, k)
     pkl.dump(clustering, open("{}/clusterer.pkl".format(output_folder), "wb"))
 
 
@@ -352,8 +352,7 @@ def analysis(path):
 
     :param path: path to file
     """
-    header                = ["filename", "start", "stop", "type", "embedding"]
-    df                    = pd.read_csv(path, sep="\t", header = None, names=header)
+    df     = pd.read_csv(path, sep="\t")
     starts = df['start']
     stops  = df['stop']
     types  = df['type']
@@ -453,17 +452,17 @@ if __name__== "__main__":
         transfer     = c['transfer']
         freeze       = c['freeze'] 
         #train_auto_encoder(version, unsupervised, output, params, latent, batch, epochs)
-        evaluate_encoder(version, unsupervised, output, "{}/encoder.h5".format(output), params, viz_k)
-        '''
-        train_silence(version, silence, output, params, "{}/encoder.h5".format(output), batch, epochs_sup, latent, freeze, transfer=transfer)
-        train_type(version, type_class, output, params, "{}/encoder.h5".format(output), batch, epochs_sup, latent, freeze, transfer)
-        test_reconstruction(reconstruct, output, params)
+        #evaluate_encoder(version, unsupervised, output, "{}/encoder.h5".format(output), params, viz_k)
+        
+        #train_silence(version, silence, output, params, "{}/encoder.h5".format(output), batch, epochs_sup, latent, freeze, transfer=transfer)
+        #train_type(version, type_class, output, params, "{}/encoder.h5".format(output), batch, epochs_sup, latent, freeze, transfer)
+        #test_reconstruction(reconstruct, output, params)
 
         enc             = load_model("{}/encoder.h5".format(output))
         silence         = load_model("{}/sil.h5".format(output))
         type_classifier = load_model("{}/type.h5".format(output))
-        clusterer       = pkl.load(open('{}/clusterer.pkl', "rb"))
+        clusterer       = pkl.load(open('{}/clusterer.pkl'.format(output), "rb"))
         
         embedder        = SequenceEmbedder(enc, params, silence, type_classifier, clusterer)
         sequence_clustering(inp, output, embedder, min_support=1, n_writers=10)    
-        '''
+        

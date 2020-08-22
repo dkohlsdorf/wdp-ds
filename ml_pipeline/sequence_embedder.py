@@ -44,7 +44,7 @@ class SequenceEmbedder:
                 is_silence = self.silence_detector.predict(b)
                 types      = self.type_classifier.predict(b)                
                 embedding  = self.encoder.predict(b)
-                clustering = self.clusterer.predict(b)
+                clustering = self.clusterer.predict(embedding)
                 for i in range(0, len(batch)):
                     if int(round(is_silence[i][0])) == 0:
                         c         = clustering[i] 
@@ -52,7 +52,7 @@ class SequenceEmbedder:
                         filename  = batch[i][1]
                         start     = batch[i][2]
                         stop      = batch[i][3]            
-                        regions.append((embedding[i, :], filename, start, stop, t, c))
+                        regions.append((filename, start, stop, t, c))
                 batch = []
         return regions
 
@@ -72,7 +72,7 @@ class TypeExtraction(namedtuple("Induction", "clustering starts stops types file
         """
         n = self.len
         for i in range(n):
-            yield self.files[i], self.starts[i], self.stops[i], self.types[i], self.embeddings[i]
+            yield self.files[i], self.starts[i], self.stops[i], self.types[i], self.clustering[i]
 
     @classmethod
     def from_audiofile(cls, path, embedder):
@@ -88,11 +88,11 @@ class TypeExtraction(namedtuple("Induction", "clustering starts stops types file
         stops      = []
         types      = []
         files      = [] 
-        logstructure.info("- Working on embedding {}".format(path))
+        logembed.info("- Working on embedding {}".format(path))
         regions = embedder.embed(path)
-        logstructure.info("\t- found region {}".format(len(regions)))
-        for x, f, start, stop, t in regions:
-            clustering.append(x)
+        logembed.info("\t- found region {}".format(len(regions)))
+        for f, start, stop, t, c in regions:
+            clustering.append(c)
             starts.append(start)
             stops.append(stop)
             types.append(t)
@@ -104,7 +104,7 @@ class TypeExtraction(namedtuple("Induction", "clustering starts stops types file
         if append:
             mode += "+"
         with open(path, mode) as fp:
-            fp.write("filename\tstart\tstop\ttype\tcluster\n".format(filename, start, stop, t, c))
+            fp.write("filename\tstart\tstop\ttype\tcluster\n")
             for filename, start, stop, t, c in self.items():
                 fp.write("{}\t{}\t{}\t{}\t{}\n".format(filename, start, stop, t, c))
 

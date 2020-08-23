@@ -20,6 +20,8 @@ logplots.setLevel(logging.INFO)
 COLORS = list(
     pd.read_csv('ml_pipeline/colors.txt', sep='\t', header=None)[1])
 
+def get_color(i):
+    return COLORS[i % len(COLORS)]
 
 def plot_result_matrix(confusion, classes, predictions, title, cmap=plt.cm.Blues):
     """
@@ -91,7 +93,7 @@ def imscatter(x, y, c, img, ax=None, zoom=1):
             images[i],
             (x[i], y[i]),
             xycoords='data',
-            frameon=True, bboxprops = dict(edgecolor=COLORS[c[i]]))
+            frameon=True, bboxprops = dict(edgecolor=get_color(c[i])))
         artists.append(ax.add_artist(ab))
     ax.update_datalim(np.column_stack([x, y]))
     ax.autoscale()

@@ -49,6 +49,7 @@ class SequenceEmbedder:
                     if int(round(is_silence[i][0])) == 0:
                         c = np.argmin(clustering[i])
                         d = np.max(clustering[i])
+                        print(d)
                         if d < th:
                             t         = np.argmax(types[i])                    
                             filename  = batch[i][1]

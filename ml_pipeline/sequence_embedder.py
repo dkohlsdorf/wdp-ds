@@ -28,7 +28,7 @@ class SequenceEmbedder:
         self.clusterer = clusterer
 
 
-    def embed(self, filename, batch_sze=1000, th=4.5):
+    def embed(self, filename, batch_sze=1000, th=10.0):
         """
         Embeds non silent regions from a file
 

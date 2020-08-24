@@ -28,7 +28,7 @@ class SequenceEmbedder:
         self.clusterer = clusterer
 
 
-    def embed(self, filename, batch_sze=1000, th=1.5):
+    def embed(self, filename, batch_sze=1000, th=4.0):
         """
         Embeds non silent regions from a file
 
@@ -49,7 +49,6 @@ class SequenceEmbedder:
                     if int(round(is_silence[i][0])) == 0:
                         c = np.argmin(clustering[i])
                         d = np.max(clustering[i])
-                        print(d)
                         if d < th:
                             t         = np.argmax(types[i])                    
                             filename  = batch[i][1]

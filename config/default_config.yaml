@@ -1,6 +1,6 @@
 spec_win     : 64
 spec_step    : 32
-fft_win      : 512
+fft_win      : 64
 fft_step     : 64
 highpass     : 12
 latent       : 128

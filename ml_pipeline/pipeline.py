@@ -421,7 +421,7 @@ def sequence_clustering(inp, out, embedder, min_support=1, n_writers=10):
                 instances_clusters[c] += 1
     log.info('Done Clustering')
     with mp.Pool(processes=n_writers) as pool:
-        pool.starmap(write_audio, ((out, cluster_id, instances_clusters, grouped_by_cluster, min_support, 500) for cluster_id in range(0, k)))
+        pool.starmap(write_audio, ((out, cluster_id, instances_clusters, grouped_by_cluster, min_support, 100) for cluster_id in range(0, k)))
     log.info('Done Writing')
     
 
@@ -470,4 +470,4 @@ if __name__== "__main__":
         clusterer       = pkl.load(open('{}/clusterer.pkl'.format(output), "rb"))
         
         embedder        = SequenceEmbedder(enc, params, silence, type_classifier, clusterer)
-        sequence_clustering(inp, output, embedder, min_support=1, n_writers=10)    
+        sequence_clustering(inp, output, embedder, min_support=1, n_writers=5)    

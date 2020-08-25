@@ -207,7 +207,7 @@ def spectrogram_windows(filename, params, shuffle=False, pcen=True):
             dft_stop  = params.fft_win
             spec  = spec[:, dft_start:dft_stop]
             if pcen:
-                e = librosa.pcen(spec, gain=0.2, bias=5)
+                e = librosa.pcen(spec.T, gain=0.2, bias=5).T
                 e = (e - np.mean(e)) / (np.std(e) + 1)
                 yield (e, filename, start, stop) 
             else:
@@ -235,7 +235,7 @@ def spectrogram_regions(filename, params, regions, pcen=True):
         dft_stop  = params.fft_win
         spec  = spec[:, dft_start:dft_stop]
         if pcen:
-            e = librosa.pcen(spec, gain=0.2, bias=5)
+            e = librosa.pcen(spec.T, gain=0.2, bias=5).T
             e = (e - np.mean(e)) / (np.std(e) + 1)
             yield e
         else:

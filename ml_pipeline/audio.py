@@ -207,6 +207,7 @@ def spectrogram_windows(filename, params, shuffle=False, pcen=True):
             dft_stop  = params.fft_win
             spec  = spec[:, dft_start:dft_stop]
             if pcen:
+                mfcc = librosa.feature.mfcc(spec, n_mfcc=64)
                 e = librosa.pcen(spec, gain=0.2, bias=5)
                 e = (e - np.mean(e)) / (np.std(e) + 1)
                 yield (e, filename, start, stop) 

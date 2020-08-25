@@ -204,7 +204,7 @@ def spectrogram_windows(filename, params, shuffle=False, pcen=True):
             audio = data[start:stop]
             if pcen:
                 mfcc = librosa.feature.mfcc(audio.astype(np.float), n_mfcc=64)
-                e = librosa.pcen(spec, gain=0.2, bias=5)
+                e = librosa.pcen(mfcc, gain=0.2, bias=5)
                 e = (e - np.mean(e)) / (np.std(e) + 1)
                 yield (e, filename, start, stop) 
             else:

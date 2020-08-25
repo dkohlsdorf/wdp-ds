@@ -469,6 +469,6 @@ if __name__== "__main__":
         type_classifier = load_model("{}/type.h5".format(output))
         clusterer       = pkl.load(open('{}/clusterer.pkl'.format(output), "rb"))
         
-        #embedder        = SequenceEmbedder(enc, params, silence, type_classifier, clusterer)
+        embedder        = SequenceEmbedder(enc, params, silence, type_classifier, clusterer)
         #sequence_clustering(inp, output, embedder, "test", min_support=1, n_writers=5)    
         sequence_clustering(unsupervised, output, embedder, "train", min_support=1, n_writers=5)    

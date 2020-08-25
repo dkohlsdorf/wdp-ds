@@ -297,7 +297,7 @@ def test_reconstruction(folder, out, params):
     plt.close()
 
 
-def write_audio(out, cluster_id, instances_clusters, grouped_by_cluster, min_support, max_support):
+def write_audio(out, prefix, cluster_id, instances_clusters, grouped_by_cluster, min_support, max_support):
     """
     Write clusters as audio
     
@@ -310,7 +310,7 @@ def write_audio(out, cluster_id, instances_clusters, grouped_by_cluster, min_sup
     """
     if instances_clusters[cluster_id] >= min_support:
         log.info("Audio result for cluster: {} {}".format(cluster_id, instances_clusters[cluster_id]))
-        audio_bank = AudioSnippetCollection("{}/seq_cluster_{}.wav".format(out, cluster_id))
+        audio_bank = AudioSnippetCollection("{}/{}_seq_cluster_{}.wav".format(out, prefix, cluster_id))
         n_written = 0
         for f, snippets in grouped_by_cluster[cluster_id].items():
             log.info("Cluster: {}, {}, {}".format(cluster_id, f, len(snippets)))
@@ -366,7 +366,7 @@ def analysis(path):
     log.info(" - gaps: {} type_dist: {}".format(n_gaps(starts, stops), n_types(types)))
 
         
-def sequence_clustering(inp, out, embedder, min_support=1, n_writers=10):    
+def sequence_clustering(inp, out, embedder, prefix, min_support=1, n_writers=10):    
     """
     Hierarchical cluster connected regions of whistles and bursts
     """
@@ -421,7 +421,7 @@ def sequence_clustering(inp, out, embedder, min_support=1, n_writers=10):
                 instances_clusters[c] += 1
     log.info('Done Clustering')
     with mp.Pool(processes=n_writers) as pool:
-        pool.starmap(write_audio, ((out, cluster_id, instances_clusters, grouped_by_cluster, min_support, 100) for cluster_id in range(0, k)))
+        pool.starmap(write_audio, ((out, prefix, cluster_id, instances_clusters, grouped_by_cluster, min_support, 100) for cluster_id in range(0, k)))
     log.info('Done Writing')
     
 
@@ -457,17 +457,18 @@ if __name__== "__main__":
         inp          = c['input']
         transfer     = c['transfer']
         freeze       = c['freeze'] 
-        train_auto_encoder(version, unsupervised, output, params, latent, batch, epochs)
-        evaluate_encoder(version, unsupervised, output, "{}/encoder.h5".format(output), params, viz_k)
+        #train_auto_encoder(version, unsupervised, output, params, latent, batch, epochs)
+        #evaluate_encoder(version, unsupervised, output, "{}/encoder.h5".format(output), params, viz_k)
         
-        train_silence(version, silence, output, params, "{}/encoder.h5".format(output), batch, epochs_sup, latent, freeze, transfer=transfer)
-        train_type(version, type_class, output, params, "{}/encoder.h5".format(output), batch, epochs_sup, latent, freeze, transfer)
-        test_reconstruction(reconstruct, output, params)
+        #train_silence(version, silence, output, params, "{}/encoder.h5".format(output), batch, epochs_sup, latent, freeze, transfer=transfer)
+        #train_type(version, type_class, output, params, "{}/encoder.h5".format(output), batch, epochs_sup, latent, freeze, transfer)
+        #test_reconstruction(reconstruct, output, params)
 
         enc             = load_model("{}/encoder.h5".format(output))
         silence         = load_model("{}/sil.h5".format(output))
         type_classifier = load_model("{}/type.h5".format(output))
         clusterer       = pkl.load(open('{}/clusterer.pkl'.format(output), "rb"))
         
-        embedder        = SequenceEmbedder(enc, params, silence, type_classifier, clusterer)
-        sequence_clustering(inp, output, embedder, min_support=1, n_writers=5)    
+        #embedder        = SequenceEmbedder(enc, params, silence, type_classifier, clusterer)
+        #sequence_clustering(inp, output, embedder, "test", min_support=1, n_writers=5)    
+        sequence_clustering(unsupervised, output, embedder, "train", min_support=1, n_writers=5)    

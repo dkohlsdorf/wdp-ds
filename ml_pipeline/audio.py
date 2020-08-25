@@ -202,16 +202,16 @@ def spectrogram_windows(filename, params, shuffle=False, pcen=True):
         for i in ordered:
             start, stop = params.range(i)
             audio = data[start:stop]
-            spec  = fwd_spectrogram(audio, params.fft_win_filtered, params.fft_step)
-            dft_start = params.fft_win - params.n_fft_bins
-            dft_stop  = params.fft_win
-            spec  = spec[:, dft_start:dft_stop]
             if pcen:
-                mfcc = librosa.feature.mfcc(spec, n_mfcc=64)
+                mfcc = librosa.feature.mfcc(audio, n_mfcc=64)
                 e = librosa.pcen(spec, gain=0.2, bias=5)
                 e = (e - np.mean(e)) / (np.std(e) + 1)
                 yield (e, filename, start, stop) 
             else:
+                spec  = fwd_spectrogram(audio, params.fft_win_filtered, params.fft_step)
+                dft_start = params.fft_win - params.n_fft_bins
+                dft_stop  = params.fft_win
+                spec  = spec[:, dft_start:dft_stop]
                 mu      = np.mean(spec)
                 sigma   = np.std(spec) + 1.0
                 yield ((spec - mu) / sigma, filename, start, stop)

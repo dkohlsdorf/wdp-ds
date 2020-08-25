@@ -133,7 +133,7 @@ def train_type(version_tag, input_folder, output_folder, params, encoder_file, b
         enc = load_model(encoder_file)
     else:
         _, enc = auto_encoder(
-            (params.spec_win, params.n_fft_bins, 1), latent
+            (params.spec_win, params.n_mfcc, 1), latent
         )
     cls_type = classifier(enc, 4, freeze)
     x_train = []
@@ -184,7 +184,7 @@ def train_silence(version_tag, input_folder, output_folder, params, encoder_file
         enc = load_model(encoder_file)
     else:
         _, enc = auto_encoder(
-            (params.spec_win, params.n_fft_bins, 1), latent
+            (params.spec_win, params.n_mfcc, 1), latent
         )    
     cls_sil = classifier(enc, 1, freeze)
     x_train = []
@@ -233,7 +233,7 @@ def train_auto_encoder(version_tag, input_folder, output_folder, params, latent,
     """
     log.info("Training Auto Encoder: {}".format(version_tag))
     ae, enc = auto_encoder(
-        (params.spec_win, params.n_fft_bins, 1), latent
+        (params.spec_win, params.n_mfcc, 1), latent
     )
     enc.summary()
     if os.path.exists('{}/encoder.h5'.format(output_folder)) and os.path.exists('{}/auto_encoder.h5'.format(output_folder)):
@@ -287,7 +287,7 @@ def test_reconstruction(folder, out, params):
         name = f.split('/')[-1]
         plt.subplot(10, 10, i + 1)
         plt.axis('off')
-        plt.imshow(1.0 - ae.predict(x.reshape(1, params.spec_win, params.n_fft_bins, 1))[0, :, :, 0].T, cmap='gray')
+        plt.imshow(1.0 - ae.predict(x.reshape(1, params.spec_win, params.n_mfcc, 1))[0, :, :, 0].T, cmap='gray')
         i += 1
         if i % 10 == 0:        
             log.info(i)

@@ -28,86 +28,35 @@ class SequenceEmbedder:
         self.clusterer = clusterer
 
 
-    def embed(self, filename, batch_sze=1000, th=15.0):
+    def embed(self, filename, outpath, batch_sze=1000, th=15.0):
         """
         Embeds non silent regions from a file
 
         :param filename: path to file
-        :param returns: iterator over (embedding, filename, start, stop)
+        :param outpath: write csv file
+        :param batch_sze: batch for embedding
+        :param th: distance threshold
         """
         batch = []
-        regions = []
-        for win in spectrogram_windows(filename, self.param):
-            batch.append(win)
-            if len(batch) == batch_sze:
-                b = np.stack([x[0].reshape(x[0].shape[0], x[0].shape[1], 1) for x in batch]) 
-                is_silence = self.silence_detector.predict(b)
-                types      = self.type_classifier.predict(b)                
-                embedding  = self.encoder.predict(b)
-                clustering = self.clusterer.transform(embedding)
-                for i in range(0, len(batch)):
-                    if int(round(is_silence[i][0])) == 0:
-                        c = np.argmin(clustering[i])
-                        d = np.max(clustering[i])
-                        if d < th:
-                            t         = np.argmax(types[i])                    
-                            filename  = batch[i][1]
-                            start     = batch[i][2]
-                            stop      = batch[i][3]            
-                            regions.append((filename, start, stop, t, c))
-                batch = []
-        return regions
-
-
-class TypeExtraction(namedtuple("Induction", "clustering starts stops types files")):
-    """
-    Type annotations for dolphin communication   
-    """
-
-    @property
-    def len(self):
-        return len(self.starts)
-
-    def items(self):        
-        """
-        Iterate annotated tuples (filename, start, stop, type, embedding vector)
-        """
-        n = self.len
-        for i in range(n):
-            yield self.files[i], self.starts[i], self.stops[i], self.types[i], self.clustering[i]
-
-    @classmethod
-    def from_audiofile(cls, path, embedder):
-        """
-        Construct type annotations from folder with audio files
-
-        :param folder: folder with audio files
-        :param embedder: a sequence embedder
-        :returns: type annotation
-        """
-        clustering = []
-        starts     = []
-        stops      = []
-        types      = []
-        files      = [] 
-        logembed.info("- Working on embedding {}".format(path))
-        regions = embedder.embed(path)
-        logembed.info("\t- found region {}".format(len(regions)))
-        for f, start, stop, t, c in regions:
-            clustering.append(c)
-            starts.append(start)
-            stops.append(stop)
-            types.append(t)
-            files.append(f)
-        return cls(clustering, starts, stops, types, files) 
-
-    def save(self, path, append=False):
-        mode = "w"
-        if append:
-            mode += "+"
         with open(path, mode) as fp:
-            fp.write("filename\tstart\tstop\ttype\tcluster\n")
-            for filename, start, stop, t, c in self.items():
-                fp.write("{}\t{}\t{}\t{}\t{}\n".format(filename, start, stop, t, c))
-
-
+            fp.write("filename\tstart\tstop\ttype\tcluster\tembedding\n")
+            for win in spectrogram_windows(filename, self.param):
+                batch.append(win)
+                if len(batch) == batch_sze:
+                    b = np.stack([x[0].reshape(x[0].shape[0], x[0].shape[1], 1) for x in batch]) 
+                    is_silence = self.silence_detector.predict(b)
+                    types      = self.type_classifier.predict(b)                
+                    embedding  = self.encoder.predict(b)
+                    clustering = self.clusterer.transform(embedding)
+                    for i in range(0, len(batch)):
+                        if int(round(is_silence[i][0])) == 0:
+                            c = np.argmin(clustering[i])
+                            d = np.min(clustering[i])
+                            if d < th:
+                                t         = np.argmax(types[i])                    
+                                filename  = batch[i][1]
+                                start     = batch[i][2]
+                                stop      = batch[i][3]     
+                                csv = ','.join(['%.5f' % f for f in embedding[i, :]])
+                                fp.write("{}\t{}\t{}\t{}\t{}\t{}\n".format(filename, start, stop, t, c, csv))
+                    batch = []

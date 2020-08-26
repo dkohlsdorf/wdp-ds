@@ -117,7 +117,7 @@ def train(folder, output_folder, params, enc, ae, batch_size=10, epochs=128, kee
     training_log.close()
     
     
-def train_type(version_tag, input_folder, output_folder, params, encoder_file, batch, epoch, latent, freeze, transfer=True, subsample=0.5):
+def train_type(version_tag, input_folder, output_folder, params, encoder_file, batch, epoch, conv_param, latent, freeze, transfer=True, subsample=0.5):
     """
     Train a multiclass type classifier
     :param version_tag: basically the model name
@@ -151,7 +151,7 @@ def train_type(version_tag, input_folder, output_folder, params, encoder_file, b
     print("Split: x = {} / {}".format(len(x_train), len(x_test)))
     x_train = np.stack(x_train)
     y_train = np.stack(y_train)    
-    cls_type.fit(x=x_train, y=y_train, batch_size=10, epochs=epoch)
+    cls_type.fit(x=x_train, y=y_train, batch_size=batch, epochs=epoch)
     confusion = np.zeros((4,4))
     for x, y in zip(x_test, y_test):
             _y = np.argmax(cls_type.predict(x.reshape(1, x.shape[0], x.shape[1], 1)), axis=1)[0]
@@ -166,7 +166,7 @@ def train_type(version_tag, input_folder, output_folder, params, encoder_file, b
     plt.close()
 
 
-def train_silence(version_tag, input_folder, output_folder, params, encoder_file, batch, epoch, latent, freeze, subsample = {0:0.85, 1: 0.0}, transfer=True):
+def train_silence(version_tag, input_folder, output_folder, params, encoder_file, batch, epoch, conv_param, latent, freeze, subsample = {0:0.85, 1: 0.0}, transfer=True):
     """
     Train a silence dectector on top of an encoder
 
@@ -201,7 +201,7 @@ def train_silence(version_tag, input_folder, output_folder, params, encoder_file
                 y_train.append(y)
     x_train = np.stack(x_train)
     y_train = np.stack(y_train) 
-    cls_sil.fit(x=x_train, y=y_train, batch_size=5, epochs=epoch)
+    cls_sil.fit(x=x_train, y=y_train, batch_size=batch, epochs=epoch)
     cls_sil.save('{}/sil.h5'.format(output_folder))
 
     confusion = np.zeros((2,2))
@@ -218,7 +218,7 @@ def train_silence(version_tag, input_folder, output_folder, params, encoder_file
     plt.close()
 
     
-def train_auto_encoder(version_tag, input_folder, output_folder, params, latent, batch, epochs):
+def train_auto_encoder(version_tag, input_folder, output_folder, params, latent, batch, epochs, conv_param):
     """
     Train an auto encoder for feature embedding
 
@@ -365,8 +365,8 @@ def analysis(path):
     types  = df['type']
     log.info(" - gaps: {} type_dist: {}".format(n_gaps(starts, stops), n_types(types)))
 
-        
-def sequence_clustering(inp, out, embedder, prefix, min_support=1, n_writers=10):    
+
+def sequence_clustering(inp, out, embedder, prefix, dist_th, batch, min_support=1, max_written = 100, n_writers=10):    
     """
     Hierarchical cluster connected regions of whistles and bursts
     """
@@ -380,9 +380,7 @@ def sequence_clustering(inp, out, embedder, prefix, min_support=1, n_writers=10)
             out_path = "{}/embedding_{}.csv".format(out, name)
             log.info("\t {}".format(in_path))
             if not os.path.isfile(out_path):
-                inducer = TypeExtraction.from_audiofile(in_path, embedder)
-                inducer.save(out_path, append=True)
-                analysis(out_path)
+                embedder.embed(in_path, out_path, batch, dist_th)
 
     clusters = []
     for file in tf.io.gfile.listdir(out):        
@@ -421,7 +419,7 @@ def sequence_clustering(inp, out, embedder, prefix, min_support=1, n_writers=10)
                 instances_clusters[c] += 1
     log.info('Done Clustering')
     with mp.Pool(processes=n_writers) as pool:
-        pool.starmap(write_audio, ((out, prefix, cluster_id, instances_clusters, grouped_by_cluster, min_support, 100) for cluster_id in range(0, k)))
+        pool.starmap(write_audio, ((out, prefix, cluster_id, instances_clusters, grouped_by_cluster, min_support, max_written) for cluster_id in range(0, k)))
     log.info('Done Writing')
     
 
@@ -442,27 +440,42 @@ if __name__== "__main__":
     if len(sys.argv) == 3 and sys.argv[1] == 'train':
         c = yaml.load(open(sys.argv[2]))
         log.info("Parameters: {}".format(c))
-        params       = WindowParams(c['spec_win'], c['spec_step'], c['fft_win'], c['fft_step'], c['highpass'])
-        latent       = c['latent']
-        batch        = c['batch']
         version      = c['version']
-        epochs       = c['epochs']
-        epochs_sup   = c['epochs_sup']
-        viz_k        = c['viz_k']
+
+        # spectrogram parameters
+        params       = WindowParams(c['spec_win'], c['spec_step'], c['fft_win'], c['fft_step'], c['highpass'])
+        
+        # neural parameters
+        latent          = c['latent']
+        batch           = c['batch']
+        embedding_batch = c['embedding_batch']
+        epochs          = c['epochs']
+        epochs_sup      = c['epochs_sup']
+        conv_param      = (c['conv_w'],  c['conv_h'],  c['conv_filters'])
+        transfer        = c['transfer']
+        freeze          = c['freeze'] 
+
+        # datasets
         silence      = c['sil']
         type_class   = c['type_class']
         unsupervised = c['unsupervised']
-        reconstruct  = c['unsupervised'] 
         output       = c['output']
         inp          = c['input']
-        transfer     = c['transfer']
-        freeze       = c['freeze'] 
-        train_auto_encoder(version, unsupervised, output, params, latent, batch, epochs)
+
+        # clutering paams
+        viz_k        = c['viz_k']
+        dist_th      = c['frame_dist_th']
+        min_support  = c['min2write']
+        max_written  = c['max2write']
+        n_writers    = c['n_writers']
+
+
+        train_auto_encoder(version, unsupervised, output, params, latent, batch, epochs, conv_param)
         evaluate_encoder(version, unsupervised, output, "{}/encoder.h5".format(output), params, viz_k)
         
-        train_silence(version, silence, output, params, "{}/encoder.h5".format(output), batch, epochs_sup, latent, freeze, transfer=transfer)
-        train_type(version, type_class, output, params, "{}/encoder.h5".format(output), batch, epochs_sup, latent, freeze, transfer)
-        test_reconstruction(reconstruct, output, params)
+        train_silence(version, silence, output, params, "{}/encoder.h5".format(output), batch, epochs_sup, conv_param, latent, freeze, transfer=transfer)
+        train_type(version, type_class, output, params, "{}/encoder.h5".format(output), batch, epochs_sup, conv_param, latent, freeze, transfer)
+        test_reconstruction(unsupervised, output, params)
 
         enc             = load_model("{}/encoder.h5".format(output))
         silence         = load_model("{}/sil.h5".format(output))
@@ -470,5 +483,5 @@ if __name__== "__main__":
         clusterer       = pkl.load(open('{}/clusterer.pkl'.format(output), "rb"))
         
         embedder        = SequenceEmbedder(enc, params, silence, type_classifier, clusterer)
-        sequence_clustering(inp, output, embedder, "test", min_support=1, n_writers=5)    
-        sequence_clustering(unsupervised, output, embedder, "train", min_support=1, n_writers=5)    
+        sequence_clustering(inp, output, embedder, "test", dist_th, embedding_batch, min_support=min_support, max_written=max_written, n_writers=n_writers)    
+        sequence_clustering(unsupervised, output, embedder, "train", dist_th, embedding_batch, min_support=min_support, max_written=max_written, n_writers=n_writers)   

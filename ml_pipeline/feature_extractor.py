@@ -8,12 +8,8 @@ from tensorflow.keras.models import *
 from tensorflow.keras.optimizers import * 
 from tensorflow.keras.losses import * 
 
-CONV_STRIDE = 1
-KERNEL_SIZE = (8, 8)
-N_FILTERS   = 256
 
-
-def encoder(in_shape, latent_dim):
+def encoder(in_shape, latent_dim, conv_params):
     """
     A LSTM stack on top of a convolutional layer pooled in time.
 
@@ -21,44 +17,51 @@ def encoder(in_shape, latent_dim):
 
     :param in_shape: the input shape to the model
     :param latent_dim: embedding size of the model
+    :param conv_params: (conv_w, conv_h, filters)
 
     :returns: a keras model
     """
+    kernel_size = (conv_params[0], conv_params[1])
+    n_filters = conv_params[2]
     dft_dim = in_shape[1]
     inp = Input(in_shape)
-    loc = Conv2D(N_FILTERS, strides = (1, CONV_STRIDE), kernel_size=KERNEL_SIZE, activation='relu', padding='same')(inp) # Shape (Time, DFT, Filters)
-    loc = MaxPool2D(pool_size=(1, dft_dim/CONV_STRIDE))(loc) # Pool in time (Time, DFT, Filters) -> (Time, 1, Filters)
-    loc = Reshape((in_shape[0], N_FILTERS))(loc) # Reshape for temporal model (Time, 1, Filters)  -> (Time, Filters)
+    loc = Conv2D(conv_params[2], strides = (1, 1), kernel_size=kernel_size, activation='relu', padding='same')(inp) # Shape (Time, DFT, Filters)
+    loc = MaxPool2D(pool_size=(1, dft_dim))(loc) # Pool in time (Time, DFT, Filters) -> (Time, 1, Filters)
+    loc = Reshape((in_shape[0], conv_params[2]))(loc) # Reshape for temporal model (Time, 1, Filters)  -> (Time, Filters)
     x   = BatchNormalization()(loc)
     x   = Bidirectional(LSTM(latent_dim, return_sequences=True))(x)
     x   = LSTM(latent_dim)(x)            
     return Model(inputs =[inp], outputs=[x])
 
 
-def decoder(length, latent_dim, output_dim):
+def decoder(length, latent_dim, output_dim, conv_params):
     """
     A LSTM stack followed by a de-convolution layer to reconstruct the input
 
     :param length: length of the sequence to reconstruct
     :param latent_dim: dimension of the latent space we reconstruct from
     :param output_dim: dimension of output
+    :param conv_params: (conv_w, conv_h, filters)
 
     See Figure [KOH4] Figure 2.
 
     :returns: a keras model
     """
+    kernel_size = (conv_params[0], conv_params[1])
+    n_filters = conv_params[2]
+
     inp = Input((latent_dim))
     x   = Reshape((1, latent_dim))(inp)
     x   = ZeroPadding1D((0, length - 1))(x)
     x   = LSTM(latent_dim, return_sequences=True)(x)    
     x   = Bidirectional(LSTM(output_dim // 2, return_sequences=True))(x)
     x   = Reshape((length, output_dim, 1))(x)
-    x   = Conv2DTranspose(N_FILTERS, kernel_size=KERNEL_SIZE, activation='relu', padding='same')(x) 
+    x   = Conv2DTranspose(conv_params[2], kernel_size=kernel_size, activation='relu', padding='same')(x) 
     x   = Conv2DTranspose(1, kernel_size=(1, 1), activation='linear', padding='same')(x) 
     return Model(inputs = [inp], outputs = [x])
 
 
-def auto_encoder(in_shape, latent_dim):
+def auto_encoder(in_shape, latent_dim, conv_params):
     """
     Auto encoder from encoder / decoder architecture on top of
     convolution / deconvolution layers
@@ -67,11 +70,12 @@ def auto_encoder(in_shape, latent_dim):
 
     :param in_shape: input shape (time, dimensions, 1)
     :param latent_dim: the length of the embedding vector
+    :param conv_params: (conv_w, conv_h, filters)
 
     :returns: a keras model for the auto encoder and a separate for the encoder
     """
-    enc = encoder(in_shape, latent_dim)
-    dec = decoder(in_shape[0], latent_dim, in_shape[1])
+    enc = encoder(in_shape, latent_dim, conv_params)
+    dec = decoder(in_shape[0], latent_dim, in_shape[1], conv_params)
     inp = Input(in_shape)
     x   = enc(inp) 
     x   = dec(x) 

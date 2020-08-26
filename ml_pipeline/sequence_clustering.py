@@ -73,7 +73,7 @@ def hc(regions, n_workers = 5, threshold = 15.0, warping=0.1):
         if i < j:
             assignment[j] = i  
         else:
-            assignment[i] = i
+            assignment[i] = j
     return assignment
 
 

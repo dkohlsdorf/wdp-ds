@@ -27,6 +27,11 @@ from plots import *
 from sequence_embedder import *
 from audio_collection import *
 from audio import * 
+from sequence_clustering import * 
+
+
+CLUSTERING_KMEANS = 0
+CLUSTERING_HC     = 1
 
 
 def no_label(f,x):
@@ -375,7 +380,7 @@ def analysis(path):
     log.info(" - gaps: {} type_dist: {}".format(n_gaps(starts, stops), n_types(types)))
 
 
-def clustering(inp, out, embedder, prefix, dist_th, batch, min_support=1, max_written = 100, n_writers=10):    
+def clustering(inp, out, embedder, prefix, dist_th, batch, clustering_type=CLUSTERING_KMEANS, min_support=1, max_written = 100, n_writers=10):    
     """
     Hierarchical cluster connected regions of whistles and bursts
     """
@@ -391,18 +396,37 @@ def clustering(inp, out, embedder, prefix, dist_th, batch, min_support=1, max_wr
             if not os.path.isfile(out_path):
                 embedder.embed(in_path, out_path, batch, dist_th)
 
-    clusters = []
-    for file in tf.io.gfile.listdir(out):        
-        if file.startswith("embedding") and file.endswith(".csv"):
-            path = "{}/{}".format(out, file)
-            log.info("\tReading {}".format(path))
-            df                    = pd.read_csv(path, sep="\t")
-            signals               = df[df['type'] > 1]
-            for _, row in signals.iterrows():
-                clusters.append((
-                    row['start'], row['stop'], row['filename'], row['type'], row['cluster']  
-                ))
-                
+    if clustering_type = CLUSTERING_KMEANS:
+        clusters = []
+        for file in tf.io.gfile.listdir(out):        
+            if file.startswith("embedding") and file.endswith(".csv"):
+                path = "{}/{}".format(out, file)
+                log.info("\tReading {}".format(path))
+                df                    = pd.read_csv(path, sep="\t")
+                signals               = df[df['type'] > 1]
+                for _, row in signals.iterrows():
+                    clusters.append((
+                        row['start'], row['stop'], row['filename'], row['type'], row['cluster']  
+                    ))
+    else:
+        overlapping = []
+        for file in tf.io.gfile.listdir(annotation_path):        
+            if file.startswith("embedding") and file.endswith(".csv"):
+                path = "{}/{}".format(annotation_path, file)
+                logstructure.info("\tReading {} {}".format(path, len(overlapping)))
+                header                = ["filename", "start", "stop", "type", "embedding"]
+                df                    = pd.read_csv(path, sep="\t", header = None, names=header)
+                signals               = df[df['type'] > 1]
+                signals['embedding']  = df['embedding'].apply(
+                    lambda x: np.array([float(i) for i in x.split(",")]))
+                annotated             = [(row['start'], row['stop'], row['filename'], row['type'], row['embedding'])
+                                        for _ , row in signals.iterrows()]
+                overlapping += groupBy(annotated, overlap)
+                if max_instances is not None and len(overlapping) > max_instances:
+                    break
+        assignment = hc([o for _,_,_,_, o in overlapping, n_writers, dist_th)
+        clusters   = [(start, stop, f, t c) for (start, stop, f, t, _), c zip(overlapping, assignment)]
+
     grouped_by_filename = {}
     grouped_by_cluster  = {}
     i = 0
@@ -426,10 +450,22 @@ def clustering(inp, out, embedder, prefix, dist_th, batch, min_support=1, max_wr
         for f, regions in collection.items():
             for r in regions:
                 instances_clusters[c] += 1
+
     log.info('Done Clustering')
     with mp.Pool(processes=n_writers) as pool:
         pool.starmap(write_audio, ((out, prefix, cluster_id, instances_clusters, grouped_by_cluster, min_support, max_written) for cluster_id in range(0, k)))
     log.info('Done Writing')
+
+    for f, regions in grouped_by_filename.items():
+        filename = f.split(".")[0].split("/")[-1]
+        log_path = "{}/{}_clustering_log_{}.csv".format(out, prefix, filename)
+        log.info("writing: {}".format(log_path))
+        with open(log_path, "w") as fp:
+            fp.write("start,stop,file,cluster,type,region_id\n")
+            for start, stop, c, t, i in regions:
+                if instances_clusters[c] >= min_support:
+                    fp.write("{},{},{},{},{},{}\n".format(start, stop, f, c, t, i))
+    log.info('Done Logs')
     
 
 def header():
@@ -492,5 +528,6 @@ if __name__== "__main__":
         clusterer       = pkl.load(open('{}/clusterer.pkl'.format(output), "rb"))
         
         embedder        = SequenceEmbedder(enc, params, silence, type_classifier, clusterer)
-        clustering(inp, output, embedder, "test", dist_th, embedding_batch, min_support=min_support, max_written=max_written, n_writers=n_writers)    
-        clustering(unsupervised, output, embedder, "train", dist_th, embedding_batch, min_support=min_support, max_written=max_written, n_writers=n_writers)   
+        clustering(inp, output, embedder, "test", dist_th, embedding_batch, clustering_type=CLUSTERING_KMEANS, min_support=min_support, max_written=max_written, n_writers=n_writers)    
+        clustering(unsupervised, output, embedder, "train", dist_th, embedding_batch, clustering_type=CLUSTERING_KMEANS, min_support=min_support, max_written=max_written, n_writers=n_writers)   
+        clustering(inp, output, embedder, "test_sequential", dist_th, embedding_batch, clustering_type=CLUSTERING_HC, min_support=min_support, max_written=max_written, n_writers=n_writers)   

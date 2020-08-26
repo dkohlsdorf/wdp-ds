@@ -7,17 +7,18 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 
-def dtw(double[:, :] x, double[:,:] y, int band, double th):
+def dtw(int id_x, int id_y, double[:, :] x, double[:,:] y, int band, double th):
     """
     Align two sequences using dynamic time warping.
 
     Implements [HOL] equation 8.2
-
+    :param id_x: position in all sequences
+    :param id_y: position in all sequences 
     :param x: a sequence of length N and dimension d
     :param y: a sequence of length M and dimension d
     :param band: sakoe chiba band
     :param th: early abandon threshold
-    :returns: alignment score
+    :returns: id_x, id_y, alignment score
     """
     cdef int N = x.shape[0]
     cdef int M = y.shape[0]
@@ -42,4 +43,4 @@ def dtw(double[:, :] x, double[:,:] y, int band, double th):
                 overflow = False
         if overflow:
             return float('inf')
-    return dp[N, M]
+    return id_x, id_y, dp[N, M] / (N * M)

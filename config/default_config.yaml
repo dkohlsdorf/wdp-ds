@@ -20,7 +20,7 @@ frame_dist_th: 15.0
 viz_k        : 128
 
 conv_w       : 8
-conv_h       : 8
+conv_h       : 32
 conv_filters : 256
 
 n_writers    : 10

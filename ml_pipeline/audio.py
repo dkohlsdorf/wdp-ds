@@ -117,6 +117,7 @@ def read(path, first_channel=True):
     all all formats that ffmpeg supports are supported
 
     :param path: pathlike object
+    :param first_channel: if true take the first channel for multi channel audio, if false average all channels 
     :returns: audio file with shape (time, )
     """
     with tf.io.gfile.GFile(path, "rb") as f:
@@ -170,8 +171,8 @@ def labeled_spectrogram_windows(filename, params, label_func, shuffle=False):
       an auto encoder:     f(name, x) => x
     :param filename: the filename
     :param params: parameters
-    :param shuffle: shuffle the dataset
     :param label_func: f(filename, spectrogram) => target
+    :param shuffle: shuffle the dataset
 
     :returns: iterator (spectrogram, label, filename, start, stop)
     """
@@ -186,8 +187,8 @@ def spectrogram_windows(filename, params, shuffle=False, pcen=True):
     Also z-normalizes the spectrograms
 
     :param params: Windowing parameters
-    :param highpass: Frequency below which we cut the spectrogram
-
+    :param shuffle: shuffle the dataset
+    :param pcen: use per channel energy normalization?
     :returns: iterator (spectrogram, filename, start, stop)
     """
     assert isinstance(params, WindowParams)
@@ -222,7 +223,7 @@ def spectrogram_regions(filename, params, regions, pcen=True):
     :param filename: the filename
     :param params: Windowing parameters
     :param regions: sequence of start, stop tuples
-    :param first_channel: pick the first channel for multi channel data or take the average
+    :param pcen: use per channel energy normalization?
     :returns: spectrogram of the normalized region
     """
     data = read(filename)
@@ -247,7 +248,7 @@ def audio_snippets(snippets):
     """
     Extract snippets from audio
 
-    snippets: (start, stop, filename)
+    :param snippets: (start, stop, filename)
     """
     files = {}
     for snippet in snippets:
@@ -283,7 +284,7 @@ def fwd_spectrogram(audio, win=512, step=64, print_stats=False):
     :param audio: one channel audio
     :param win: window size for dft sliding window
     :param step: step size for dft sliding windo
-
+    :param print_stats: print debug statistics?
     :returns: power spectrum
     """
     spectrogram = []

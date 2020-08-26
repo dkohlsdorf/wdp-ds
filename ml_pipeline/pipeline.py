@@ -396,7 +396,7 @@ def clustering(inp, out, embedder, prefix, dist_th, batch, clustering_type=CLUST
             if not os.path.isfile(out_path):
                 embedder.embed(in_path, out_path, batch, dist_th)
 
-    if clustering_type = CLUSTERING_KMEANS:
+    if clustering_type == CLUSTERING_KMEANS:
         clusters = []
         for file in tf.io.gfile.listdir(out):        
             if file.startswith("embedding") and file.endswith(".csv"):

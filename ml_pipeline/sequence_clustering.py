@@ -63,6 +63,7 @@ def hc(regions, n_workers = 5, threshold = 15.0, warping=0.1):
     assignment = np.arange(n)
     min_linkage = 0.0
     while min_linkage < threshold:
+        min_linkage = float('inf')
         for cluster_i in set(assignment):
             for cluster_j in set(assignment):
                 if cluster_i != cluster_j:

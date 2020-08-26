@@ -117,7 +117,7 @@ def train(folder, output_folder, params, enc, ae, batch_size=10, epochs=128, kee
     training_log.close()
     
     
-def train_type(version_tag, input_folder, output_folder, params, encoder_file, batch, epoch, conv_param, latent, freeze, transfer=True, subsample=0.5):
+def train_type(version_tag, input_folder, output_folder, params, encoder_file, batch, epoch, conv_param, latent, freeze, transfer=True):
     """
     Train a multiclass type classifier
     :param version_tag: basically the model name
@@ -127,6 +127,9 @@ def train_type(version_tag, input_folder, output_folder, params, encoder_file, b
     :param encoder_file: a saved encoder
     :param batch: batch size
     :param epochs: number of training epochs
+    :param latent: dimension of the latent space
+    :param freeze: freeze weights or not
+    :param transfer: pretrained weights
     """
     if transfer:
         log.info(encoder_file)
@@ -141,7 +144,7 @@ def train_type(version_tag, input_folder, output_folder, params, encoder_file, b
     y_train = []
     y_test = []
     for (x, y, _, _, _) in dataset(input_folder, params, lable, True):
-        if np.random.uniform() < subsample and x is not None and y is not None:
+        if x is not None and y is not None:
             if np.random.uniform() > 0.6:                
                 x_test.append(x)
                 y_test.append(y)
@@ -177,6 +180,11 @@ def train_silence(version_tag, input_folder, output_folder, params, encoder_file
     :param encoder_file: a saved encoder
     :param batch: batch size
     :param epochs: number of training epochs
+    :param conv_params: (conv_w, conv_h, filters)
+    :param latent: dimension of the latent space
+    :param freeze: freeze weights or not
+    :param subsample: subsample by label
+    :param transfer: pretrained weights
     """
     
     log.info("Training Silence Detector: {} {} {}".format(version_tag, epoch, subsample))
@@ -230,6 +238,7 @@ def train_auto_encoder(version_tag, input_folder, output_folder, params, latent,
     :param latent: dimension of the latent space
     :param batch: batch size
     :param epochs: number of training epochs
+    :param conv_params: (conv_w, conv_h, filters)
     """
     log.info("Training Auto Encoder: {}".format(version_tag))
     ae, enc = auto_encoder(
@@ -366,7 +375,7 @@ def analysis(path):
     log.info(" - gaps: {} type_dist: {}".format(n_gaps(starts, stops), n_types(types)))
 
 
-def sequence_clustering(inp, out, embedder, prefix, dist_th, batch, min_support=1, max_written = 100, n_writers=10):    
+def clustering(inp, out, embedder, prefix, dist_th, batch, min_support=1, max_written = 100, n_writers=10):    
     """
     Hierarchical cluster connected regions of whistles and bursts
     """
@@ -483,5 +492,5 @@ if __name__== "__main__":
         clusterer       = pkl.load(open('{}/clusterer.pkl'.format(output), "rb"))
         
         embedder        = SequenceEmbedder(enc, params, silence, type_classifier, clusterer)
-        sequence_clustering(inp, output, embedder, "test", dist_th, embedding_batch, min_support=min_support, max_written=max_written, n_writers=n_writers)    
-        sequence_clustering(unsupervised, output, embedder, "train", dist_th, embedding_batch, min_support=min_support, max_written=max_written, n_writers=n_writers)   
+        clustering(inp, output, embedder, "test", dist_th, embedding_batch, min_support=min_support, max_written=max_written, n_writers=n_writers)    
+        clustering(unsupervised, output, embedder, "train", dist_th, embedding_batch, min_support=min_support, max_written=max_written, n_writers=n_writers)   

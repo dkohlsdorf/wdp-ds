@@ -15,6 +15,13 @@ and communicate the results with domain experts.
 + numpy / scipy
 + pydub
 + librosa
++ cython
+
+# Setup
+You need to run the cython compiler for all cython parts of the library
+```
+cythonize -if ml_pipeline/*.pyx
+```
 
 ## Usage:
 The machine learning pipeline can be run in 4 modes:

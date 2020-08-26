@@ -382,7 +382,7 @@ def analysis(path):
 
 def clustering(inp, out, embedder, prefix, dist_th, batch, clustering_type=CLUSTERING_KMEANS, min_support=1, max_written = 100, n_writers=10):    
     """
-    Hierarchical cluster connected regions of whistles and bursts
+    Clustering all embeddings
     """
     log.info("Sequence Clustering")
     for filename in tf.io.gfile.listdir(inp):

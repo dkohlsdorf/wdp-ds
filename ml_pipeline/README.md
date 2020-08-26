@@ -9,3 +9,4 @@
 + `pipeline.py`: the training pipeline for silence detector and embedder including evaluation
 + `sequence_embedder.py`: apply the model to larger files 
 + `dtw.pyx`: cython implementation of dynamic time warping
++ `sequence_clustering`: cluster sequences using dynamic time warping

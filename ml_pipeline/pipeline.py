@@ -136,7 +136,7 @@ def train_type(version_tag, input_folder, output_folder, params, encoder_file, b
         enc = load_model(encoder_file)
     else:
         _, enc = auto_encoder(
-            (params.spec_win, params.fft_win_filtered // 2, 1), latent
+            (params.spec_win, params.fft_win_filtered // 2, 1), latent, conv_param
         )
     cls_type = classifier(enc, 4, freeze)
     x_train = []
@@ -192,7 +192,7 @@ def train_silence(version_tag, input_folder, output_folder, params, encoder_file
         enc = load_model(encoder_file)
     else:
         _, enc = auto_encoder(
-            (params.spec_win, params.fft_win_filtered // 2, 1), latent
+            (params.spec_win, params.fft_win_filtered // 2, 1), latent, conv_param
         )    
     cls_sil = classifier(enc, 1, freeze)
     x_train = []
@@ -242,7 +242,7 @@ def train_auto_encoder(version_tag, input_folder, output_folder, params, latent,
     """
     log.info("Training Auto Encoder: {}".format(version_tag))
     ae, enc = auto_encoder(
-        (params.spec_win, params.fft_win_filtered // 2, 1), latent
+        (params.spec_win, params.fft_win_filtered // 2, 1), latent, conv_param
     )
     enc.summary()
     if os.path.exists('{}/encoder.h5'.format(output_folder)) and os.path.exists('{}/auto_encoder.h5'.format(output_folder)):

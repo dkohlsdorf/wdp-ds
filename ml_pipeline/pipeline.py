@@ -425,7 +425,7 @@ def clustering(inp, out, embedder, prefix, dist_th, batch, clustering_type=CLUST
                 if max_instances is not None and len(overlapping) > max_instances:
                     break
         assignment = hc([o for _,_,_,_, o in overlapping], n_writers, dist_th)
-        clusters   = [(start, stop, f, t c) for (start, stop, f, t, _), c zip(overlapping, assignment)]
+        clusters   = [(start, stop, f, t, c) for (start, stop, f, t, _), c zip(overlapping, assignment)]
 
     grouped_by_filename = {}
     grouped_by_cluster  = {}

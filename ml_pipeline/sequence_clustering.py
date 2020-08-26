@@ -57,7 +57,7 @@ def hc(regions, n_workers = 5, threshold = 15.0, warping=0.1):
     :return: array of n cluster ids
     '''
     with mp.Pool(processes=n_workers) as pool:
-        result = pool.starmap(write_audio, (distance_compute_job(regions, threshold, warping)))
+        result = pool.starmap(dtw, (distance_compute_job(regions, threshold, warping)))
     sparse_dist = dict([((i, j), d) for i, j, d in results if not np.isinf(d)])
     n = len(regions)
     assignment = np.arange(n)

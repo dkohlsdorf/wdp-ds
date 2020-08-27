@@ -6,6 +6,11 @@
 import numpy as np
 import matplotlib.pyplot as plt
 
+import logging
+logging.basicConfig()
+logdtw = logging.getLogger('dtw')
+logdtw.setLevel(logging.INFO)
+
 
 def dtw(int id_x, int id_y, double[:, :] x, double[:,:] y, int band, double th):
     """
@@ -43,4 +48,6 @@ def dtw(int id_x, int id_y, double[:, :] x, double[:,:] y, int band, double th):
                 overflow = False
         if overflow:
             return float('inf')
-    return id_x, id_y, dp[N, M] / (N * M)
+    score = dp[N, M] / (N * M)
+    logdtw.info("DTW({} {} | {}) = {} | abandon = {}".format(id_x, id_y, w, score, overflow))
+    return id_x, id_y, score

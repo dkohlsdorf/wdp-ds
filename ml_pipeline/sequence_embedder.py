@@ -43,11 +43,11 @@ class SequenceEmbedder:
             for win in spectrogram_windows(filename, self.param):
                 batch.append(win)
                 if len(batch) == batch_sze:
-                    process_batch(batch, fp)
+                    self.process_batch(batch, fp)
                     batch = []
             if len(batch) > 0:
-                process_batch(batch, fp)
-                
+                self.process_batch(batch, fp)
+
     def process_batch(self, batch, fp):
         b = np.stack([x[0].reshape(x[0].shape[0], x[0].shape[1], 1) for x in batch]) 
         is_silence = self.silence_detector.predict(b)

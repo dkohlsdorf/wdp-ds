@@ -25,9 +25,9 @@ def encoder(in_shape, latent_dim, conv_params):
     n_filters = conv_params[2]
     dft_dim = in_shape[1]
     inp = Input(in_shape)
-    loc = Conv2D(conv_params[2], strides = (1, 1), kernel_size=kernel_size, activation='relu', padding='same')(inp) # Shape (Time, DFT, Filters)
+    loc = Conv2D(n_filters, strides = (1, 1), kernel_size=kernel_size, activation='relu', padding='same')(inp) # Shape (Time, DFT, Filters)
     loc = MaxPool2D(pool_size=(1, dft_dim))(loc) # Pool in time (Time, DFT, Filters) -> (Time, 1, Filters)
-    loc = Reshape((-1, conv_params[2]))(loc) # Reshape for temporal model (Time, 1, Filters)  -> (Time, Filters)
+    loc = Reshape((-1, n_filters))(loc) # Reshape for temporal model (Time, 1, Filters)  -> (Time, Filters)
     x   = BatchNormalization()(loc)
     x   = Bidirectional(LSTM(latent_dim, return_sequences=True))(x)
     x   = LSTM(latent_dim)(x)            
@@ -56,7 +56,7 @@ def decoder(length, latent_dim, output_dim, conv_params):
     x   = LSTM(latent_dim, return_sequences=True)(x)    
     x   = Bidirectional(LSTM(output_dim // 2, return_sequences=True))(x)
     x   = Reshape((length, output_dim, 1))(x)
-    x   = Conv2DTranspose(conv_params[2], kernel_size=kernel_size, activation='relu', padding='same')(x) 
+    x   = Conv2DTranspose(n_filters, kernel_size=kernel_size, activation='relu', padding='same')(x) 
     x   = Conv2DTranspose(1, kernel_size=(1, 1), activation='linear', padding='same')(x) 
     return Model(inputs = [inp], outputs = [x])
 

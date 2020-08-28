@@ -294,19 +294,20 @@ def test_reconstruction(folder, out, params):
     """
     log.info("Testing Reconstruction")
     ae = load_model('{}/auto_encoder.h5'.format(out))
-    gen = dataset(folder, params, no_label, True)
+    gen = dataset(folder, params, lable, True)
     i = 0
     plt.figure(figsize=(40, 40))
-    for (x, _, f, _, _) in gen:
-        name = f.split('/')[-1]
-        plt.subplot(10, 10, i + 1)
-        plt.axis('off')
-        plt.imshow(1.0 - ae.predict(x.reshape(1, params.spec_win, params.n_fft_bins, 1))[0, :, :, 0].T, cmap='gray')
-        i += 1
-        if i % 10 == 0:        
-            log.info(i)
-        if i == 100:
-            break
+    for (x, l, f, _, _) in gen:
+        if l > 1:
+            name = f.split('/')[-1]
+            plt.subplot(10, 10, i + 1)
+            plt.axis('off')
+            plt.imshow(1.0 - ae.predict(x.reshape(1, params.spec_win, params.n_fft_bins, 1))[0, :, :, 0].T, cmap='gray')
+            i += 1
+            if i % 10 == 0:        
+                log.info(i)
+            if i == 100:
+                break
     plt.savefig('{}/reconstructions.png'.format(out))
     plt.close()
 
@@ -395,6 +396,7 @@ def clustering(inp, out, embedder, prefix, dist_th, batch, clustering_type=CLUST
             log.info("\t {}".format(in_path))
             if not os.path.isfile(out_path):
                 embedder.embed(in_path, out_path, batch, dist_th)
+            analysis(out_path)
 
     if clustering_type == CLUSTERING_KMEANS:
         clusters = []
@@ -519,14 +521,14 @@ if __name__== "__main__":
         #evaluate_encoder(version, unsupervised, output, "{}/encoder.h5".format(output), params, viz_k)        
         #train_silence(version, silence, output, params, "{}/encoder.h5".format(output), batch, epochs_sup, conv_param, latent, freeze, transfer=transfer)
         #train_type(version, type_class, output, params, "{}/encoder.h5".format(output), batch, epochs_sup, conv_param, latent, freeze, transfer)
-        #test_reconstruction(unsupervised, output, params)
-
-        enc             = load_model("{}/encoder.h5".format(output))
-        silence         = load_model("{}/sil.h5".format(output))
-        type_classifier = load_model("{}/type.h5".format(output))
-        clusterer       = pkl.load(open('{}/clusterer.pkl'.format(output), "rb"))
+        test_reconstruction(type_class, output, params)
+    
+        #enc             = load_model("{}/encoder.h5".format(output))
+        #silence         = load_model("{}/sil.h5".format(output))
+        #type_classifier = load_model("{}/type.h5".format(output))
+        #clusterer       = pkl.load(open('{}/clusterer.pkl'.format(output), "rb"))
         
-        embedder        = SequenceEmbedder(enc, params, silence, type_classifier, clusterer)
-        clustering(inp, output, embedder, "test", dist_th, embedding_batch, clustering_type=CLUSTERING_KMEANS, min_support=min_support, max_written=max_written, n_writers=n_writers)    
-        clustering(unsupervised, output, embedder, "train", dist_th, embedding_batch, clustering_type=CLUSTERING_KMEANS, min_support=min_support, max_written=max_written, n_writers=n_writers)   
-        clustering(inp, output, embedder, "test_sequential", dist_th, embedding_batch, clustering_type=CLUSTERING_HC, min_support=min_support, max_written=max_written, n_writers=n_writers)   
+        #embedder        = SequenceEmbedder(enc, params, silence, type_classifier, clusterer)
+        #clustering(inp, output, embedder, "test", dist_th, embedding_batch, clustering_type=CLUSTERING_KMEANS, min_support=min_support, max_written=max_written, n_writers=n_writers)    
+        #clustering(unsupervised, output, embedder, "train", dist_th, embedding_batch, clustering_type=CLUSTERING_KMEANS, min_support=min_support, max_written=max_written, n_writers=n_writers)   
+        #clustering(inp, output, embedder, "test_sequential", dist_th, embedding_batch, clustering_type=CLUSTERING_HC, min_support=min_support, max_written=max_written, n_writers=n_writers)   

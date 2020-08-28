@@ -294,12 +294,12 @@ def test_reconstruction(folder, out, params):
     """
     log.info("Testing Reconstruction")
     ae = load_model('{}/auto_encoder.h5'.format(out))
-    gen = dataset(folder, params, lable, True)
+    gen = dataset(folder, params, no_label, True)
     i = 0
     plt.figure(figsize=(40, 40))
-    for (x, l, f, _, _) in gen:
-        if l > 1:
-            name = f.split('/')[-1]
+    for (x, _, f, _, _) in gen:
+        name = f.split('/')[-1]
+        if name.startswith('whistle') or name.startswith('burst'):
             plt.subplot(10, 10, i + 1)
             plt.axis('off')
             plt.imshow(1.0 - ae.predict(x.reshape(1, params.spec_win, params.n_fft_bins, 1))[0, :, :, 0].T, cmap='gray')
@@ -521,7 +521,7 @@ if __name__== "__main__":
         #evaluate_encoder(version, unsupervised, output, "{}/encoder.h5".format(output), params, viz_k)        
         #train_silence(version, silence, output, params, "{}/encoder.h5".format(output), batch, epochs_sup, conv_param, latent, freeze, transfer=transfer)
         #train_type(version, type_class, output, params, "{}/encoder.h5".format(output), batch, epochs_sup, conv_param, latent, freeze, transfer)
-        test_reconstruction(noise, output, params)
+        test_reconstruction(type_class, output, params)
     
         #enc             = load_model("{}/encoder.h5".format(output))
         #silence         = load_model("{}/sil.h5".format(output))

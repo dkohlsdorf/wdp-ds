@@ -16,6 +16,7 @@ and communicate the results with domain experts.
 + pydub
 + librosa
 + cython
++ tensorflow-addons
 
 # Setup
 You need to run the cython compiler for all cython parts of the library

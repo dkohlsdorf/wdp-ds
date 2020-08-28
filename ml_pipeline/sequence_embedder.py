@@ -38,7 +38,7 @@ class SequenceEmbedder:
         :param th: distance threshold
         """
         batch = []
-        with open(path, mode) as fp:
+        with open(outpath, "w") as fp:
             fp.write("filename\tstart\tstop\ttype\tcluster\tembedding\n")
             for win in spectrogram_windows(filename, self.param):
                 batch.append(win)

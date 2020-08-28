@@ -281,7 +281,7 @@ def evaluate_encoder(version_tag, input_folder, output_folder, encoder_file, par
     visualize_2dfilters(output_folder, enc, [1], n_rows = 8)    
     x = np.stack([x.reshape(x.shape[0], x.shape[1], 1) for (x,_,_,_,_) in dataset(
         input_folder, params, no_label, False
-    ) if np.random.uniform() < 1.0])
+    ) if np.random.uniform() < 0.1])
     log.info(x.shape)
     h = enc.predict(x)
     clustering = visualize_embedding("{}/embeddings.png".format(output_folder), h, x, k)
@@ -515,12 +515,11 @@ if __name__== "__main__":
         n_writers    = c['n_writers']
 
 
-        train_auto_encoder(version, unsupervised, output, params, latent, batch, epochs, conv_param)
-        evaluate_encoder(version, unsupervised, output, "{}/encoder.h5".format(output), params, viz_k)
-        
-        train_silence(version, silence, output, params, "{}/encoder.h5".format(output), batch, epochs_sup, conv_param, latent, freeze, transfer=transfer)
-        train_type(version, type_class, output, params, "{}/encoder.h5".format(output), batch, epochs_sup, conv_param, latent, freeze, transfer)
-        test_reconstruction(unsupervised, output, params)
+        #train_auto_encoder(version, unsupervised, output, params, latent, batch, epochs, conv_param)
+        #evaluate_encoder(version, unsupervised, output, "{}/encoder.h5".format(output), params, viz_k)        
+        #train_silence(version, silence, output, params, "{}/encoder.h5".format(output), batch, epochs_sup, conv_param, latent, freeze, transfer=transfer)
+        #train_type(version, type_class, output, params, "{}/encoder.h5".format(output), batch, epochs_sup, conv_param, latent, freeze, transfer)
+        #test_reconstruction(unsupervised, output, params)
 
         enc             = load_model("{}/encoder.h5".format(output))
         silence         = load_model("{}/sil.h5".format(output))

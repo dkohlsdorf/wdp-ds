@@ -521,7 +521,7 @@ if __name__== "__main__":
         #evaluate_encoder(version, unsupervised, output, "{}/encoder.h5".format(output), params, viz_k)        
         #train_silence(version, silence, output, params, "{}/encoder.h5".format(output), batch, epochs_sup, conv_param, latent, freeze, transfer=transfer)
         #train_type(version, type_class, output, params, "{}/encoder.h5".format(output), batch, epochs_sup, conv_param, latent, freeze, transfer)
-        test_reconstruction(type_class, output, params)
+        test_reconstruction(noise, output, params)
     
         #enc             = load_model("{}/encoder.h5".format(output))
         #silence         = load_model("{}/sil.h5".format(output))

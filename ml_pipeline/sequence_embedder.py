@@ -54,12 +54,13 @@ class SequenceEmbedder:
         b = np.stack([x[0].reshape(x[0].shape[0], x[0].shape[1], 1) for x in batch]) 
         is_silence = self.silence_detector.predict(b)
         types      = self.type_classifier.predict(b)                
-        embedding  = self.encoder.predict(b)
-        clustering = self.clusterer.predict(embedding)
         for i in range(0, len(batch)):
             if int(round(is_silence[i][0])) == 0:
                 t = np.argmax(types[i])                    
-                if t in write_labels:                     
+                if t in write_labels:      
+                    embedding  = self.encoder.predict(b)
+                    clustering = self.clusterer.predict(embedding)
+            
                     c         = clustering[i]
                     filename  = batch[i][1]
                     start     = batch[i][2]

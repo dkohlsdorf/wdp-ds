@@ -405,7 +405,7 @@ def clustering(inp, out, embedder, prefix, dist_th, batch, clustering_type=CLUST
                 path = "{}/{}".format(out, file)
                 log.info("\tReading {}".format(path))
                 df                    = pd.read_csv(path, sep="\t")
-                signals               = df[df['type'] > 1]
+                signals               = df
                 for _, row in signals.iterrows():
                     clusters.append((
                         row['start'], row['stop'], row['filename'], row['type'], row['cluster']  
@@ -418,7 +418,7 @@ def clustering(inp, out, embedder, prefix, dist_th, batch, clustering_type=CLUST
                 logstructure.info("\tReading {} {}".format(path, len(overlapping)))
                 header                = ["filename", "start", "stop", "type", "embedding"]
                 df                    = pd.read_csv(path, sep="\t", header = None, names=header)
-                signals               = df[df['type'] > 1]
+                signals               = df
                 signals['embedding']  = df['embedding'].apply(
                     lambda x: np.array([float(i) for i in x.split(",")]))
                 annotated             = [(row['start'], row['stop'], row['filename'], row['type'], row['embedding'])

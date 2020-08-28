@@ -49,6 +49,7 @@ class SequenceEmbedder:
                 self.process_batch(batch, fp, th)
                 batch = []
 
+
     def process_batch(self, batch, fp, th):
         b = np.stack([x[0].reshape(x[0].shape[0], x[0].shape[1], 1) for x in batch]) 
         is_silence = self.silence_detector.predict(b)

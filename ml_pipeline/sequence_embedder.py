@@ -43,20 +43,25 @@ class SequenceEmbedder:
             for win in spectrogram_windows(filename, self.param):
                 batch.append(win)
                 if len(batch) == batch_sze:
-                    b = np.stack([x[0].reshape(x[0].shape[0], x[0].shape[1], 1) for x in batch]) 
-                    is_silence = self.silence_detector.predict(b)
-                    types      = self.type_classifier.predict(b)                
-                    embedding  = self.encoder.predict(b)
-                    clustering = self.clusterer.transform(embedding)
-                    for i in range(0, len(batch)):
-                        if int(round(is_silence[i][0])) == 0:
-                            c = np.argmin(clustering[i])
-                            d = np.min(clustering[i])
-                            if d < th:
-                                t         = np.argmax(types[i])                    
-                                filename  = batch[i][1]
-                                start     = batch[i][2]
-                                stop      = batch[i][3]     
-                                csv = ','.join(['%.5f' % f for f in embedding[i, :]])
-                                fp.write("{}\t{}\t{}\t{}\t{}\t{}\n".format(filename, start, stop, t, c, csv))
+                    process_batch(batch, fp)
                     batch = []
+            if len(batch) > 0:
+                process_batch(batch, fp)
+                
+    def process_batch(self, batch, fp):
+        b = np.stack([x[0].reshape(x[0].shape[0], x[0].shape[1], 1) for x in batch]) 
+        is_silence = self.silence_detector.predict(b)
+        types      = self.type_classifier.predict(b)                
+        embedding  = self.encoder.predict(b)
+        clustering = self.clusterer.transform(embedding)
+        for i in range(0, len(batch)):
+            if int(round(is_silence[i][0])) == 0:
+                c = np.argmin(clustering[i])
+                d = np.min(clustering[i])
+                if d < th:
+                    t         = np.argmax(types[i])                    
+                    filename  = batch[i][1]
+                    start     = batch[i][2]
+                    stop      = batch[i][3]     
+                    csv = ','.join(['%.5f' % f for f in embedding[i, :]])
+                    fp.write("{}\t{}\t{}\t{}\t{}\t{}\n".format(filename, start, stop, t, c, csv))

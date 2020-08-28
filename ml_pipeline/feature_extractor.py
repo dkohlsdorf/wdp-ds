@@ -27,7 +27,7 @@ def encoder(in_shape, latent_dim, conv_params):
     inp = Input(in_shape)
     loc = Conv2D(conv_params[2], strides = (1, 1), kernel_size=kernel_size, activation='relu', padding='same')(inp) # Shape (Time, DFT, Filters)
     loc = MaxPool2D(pool_size=(1, dft_dim))(loc) # Pool in time (Time, DFT, Filters) -> (Time, 1, Filters)
-    loc = Reshape((in_shape[0], conv_params[2]))(loc) # Reshape for temporal model (Time, 1, Filters)  -> (Time, Filters)
+    loc = Reshape((-1, conv_params[2]))(loc) # Reshape for temporal model (Time, 1, Filters)  -> (Time, Filters)
     x   = BatchNormalization()(loc)
     x   = Bidirectional(LSTM(latent_dim, return_sequences=True))(x)
     x   = LSTM(latent_dim)(x)            

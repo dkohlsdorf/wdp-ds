@@ -23,7 +23,7 @@ conv_w       : 8
 conv_h       : 32
 conv_filters : 256
 
-n_writers    : 10
+n_writers    : 5
 min2write    : 5
 max2write    : 100
 min_len      : 5

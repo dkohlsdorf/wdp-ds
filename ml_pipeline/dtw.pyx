@@ -28,7 +28,6 @@ def dtw(int id_x, int id_y, double[:, :] x, double[:,:] y, int band, double th):
     cdef int N = x.shape[0]
     cdef int M = y.shape[0]
     cdef int w = max(band, abs(N - M)) + 2
-    print(w, N, M, abs(N - M), max(band, abs(N - M)))
     cdef int i, j = 0
     cdef double dist
     cdef bint overflow   

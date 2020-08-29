@@ -22,6 +22,10 @@ def distance_compute_job(regions, distance_threshold_frame, warping_band_percent
                 yield i, j, ri, rj, th, w
 
 
+def dtw_process(i, j, ri, rj, th, w):
+    return dtw(i,j, np.stack(ri), np.stack(rj), th, w)
+    
+                
 def linkage(cluster_i, cluster_j, assignment, distances):
     '''
     Compute the average linkage between cluster i and cluster j
@@ -57,7 +61,7 @@ def hc(regions, n_workers = 5, threshold = 15.0, warping=0.1):
     :return: array of n cluster ids
     '''
     with mp.Pool(processes=n_workers) as pool:
-        result = pool.starmap(dtw, (distance_compute_job(regions, threshold, warping)))
+        result = pool.starmap(dtw_process, (distance_compute_job(regions, threshold, warping)))
     sparse_dist = dict([((i, j), d) for i, j, d in results if not np.isinf(d)])
     for (i, j), d in sparse_dist.items():
         sparse_dist[(j,i)] = d

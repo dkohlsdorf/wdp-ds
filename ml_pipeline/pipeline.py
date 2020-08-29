@@ -527,6 +527,6 @@ if __name__== "__main__":
         type_classifier = load_model("{}/type.h5".format(output))
         clusterer       = pkl.load(open('{}/clusterer.pkl'.format(output), "rb"))
         embedder        = SequenceEmbedder(enc, params, silence, type_classifier, clusterer)
-        clustering(inp, output, embedder, "test", dist_th, embedding_batch, clustering_type=CLUSTERING_KMEANS, min_len=min_len, min_support=min_support, max_written=max_written, n_writers=n_writers)    
-        clustering(unsupervised, output, embedder, "train", dist_th, embedding_batch, clustering_type=CLUSTERING_KMEANS, min_len=min_len, min_support=min_support, max_written=max_written, n_writers=n_writers)   
+        #clustering(inp, output, embedder, "test", dist_th, embedding_batch, clustering_type=CLUSTERING_KMEANS, min_len=min_len, min_support=min_support, max_written=max_written, n_writers=n_writers)    
+        #clustering(unsupervised, output, embedder, "train", dist_th, embedding_batch, clustering_type=CLUSTERING_KMEANS, min_len=min_len, min_support=min_support, max_written=max_written, n_writers=n_writers)   
         clustering(inp, output, embedder, "test_sequential", dist_th, embedding_batch, clustering_type=CLUSTERING_HC, min_len=min_len, min_support=min_support, max_written=max_written, n_writers=n_writers)   

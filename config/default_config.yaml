@@ -32,5 +32,5 @@ sil          : 'data/classification_noise'
 type_class   : 'data/classification'
 unsupervised : 'data/unsupervised'
 output       : 'models/v6_lstm_v1/'
-input        : 'gs://wdp-ds-data/dolphin_ogg'
+input        : 'gs://wdp-ds-data/2011'
 

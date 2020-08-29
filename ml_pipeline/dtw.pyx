@@ -30,23 +30,15 @@ def dtw(int id_x, int id_y, double[:, :] x, double[:,:] y, int band, double th):
     cdef int w = max(band, abs(N - M)) + 2
     cdef int i, j = 0
     cdef double dist
-    cdef bint overflow   
     cdef double[:,:] dp = np.ones((N + 1, M + 1)) * float('inf')
     
     dp[0, 0] = 0.0
     for i in range(1, N + 1):
-        overflow = True 
         for j in range(max(1, i - w), min(M + 1, i + w)): # sakoe chiba band
             v    = min([dp[i - 1, j], dp[i - 1, j - 1], dp[i, j - 1]]) 
             dist = np.sum(np.square(np.subtract(x[i-1,:], y[j-1,:]))) 
             dp[i][j] = v + dist
-            # early abandon
-            if dp[i][j] > th:
-                dp[i][j] = float('inf')
-            else:
-                overflow = False
-        if overflow:
-            return float('inf')
+											
     score = dp[N, M] / (N * M)
-    logdtw.info("DTW({} {} | {}) = {} | abandon = {}".format(id_x, id_y, w, score, overflow))
+    logdtw.info("DTW({} {} | {}) = {} ".format(id_x, id_y, w, score))
     return id_x, id_y, score

@@ -39,5 +39,6 @@ def dtw(int id_x, int id_y, double[:, :] x, double[:,:] y, int band):
             dp[i][j] = v + dist
 											
     score = dp[N, M] / (N * M)
-    logdtw.info("DTW({} {} | {}) = {} ".format(id_x, id_y, w, score))
+    if i % 100 == 0:
+        logdtw.info("DTW({} {} | {}) = {} ".format(id_x, id_y, w, score))
     return id_x, id_y, score

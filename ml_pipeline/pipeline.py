@@ -381,7 +381,7 @@ def analysis(path):
     log.info(" - gaps: {} type_dist: {}".format(n_gaps(starts, stops), n_types(types)))
 
 
-def clustering(inp, out, embedder, prefix, dist_th, batch, clustering_type=CLUSTERING_KMEANS, min_support=1, max_written = 100, n_writers=10):    
+def clustering(inp, out, embedder, prefix, dist_th, batch, clustering_type=CLUSTERING_KMEANS, min_support=1, max_written = 100, n_writers=10, max_instance=100000):    
     """
     Clustering all embeddings
     """
@@ -423,6 +423,8 @@ def clustering(inp, out, embedder, prefix, dist_th, batch, clustering_type=CLUST
                 annotated             = [(row['start'], row['stop'], row['filename'], row['type'], row['embedding'])
                                         for _ , row in signals.iterrows()]
                 overlapping += groupBy(annotated, overlap)
+                if max_instance not is None and len(overlapping) > max_instances:
+                    break
         assignment = hc([o for _,_,_,_, o in overlapping], n_writers, dist_th)
         clusters   = [(start, stop, f, t, c) for (start, stop, f, t, _), c in zip(overlapping, assignment)]
 

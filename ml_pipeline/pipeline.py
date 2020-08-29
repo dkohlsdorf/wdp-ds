@@ -515,18 +515,17 @@ if __name__== "__main__":
         max_written  = c['max2write']
         n_writers    = c['n_writers']
         min_len      = c['min_len']
-
-        #train_auto_encoder(version, unsupervised, output, params, latent, batch, epochs, conv_param)
-        #evaluate_encoder(version, unsupervised, output, "{}/encoder.h5".format(output), params, viz_k)        
-        #train_silence(version, silence, output, params, "{}/encoder.h5".format(output), batch, epochs_sup, conv_param, latent, freeze, transfer=transfer)
-        #train_type(version, type_class, output, params, "{}/encoder.h5".format(output), batch, epochs_sup, conv_param, latent, freeze, transfer)
-        #test_reconstruction(silence, output, params)
+        
+        train_auto_encoder(version, unsupervised, output, params, latent, batch, epochs, conv_param)
+        evaluate_encoder(version, unsupervised, output, "{}/encoder.h5".format(output), params, viz_k)        
+        train_silence(version, silence, output, params, "{}/encoder.h5".format(output), batch, epochs_sup, conv_param, latent, freeze, transfer=transfer)
+        train_type(version, type_class, output, params, "{}/encoder.h5".format(output), batch, epochs_sup, conv_param, latent, freeze, transfer)
+        test_reconstruction(silence, output, params)
     
         enc             = load_model("{}/encoder.h5".format(output))
         silence         = load_model("{}/sil.h5".format(output))
         type_classifier = load_model("{}/type.h5".format(output))
         clusterer       = pkl.load(open('{}/clusterer.pkl'.format(output), "rb"))
         embedder        = SequenceEmbedder(enc, params, silence, type_classifier, clusterer)
-        #clustering(inp, output, embedder, "test", dist_th, embedding_batch, clustering_type=CLUSTERING_KMEANS, min_len=min_len, min_support=min_support, max_written=max_written, n_writers=n_writers)    
-        #clustering(unsupervised, output, embedder, "train", dist_th, embedding_batch, clustering_type=CLUSTERING_KMEANS, min_len=min_len, min_support=min_support, max_written=max_written, n_writers=n_writers)   
+        clustering(inp, output, embedder, "test", dist_th, embedding_batch, clustering_type=CLUSTERING_KMEANS, min_len=min_len, min_support=min_support, max_written=max_written, n_writers=n_writers)    
         clustering(inp, output, embedder, "test_sequential", dist_th, embedding_batch, clustering_type=CLUSTERING_HC, min_len=min_len, min_support=min_support, max_written=max_written, n_writers=n_writers)   

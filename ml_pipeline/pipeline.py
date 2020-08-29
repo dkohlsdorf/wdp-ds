@@ -416,8 +416,7 @@ def clustering(inp, out, embedder, prefix, dist_th, batch, clustering_type=CLUST
             if file.startswith("embedding") and file.endswith(".csv"):
                 path = "{}/{}".format(out, file)
                 log.info("\tReading {} {}".format(path, len(overlapping)))
-                header                = ["filename", "start", "stop", "type", "embedding"]
-                df                    = pd.read_csv(path, sep="\t", header = None, names=header)
+                df                    = pd.read_csv(path, sep="\t")
                 signals               = df
                 signals['embedding']  = df['embedding'].apply(
                     lambda x: np.array([float(i) for i in x.split(",")]))

@@ -334,7 +334,9 @@ def write_audio(out, prefix, cluster_id, instances_clusters, grouped_by_cluster,
                 n_written += 1
                 if n_written > max_support:
                     audio_bank.close()
+                    log.info("Done: {}".format(cluster_id))
                     return True
+
         audio_bank.close()
         log.info("Done: {}".format(cluster_id))
         return False

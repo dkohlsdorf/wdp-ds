@@ -12,7 +12,7 @@ logdtw = logging.getLogger('dtw')
 logdtw.setLevel(logging.INFO)
 
 
-def dtw(int id_x, int id_y, double[:, :] x, double[:,:] y, int band, double th):
+def dtw(int id_x, int id_y, double[:, :] x, double[:,:] y, int band):
     """
     Align two sequences using dynamic time warping.
 
@@ -22,7 +22,6 @@ def dtw(int id_x, int id_y, double[:, :] x, double[:,:] y, int band, double th):
     :param x: a sequence of length N and dimension d
     :param y: a sequence of length M and dimension d
     :param band: sakoe chiba band
-    :param th: early abandon threshold
     :returns: id_x, id_y, alignment score
     """
     cdef int N = x.shape[0]

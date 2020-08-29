@@ -19,11 +19,11 @@ def distance_compute_job(regions, distance_threshold_frame, warping_band_percent
                 m = len(rj)
                 th = distance_threshold_frame * n * m
                 w  = int(max(n, m) * warping_band_percentage)
-                yield i, j, ri, rj, th, w
+                yield i, j, ri, rj, w
 
 
-def dtw_process(i, j, ri, rj, th, w):
-    return dtw(i,j, np.stack(ri), np.stack(rj), th, w)
+def dtw_process(i, j, ri, rj, w):
+    return dtw(i,j, np.stack(ri), np.stack(rj), w)
     
                 
 def linkage(cluster_i, cluster_j, assignment, distances):

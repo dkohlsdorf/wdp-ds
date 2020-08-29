@@ -412,9 +412,9 @@ def clustering(inp, out, embedder, prefix, dist_th, batch, clustering_type=CLUST
                     ))
     else:
         overlapping = []
-        for file in tf.io.gfile.listdir(annotation_path):        
+        for file in tf.io.gfile.listdir(out):        
             if file.startswith("embedding") and file.endswith(".csv"):
-                path = "{}/{}".format(annotation_path, file)
+                path = "{}/{}".format(out, file)
                 logstructure.info("\tReading {} {}".format(path, len(overlapping)))
                 header                = ["filename", "start", "stop", "type", "embedding"]
                 df                    = pd.read_csv(path, sep="\t", header = None, names=header)

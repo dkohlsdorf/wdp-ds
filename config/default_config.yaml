@@ -2,10 +2,10 @@ spec_win     : 128
 spec_step    : 64
 
 fft_win      : 512
-fft_step     : 64
-highpass     : 0
+fft_step     : 128
+highpass     : 25
 
-latent       : 128
+latent       : 256
 
 embedding_batch: 1000
 batch          : 10

@@ -381,7 +381,7 @@ def analysis(path):
     log.info(" - gaps: {} type_dist: {}".format(n_gaps(starts, stops), n_types(types)))
 
 
-def clustering(inp, out, embedder, prefix, dist_th, batch, clustering_type=CLUSTERING_KMEANS, min_support=1, max_written = 100, n_writers=10, max_instances=100000):    
+def clustering(inp, out, embedder, prefix, dist_th, batch, clustering_type=CLUSTERING_KMEANS, min_support=1, max_written = 100, n_writers=10):    
     """
     Clustering all embeddings
     """
@@ -423,8 +423,6 @@ def clustering(inp, out, embedder, prefix, dist_th, batch, clustering_type=CLUST
                 annotated             = [(row['start'], row['stop'], row['filename'], row['type'], row['embedding'])
                                         for _ , row in signals.iterrows()]
                 overlapping += groupBy(annotated, overlap)
-                if max_instances is not None and len(overlapping) > max_instances:
-                    break
         assignment = hc([o for _,_,_,_, o in overlapping], n_writers, dist_th)
         clusters   = [(start, stop, f, t, c) for (start, stop, f, t, _), c in zip(overlapping, assignment)]
 
@@ -527,6 +525,6 @@ if __name__== "__main__":
         type_classifier = load_model("{}/type.h5".format(output))
         clusterer       = pkl.load(open('{}/clusterer.pkl'.format(output), "rb"))
         embedder        = SequenceEmbedder(enc, params, silence, type_classifier, clusterer)
-        #clustering(inp, output, embedder, "test", dist_th, embedding_batch, clustering_type=CLUSTERING_KMEANS, min_support=min_support, max_written=max_written, n_writers=n_writers)    
-        #clustering(unsupervised, output, embedder, "train", dist_th, embedding_batch, clustering_type=CLUSTERING_KMEANS, min_support=min_support, max_written=max_written, n_writers=n_writers)   
+        clustering(inp, output, embedder, "test", dist_th, embedding_batch, clustering_type=CLUSTERING_KMEANS, min_support=min_support, max_written=max_written, n_writers=n_writers)    
+        clustering(unsupervised, output, embedder, "train", dist_th, embedding_batch, clustering_type=CLUSTERING_KMEANS, min_support=min_support, max_written=max_written, n_writers=n_writers)   
         clustering(inp, output, embedder, "test_sequential", dist_th, embedding_batch, clustering_type=CLUSTERING_HC, min_support=min_support, max_written=max_written, n_writers=n_writers)   

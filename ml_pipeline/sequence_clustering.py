@@ -59,6 +59,9 @@ def hc(regions, n_workers = 5, threshold = 15.0, warping=0.1):
     with mp.Pool(processes=n_workers) as pool:
         result = pool.starmap(dtw, (distance_compute_job(regions, threshold, warping)))
     sparse_dist = dict([((i, j), d) for i, j, d in results if not np.isinf(d)])
+    for (i, j), d in sparse_dist.items():
+        sparse_dist[(j,i)] = d
+        
     n = len(regions)
     assignment = np.arange(n)
     min_linkage = 0.0

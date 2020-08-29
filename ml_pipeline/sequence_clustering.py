@@ -48,6 +48,7 @@ def linkage(cluster_i, cluster_j, assignment, distances):
                         d = distances[(i,j)]
                     elif (j, i) in distances:
                         d = distances[(j,i)]
+                    
                     if np.isinf(d):
                         return d
                     else:
@@ -82,10 +83,11 @@ def hc(regions, n_workers = 5, threshold = 0.5, warping=0.1):
                     l = linkage(cluster_i, cluster_j, assignment, sparse_dist)
                     if l < min_linkage:
                         min_linkage = l
-        if i < j:
-            assignment[j] = i  
-        else:
-            assignment[i] = j
+        if min_linkage < threshold:
+            if i < j:
+                assignment[j] = i  
+            else:
+                assignment[i] = j
     return assignment
 
 

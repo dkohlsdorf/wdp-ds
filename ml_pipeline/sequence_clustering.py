@@ -109,7 +109,7 @@ def mk_region(sequences):
         yield start, stop, f, t, items
 
 
-def groupBy(sequences, grouping_cond, window_size=None):
+def groupBy(sequences, grouping_cond, min_len):
     """
     Extract groups of signals
     :param sequences: a sortd list of time stamped embedding sequences (seq, start, stop, file, type)
@@ -124,13 +124,9 @@ def groupBy(sequences, grouping_cond, window_size=None):
         else:
             if grouping_cond(current[-1], x):
                 current.append(x)
-                if window_size is not None and window_size == len(current):
-                    groups.append(current)
-                    current = current[1:]
             else:
-                if window_size is None:
-                    groups.append(current)
-                    current = [x]
+                groups.append(current)
+                current = [x]
     if len(current) > 0:
         groups.append(current)
-    return [x for x in mk_region(groups)]
+    return [x for x in mk_region(groups) if len(x[4]) >= min_len]

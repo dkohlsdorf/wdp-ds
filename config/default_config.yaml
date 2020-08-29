@@ -8,7 +8,7 @@ highpass     : 0
 latent       : 128
 
 embedding_batch: 1000
-batch          : 25
+batch          : 10
 version        : "v6.0"
 epochs         : 50
 epochs_sup     : 15

@@ -43,14 +43,21 @@ def linkage(cluster_i, cluster_j, assignment, distances):
         if assignment[i] == cluster_i:
             for j in range(n):
                 if assignment[j] == cluster_j:
+                    d = float('inf')
                     if (i, j) in distances:
-                        distance += distances[(i,j)]
+                        d = distances[(i,j)]
+                    elif (j, i) in distances:
+                        d = distances[(j,i)]
+                    if np.isinf(d):
+                        return d
+                    else:
+                        distances += d
                     size_y += 1.0
             size_x += 1.0
     return distance / (size_x * size_y)
 
 
-def hc(regions, n_workers = 5, threshold = 15.0, warping=0.1):
+def hc(regions, n_workers = 5, threshold = 0.5, warping=0.1):
     '''
     Hierarchical Clustering
 
@@ -62,10 +69,8 @@ def hc(regions, n_workers = 5, threshold = 15.0, warping=0.1):
     '''
     with mp.Pool(processes=n_workers) as pool:
         result = pool.starmap(dtw_process, (distance_compute_job(regions, threshold, warping)))
-    sparse_dist = dict([((i, j), d) for i, j, d in results if not np.isinf(d)])
-    for (i, j), d in sparse_dist.items():
-        sparse_dist[(j,i)] = d
-        
+    sparse_dist = dict([((i, j), d) for i, j, d in results if d < threshold])
+
     n = len(regions)
     assignment = np.arange(n)
     min_linkage = 0.0

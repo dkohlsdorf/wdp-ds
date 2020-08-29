@@ -423,7 +423,7 @@ def clustering(inp, out, embedder, prefix, dist_th, batch, clustering_type=CLUST
                 annotated             = [(row['start'], row['stop'], row['filename'], row['type'], row['embedding'])
                                         for _ , row in signals.iterrows()]
                 overlapping += groupBy(annotated, overlap)
-                if max_instance not is None and len(overlapping) > max_instances:
+                if max_instance is not None and len(overlapping) > max_instances:
                     break
         assignment = hc([o for _,_,_,_, o in overlapping], n_writers, dist_th)
         clusters   = [(start, stop, f, t, c) for (start, stop, f, t, _), c in zip(overlapping, assignment)]

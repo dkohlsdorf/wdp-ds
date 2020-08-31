@@ -122,7 +122,7 @@ def visualize_2dfilters(img_path, encoder, layers, n_rows = 8):
         plt.close()
         
             
-def visualize_embedding(img_path, embeddings, examples, k, figsize=(80, 60), zoom=0.15, sparse=False):
+def visualize_embedding(img_path, embeddings, examples, k, figsize=(80, 60), zoom=0.15):
     """
     Plot the examples in the embedding space projected to 2D using
     t-sne
@@ -141,16 +141,6 @@ def visualize_embedding(img_path, embeddings, examples, k, figsize=(80, 60), zoo
     clustering = KMeans(n_clusters=k, max_iter=1024)
     c = clustering.fit_predict(embeddings)
     l = tsne.fit_transform(embeddings)
-    if sparse:
-        sample_silhouette_values = silhouette_samples(embeddings, c)
-        th = np.percentile(sample_silhouette_values, 50)
-        c = [cluster for cluster, shillouette in zip(c, sample_silhouette_values)   if shillouette > th]
-        l = [latent for latent, shillouette in zip(l, sample_silhouette_values)     if shillouette > th]
-        examples = np.stack([x for x, shillouette in zip(examples, sample_silhouette_values) if shillouette > th])
-        ids = [i for i in range(0, len(sample_silhouette_values)) if sample_silhouette_values[i] > th]
-        logplots.info("Shillouette TH: {} n_samples left {}".format(th, len(ids)))
-    else:
-        ids = [i for i in range(0, len(c))]
     f, ax = plt.subplots(figsize=figsize)
     imscatter([a[0] for a in l], [a[1] for a in l], c, examples, ax, zoom=zoom)
     plt.savefig(img_path)

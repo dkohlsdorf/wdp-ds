@@ -468,6 +468,43 @@ def clustering(inp, out, embedder, prefix, dist_th, batch, clustering_type=CLUST
     log.info('Done Logs')
     
 
+def fine_tuning(input_folder, output_folder, params, latent, encoder_file, batch, epoch):
+    '''
+    Fine tune the model using the triplet loss
+    '''
+    enc = load_model(encoder_file)
+    enc, model = triplet_model((params.spec_win, params.n_fft_bins, 1), enc, latent)
+    model.summary()
+
+    n = 0    
+    total_loss = 0.0
+    negative_stream = dataset(input_folder, params, no_label, True)
+    for epoch in range(epochs):
+        positive_stream = dataset(input_folder, params, no_label, True)
+        anchor   = next(positive_stream, None)
+        while anchor is not None:            
+            negative = next(negative_stream, None)
+            if negative is None:                
+                negative_stream = dataset(folder, params, auto_encode, True)
+                negative = next(negative_stream, None)
+            anchor   = anchor[0].reshape((1, params.spec_win, params.n_fft_bins, 1))
+            negative = negative[0].reshape((1, params.spec_win, params.n_fft_bins, 1))
+            if np.random.uniform() < 0.5:
+                positive = anchor + np.random.normal(0, 1, (1, params.spec_win, params.n_fft_bins, 1))
+            else:
+                positive = (anchor + negative) / 2
+            loss = model.train_on_batch(x=[anchor, positive, negative], y=np.zeros((1,  256)))
+            anchor = next(positive_stream, None)
+            total_loss += loss
+            n += 1
+            if n % 10 == 0:
+                log.info("EPOCH: {} LOSS: {}".format(epoch, total_loss))
+                total_loss = 0.0
+                n = 0
+    enc.save('{}/encoder.h5'.format(output_folder))
+    model.save('{}/triplet.h5'.format(output_folder))
+
+
 def header():
     return """
     =================================================================
@@ -478,8 +515,8 @@ def header():
     by Daniel Kyu Hwa Kohlsdorf
     =================================================================
     """
-    
-    
+
+
 if __name__== "__main__":
     log.info(header())
     if len(sys.argv) == 3 and sys.argv[1] == 'train':
@@ -516,12 +553,12 @@ if __name__== "__main__":
         min_len      = c['min_len']
         
         train_auto_encoder(version, unsupervised, output, params, latent, batch, epochs, conv_param)
-        evaluate_encoder(version, unsupervised, output, "{}/encoder.h5".format(output), params, viz_k)        
         train_silence(version, silence, output, params, "{}/encoder.h5".format(output), batch, epochs_sup, conv_param, latent, freeze, transfer=transfer)
         train_type(version, type_class, output, params, "{}/encoder.h5".format(output), batch, epochs_sup, conv_param, latent, freeze, transfer)
+        fine_tuning(unsupervised, output, params, latent, "{}/encoder.h5".format(output), batch, epochs_sup)
+        evaluate_encoder(version, unsupervised, output, "{}/encoder.h5".format(output), params, viz_k)        
         test_reconstruction(silence, output, params)
-    
-        enc             = load_model("{}/encoder.h5".format(output))
+
         silence         = load_model("{}/sil.h5".format(output))
         type_classifier = load_model("{}/type.h5".format(output))
         clusterer       = pkl.load(open('{}/clusterer.pkl'.format(output), "rb"))

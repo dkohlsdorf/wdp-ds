@@ -153,12 +153,16 @@ def dataset(folder, params, label_func, shuffle):
 
     :returns: iterator (spectrogram, label, filename, start, stop)
     """
-    for filename in tf.io.gfile.listdir(folder):
-        if filename.endswith('.ogg') or filename.endswith('.wav') or filename.endswith('.aiff') or filename.startswith('cluster') or filename.startswith('noise'):
-            path = "{}/{}".format(folder, filename)
-            spec_iter = labeled_spectrogram_windows(path, params, label_func, shuffle=shuffle)
-            for x in spec_iter:
-                yield x
+    f = [filename for filename in tf.io.gfile.listdir(folder) if filename.endswith('.ogg') or filename.endswith('.wav') or filename.endswith('.aiff') or filename.startswith('cluster') or filename.startswith('noise')]
+    ordered = [i for i in range(0, len(f))]
+    if shuffle:
+        random.shuffle(ordered)
+    for i in ordered:
+        filename  = f[i]
+        path = "{}/{}".format(folder, filename)
+        spec_iter = labeled_spectrogram_windows(path, params, label_func, shuffle=shuffle)
+        for x in spec_iter:
+            yield x
 
 
 def labeled_spectrogram_windows(filename, params, label_func, shuffle=False):

@@ -51,12 +51,13 @@ def hc(regions, n_workers = 5, threshold = 0.5, warping=0.1):
     for i, j, d in results:
         distances[i, j] = d
         distances[j, i] = d
-    logcluster.info("Done writing distances: p95 = {}, p5 = {}, median = {}".format(
+    logcluster.info("Done writing distances: p95 = {}, p1 = {}, p5 = {}, median = {}".format(
         np.percentile(distances, 95),
+        np.percentile(distances, 1),
         np.percentile(distances, 5),
         np.percentile(distances, 50)
     ))
-    agg = AgglomerativeClustering(n_clusters = None, distance_threshold = threshold, linkage = 'average', affinity='precomputed')
+    agg = AgglomerativeClustering(n_clusters = None, distance_threshold = threshold, linkage = 'complete', affinity='precomputed')
     assignment = agg.fit_predict(distances)
     return assignment
 

@@ -55,12 +55,14 @@ class SequenceEmbedder:
         is_silence = self.silence_detector.predict(b)
         types      = self.type_classifier.predict(b) 
         embedding  = self.encoder.predict(b)
-        clustering = self.clusterer.predict(embedding)               
+        clustering = self.clusterer.fit_transform(embedding)               
         for i in range(0, len(batch)):
             if int(round(is_silence[i][0])) == 0:
                 t = np.argmax(types[i])                    
                 if t in write_labels:      
-                    c         = clustering[i]
+                    c = np.argmax(clustering[i])
+                    if clustering[i][c] >= th:
+                        c = -1
                     filename  = batch[i][1]
                     start     = batch[i][2]
                     stop      = batch[i][3]     

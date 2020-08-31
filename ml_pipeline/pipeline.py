@@ -408,6 +408,7 @@ def clustering(inp, out, embedder, prefix, dist_th, batch, clustering_type=CLUST
                 log.info("\tReading {}".format(path))
                 df                    = pd.read_csv(path, sep="\t")
                 signals               = df
+                signals               = signals[signals['cluster'] >= 0]
                 for _, row in signals.iterrows():
                     clusters.append((
                         row['start'], row['stop'], row['filename'], row['type'], row['cluster']  

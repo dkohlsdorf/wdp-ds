@@ -28,7 +28,7 @@ class SequenceEmbedder:
         self.clusterer = clusterer
 
 
-    def embed(self, filename, outpath, batch_sze=1000, th=15.0, write_labels = set([2, 3])):
+    def embed(self, filename, outpath, batch_sze=1000, write_labels = set([2, 3])):
         """
         Embeds non silent regions from a file
 
@@ -43,26 +43,24 @@ class SequenceEmbedder:
             for win in spectrogram_windows(filename, self.param):
                 batch.append(win)
                 if len(batch) == batch_sze:
-                    self.process_batch(batch, fp, th, write_labels)
+                    self.process_batch(batch, fp, write_labels)
                     batch = []
             if len(batch) > 0:
-                self.process_batch(batch, fp, th, write_labels)
+                self.process_batch(batch, fp, write_labels)
                 batch = []
 
 
-    def process_batch(self, batch, fp, th, write_labels):
+    def process_batch(self, batch, fp, write_labels):
         b = np.stack([x[0].reshape(x[0].shape[0], x[0].shape[1], 1) for x in batch]) 
         is_silence = self.silence_detector.predict(b)
         types      = self.type_classifier.predict(b) 
         embedding  = self.encoder.predict(b)
-        clustering = self.clusterer.fit_transform(embedding)               
+        clustering = self.clusterer.predict(embedding)               
         for i in range(0, len(batch)):
             if int(round(is_silence[i][0])) == 0:
                 t = np.argmax(types[i])                    
                 if t in write_labels:      
-                    c = np.argmax(clustering[i])
-                    if clustering[i][c] >= th:
-                        c = -1
+                    c         = clustering[i]
                     filename  = batch[i][1]
                     start     = batch[i][2]
                     stop      = batch[i][3]     

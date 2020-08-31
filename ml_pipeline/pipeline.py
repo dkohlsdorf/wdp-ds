@@ -397,7 +397,7 @@ def clustering(inp, out, embedder, prefix, dist_th, batch, clustering_type=CLUST
             out_path = "{}/embedding_{}.csv".format(out, name)
             log.info("\t {}".format(in_path))
             if not os.path.isfile(out_path):
-                embedder.embed(in_path, out_path, batch, dist_th)
+                embedder.embed(in_path, out_path, batch)
             analysis(out_path)
 
     if clustering_type == CLUSTERING_KMEANS:
@@ -408,7 +408,6 @@ def clustering(inp, out, embedder, prefix, dist_th, batch, clustering_type=CLUST
                 log.info("\tReading {}".format(path))
                 df                    = pd.read_csv(path, sep="\t")
                 signals               = df
-                signals               = signals[signals['cluster'] >= 0]
                 for _, row in signals.iterrows():
                     clusters.append((
                         row['start'], row['stop'], row['filename'], row['type'], row['cluster']  

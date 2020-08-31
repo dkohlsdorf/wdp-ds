@@ -1,6 +1,12 @@
 import multiprocessing as mp
 import numpy as np
 from dtw import *
+from sklearn.cluster import AgglomerativeClustering
+
+import logging
+logging.basicConfig()
+logcluster = logging.getLogger('cluster')
+logcluster.setLevel(logging.INFO)
 
 
 def distance_compute_job(regions, distance_threshold_frame, warping_band_percentage):
@@ -26,38 +32,6 @@ def dtw_process(i, j, ri, rj, w):
     return dtw(i,j, np.stack(ri), np.stack(rj), w)
     
                 
-def linkage(cluster_i, cluster_j, assignment, distances):
-    '''
-    Compute the average linkage between cluster i and cluster j
-    :param cluster_i: ith cluster id
-    :param cluster_j: jth cluster id
-    :param assignment: array with cluster assignments
-    :param distances: map[(i,j)] = distance
-    :return: average linkage
-    '''
-    n = len(assignment)
-    distance = 0.0
-    size_x   = 0.0
-    size_y   = 0.0
-    for i in range(n):
-        if assignment[i] == cluster_i:
-            for j in range(n):
-                if assignment[j] == cluster_j:
-                    d = float('inf')
-                    if (i, j) in distances:
-                        d = distances[(i,j)]
-                    elif (j, i) in distances:
-                        d = distances[(j,i)]
-                    
-                    if np.isinf(d):
-                        return d
-                    else:
-                        distances += d
-                    size_y += 1.0
-            size_x += 1.0
-    return distance / (size_x * size_y)
-
-
 def hc(regions, n_workers = 5, threshold = 0.5, warping=0.1):
     '''
     Hierarchical Clustering
@@ -68,26 +42,22 @@ def hc(regions, n_workers = 5, threshold = 0.5, warping=0.1):
     :param warping: percentage of allowed warping
     :return: array of n cluster ids
     '''
-    with mp.Pool(processes=n_workers) as pool:
-        result = pool.starmap(dtw_process, (distance_compute_job(regions, threshold, warping)))
-    sparse_dist = dict([((i, j), d) for i, j, d in results if d < threshold])
-
+    logcluster.info("Start clustering distance precompute with {} workers".format(n_workers))
     n = len(regions)
-    assignment = np.arange(n)
-    min_linkage = 0.0
-    while min_linkage < threshold:
-        min_linkage = float('inf')
-        for cluster_i in set(assignment):
-            for cluster_j in set(assignment):
-                if cluster_i != cluster_j:
-                    l = linkage(cluster_i, cluster_j, assignment, sparse_dist)
-                    if l < min_linkage:
-                        min_linkage = l
-        if min_linkage < threshold:
-            if i < j:
-                assignment[j] = i  
-            else:
-                assignment[i] = j
+    with mp.Pool(processes=n_workers) as pool:
+        results = pool.starmap(dtw_process, (distance_compute_job(regions, threshold, warping)))
+    logcluster.info("Done distance computation for {} instances".format(n))
+    distances = np.zeros((n, n))
+    for i, j, d in results:
+        distances[i, j] = d
+        distances[j, i] = d
+    logcluster.info("Done writing distances: p95 = {}, p5 = {}, median = {}".format(
+        np.percentile(distances, 95),
+        np.percentile(distances, 5),
+        np.percentile(distances, 50)
+    ))
+    agg = AgglomerativeClustering(n_clusters = None, distance_threshold = threshold, linkage = 'average', affinity='precomputed')
+    assignment = agg.fit_predict(distances)
     return assignment
 
 

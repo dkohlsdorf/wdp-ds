@@ -280,8 +280,7 @@ def evaluate_encoder(version_tag, input_folder, output_folder, encoder_file, par
     enc = load_model(encoder_file)
     visualize_2dfilters(output_folder, enc, [1], n_rows = 8)    
     x = np.stack([x.reshape(x.shape[0], x.shape[1], 1) for (x,_,_,_,_) in dataset(
-        input_folder, params, no_label, False
-    ) if np.random.uniform() < 0.1])
+        input_folder, params, no_label, False)])
     log.info(x.shape)
     h = enc.predict(x)
     clustering = visualize_embedding("{}/embeddings.png".format(output_folder), h, x, k)

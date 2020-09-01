@@ -95,7 +95,6 @@ class TripletLoss(Loss):
 
     def call(self, y_true, y_pred):
         y_pred = tf.convert_to_tensor(y_pred)
-        print(y_pred)
         anchor = y_pred[:, 0:self.latent]
         pos    = y_pred[:, self.latent:2 * self.latent]
         neg    = y_pred[:, 2 * self.latent:3 * self.latent]

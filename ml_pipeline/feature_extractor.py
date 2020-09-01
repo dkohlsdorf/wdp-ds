@@ -102,7 +102,7 @@ class TripletLoss(Loss):
         neg_dist   = tf.reduce_sum(tf.square(tf.subtract(anchor, neg)), axis=-1)    
         basic_loss = tf.add(tf.subtract(pos_dist, neg_dist), self.margin)    
         loss       = tf.reduce_sum(tf.maximum(basic_loss, 0.0))               
-        return neg_dist
+        return loss
 
 
 def triplet_model(in_shape, encoder, latent, margin=0.1):

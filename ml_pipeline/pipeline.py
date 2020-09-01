@@ -488,7 +488,7 @@ def fine_tuning(input_folder, output_folder, params, latent, encoder_file, batch
         while anchor is not None:            
             negative = next(negative_stream, None)
             if negative is None:                
-                negative_stream = dataset(folder, params, auto_encode, True)
+                negative_stream = dataset(input_folder, params, auto_encode, True)
                 negative = next(negative_stream, None)
             anchor   = anchor[0].reshape((params.spec_win, params.n_fft_bins, 1))
             negative = negative[0].reshape((params.spec_win, params.n_fft_bins, 1))

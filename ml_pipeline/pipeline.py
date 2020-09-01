@@ -482,6 +482,7 @@ def fine_tuning(input_folder, output_folder, params, latent, encoder_file, batch
     for epoch in range(epochs):
         positive_stream = dataset(input_folder, params, no_label, True)
         anchor   = next(positive_stream, None)
+        batch_x  = []
         while anchor is not None:            
             negative = next(negative_stream, None)
             if negative is None:                
@@ -493,14 +494,18 @@ def fine_tuning(input_folder, output_folder, params, latent, encoder_file, batch
                 positive = anchor + np.random.normal(0, 1, (1, params.spec_win, params.n_fft_bins, 1))
             else:
                 positive = (anchor + negative) / 2
-            loss = model.train_on_batch(x=[anchor, positive, negative], y=np.zeros((1,  256)))
+                        
+            batch_x.append([anchor, positive, negative])
             anchor = next(positive_stream, None)
-            total_loss += loss
-            n += 1
-            if n % 10 == 0:
-                log.info("EPOCH: {} LOSS: {}".format(epoch, total_loss))
-                total_loss = 0.0
-                n = 0
+            if len(batch_x) == batch:
+                loss = model.train_on_batch(x=batch_x, y=np.zeros((batch,  256)))
+                total_loss += loss
+                n += 1
+                if n % 10 == 0:
+                    log.info("EPOCH: {} LOSS: {}".format(epoch, total_loss))
+                    total_loss = 0.0
+                    n = 0
+                batch_x = []
     enc.save('{}/encoder.h5'.format(output_folder))
     model.save('{}/triplet.h5'.format(output_folder))
 

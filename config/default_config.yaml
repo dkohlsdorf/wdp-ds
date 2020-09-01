@@ -9,7 +9,7 @@ latent       : 256
 
 embedding_batch: 1000
 batch          : 10
-version        : "v6.0"
+version        : "v7.0"
 epochs         : 50
 epochs_sup     : 15
 
@@ -31,6 +31,6 @@ min_len      : 5
 sil          : 'data/classification_noise'
 type_class   : 'data/classification'
 unsupervised : 'data/unsupervised'
-output       : 'models/v6_lstm_v1/'
+output       : 'models/v7_lstm_v1/'
 input        : 'gs://wdp-ds-data/2011'
 

@@ -482,30 +482,35 @@ def fine_tuning(input_folder, output_folder, params, latent, encoder_file, batch
     for epoch in range(epochs):
         positive_stream = dataset(input_folder, params, no_label, True)
         anchor   = next(positive_stream, None)
-        batch_x  = []
+        batch_pos = []
+        batch_neg = []
+        batch_anc = []
         while anchor is not None:            
             negative = next(negative_stream, None)
             if negative is None:                
                 negative_stream = dataset(folder, params, auto_encode, True)
                 negative = next(negative_stream, None)
-            anchor   = anchor[0].reshape((1, params.spec_win, params.n_fft_bins, 1))
-            negative = negative[0].reshape((1, params.spec_win, params.n_fft_bins, 1))
+            anchor   = anchor[0].reshape((params.spec_win, params.n_fft_bins, 1))
+            negative = negative[0].reshape((params.spec_win, params.n_fft_bins, 1))
             if np.random.uniform() < 0.5:
-                positive = anchor + np.random.normal(0, 1, (1, params.spec_win, params.n_fft_bins, 1))
+                positive = anchor + np.random.normal(0, 1, (params.spec_win, params.n_fft_bins, 1))
             else:
                 positive = (anchor + negative) / 2
-                        
-            batch_x.append([anchor, positive, negative])
+            batch_pos.append(positive)
+            batch_neg.append(negative)
+            batch_anc.append(anchor)
             anchor = next(positive_stream, None)
-            if len(batch_x) == batch:
-                loss = model.train_on_batch(x=batch_x, y=np.zeros((batch,  256)))
+            if len(batch_pos) == batch:                
+                loss = model.train_on_batch(x=[batch_pos, batch_neg, batch_anc], y=np.zeros((batch,  256)))
                 total_loss += loss
                 n += 1
                 if n % 10 == 0:
                     log.info("EPOCH: {} LOSS: {}".format(epoch, total_loss))
                     total_loss = 0.0
                     n = 0
-                batch_x = []
+                batch_pos = []
+                batch_neg = []
+                batch_anc = []
     enc.save('{}/encoder.h5'.format(output_folder))
     model.save('{}/triplet.h5'.format(output_folder))
 
@@ -558,9 +563,9 @@ if __name__== "__main__":
         min_len      = c['min_len']
         
         train_auto_encoder(version, unsupervised, output, params, latent, batch, epochs, conv_param)
+        fine_tuning(unsupervised, output, params, latent, "{}/encoder.h5".format(output), batch, epochs_sup)
         train_silence(version, silence, output, params, "{}/encoder.h5".format(output), batch, epochs_sup, conv_param, latent, freeze, transfer=transfer)
         train_type(version, type_class, output, params, "{}/encoder.h5".format(output), batch, epochs_sup, conv_param, latent, freeze, transfer)
-        fine_tuning(unsupervised, output, params, latent, "{}/encoder.h5".format(output), batch, epochs_sup)
         evaluate_encoder(version, unsupervised, output, "{}/encoder.h5".format(output), params, viz_k)        
         test_reconstruction(silence, output, params)
 

@@ -95,9 +95,10 @@ class TripletLoss(Loss):
 
     def call(self, y_true, y_pred):
         y_pred = tf.convert_to_tensor(y_pred)
-        anchor = y_pred[0, 0:self.latent]
-        pos    = y_pred[0, self.latent:2 * self.latent]
-        neg    = y_pred[0, 2 * self.latent:3 * self.latent]
+        print(y_pred)
+        anchor = y_pred[:, 0:self.latent]
+        pos    = y_pred[:, self.latent:2 * self.latent]
+        neg    = y_pred[:, 2 * self.latent:3 * self.latent]
         pos_dist   = tf.reduce_sum(tf.square(tf.subtract(anchor, pos)), axis=-1)            
         neg_dist   = tf.reduce_sum(tf.square(tf.subtract(anchor, neg)), axis=-1)    
         basic_loss = tf.add(tf.subtract(pos_dist, neg_dist), self.margin)    

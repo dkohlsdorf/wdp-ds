@@ -600,11 +600,15 @@ if __name__== "__main__":
         min_len      = c['min_len']
         
         #train_auto_encoder(version, unsupervised, output, params, latent, batch, epochs, conv_param)
-        fine_tuning(unsupervised, output, params, latent, "{}/encoder.h5".format(output), batch, epochs_sup)
+        fine_tuning(unsupervised, output, params, latent, "{}/encoder.h5".format(output), batch, epochs_sup) 
+        
+        # TODO labeled fine tuning           
         train_silence(version, silence, output, params, "{}/encoder.h5".format(output), batch, epochs_sup, conv_param, latent, freeze, transfer=transfer)
         train_type(version, type_class, output, params, "{}/encoder.h5".format(output), batch, epochs_sup, conv_param, latent, freeze, transfer)
         evaluate_encoder(version, unsupervised, output, "{}/encoder.h5".format(output), params, viz_k)        
         test_reconstruction(silence, output, params)
+
+        # TODO find threshold using labels
 
         silence         = load_model("{}/sil.h5".format(output))
         type_classifier = load_model("{}/type.h5".format(output))

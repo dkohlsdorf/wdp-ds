@@ -72,6 +72,16 @@ def sil(f, x):
         return 0.0
 
 
+def cluster_number(f, x):
+    '''
+    For fine tuning based on clusters
+
+    :returns: cluster id
+    '''
+    cluster_number = f.split('/')[-1].split('_')[0][1:]
+    return int(cluster_number)
+
+
 def auto_encode(f, x):
     """
     For auto encoding the label is the spectrogram itself
@@ -467,7 +477,7 @@ def clustering(inp, out, embedder, prefix, dist_th, batch, clustering_type=CLUST
                     fp.write("{},{},{},{},{},{}\n".format(start, stop, f, c, t, i))
     log.info('Done Logs')
     
-
+    
 def fine_tuning(input_folder, output_folder, params, latent, encoder_file, batch, epoch):
     '''
     Fine tune the model using the triplet loss

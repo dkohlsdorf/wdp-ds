@@ -538,8 +538,9 @@ def clusters_as_dataset(input_folder, dataset_folder, prefix):
     '''
     os.mkdir(dataset_folder)
     for filename in os.listdir(input_folder):
-        if filename.startswith('prefix') and filename.endswith('.csv'):
+        if filename.startswith(prefix) and filename.endswith('.csv'):
             path = "{}/{}".format(input_folder, filename)
+            log.info("Reading: {}".format(path))
             df = pd.read_csv(path)
             snippets  = []
             clusters  = []
@@ -553,8 +554,9 @@ def clusters_as_dataset(input_folder, dataset_folder, prefix):
                 snippets.append((start, stop))
                 clusters.append(cluster)
                 region_id.append(rid)
-            for i, x in enumerate(audio_snippets(infile, snippets)):
-                cluster_file = "{}/c{}_r{}".format(dataset_folder, clusters[i], region_id[i])
+            for i, x in enumerate(audio_regions(infile, snippets)):
+                cluster_file = "{}/c{}_r{}.wav".format(dataset_folder, clusters[i], region_id[i])
+                log.info("\tWriting: {}".format(cluster_file))
                 writer = AudioSnippetCollection(cluster_file)
                 writer.write(x)
                 writer.close()
@@ -610,23 +612,24 @@ if __name__== "__main__":
         min_len      = c['min_len']
         
         #train_auto_encoder(version, unsupervised, output, params, latent, batch, epochs, conv_param)
-        fine_tuning(unsupervised, output, params, latent, "{}/encoder.h5".format(output), batch, epochs_sup) 
+        #fine_tuning(unsupervised, output, params, latent, "{}/encoder.h5".format(output), batch, epochs_sup) 
         
         # TODO labeled fine tuning           
-        train_silence(version, silence, output, params, "{}/encoder.h5".format(output), batch, epochs_sup, conv_param, latent, freeze, transfer=transfer)
-        train_type(version, type_class, output, params, "{}/encoder.h5".format(output), batch, epochs_sup, conv_param, latent, freeze, transfer)
-        evaluate_encoder(version, unsupervised, output, "{}/encoder.h5".format(output), params, viz_k)        
-        test_reconstruction(silence, output, params)
+        #train_silence(version, silence, output, params, "{}/encoder.h5".format(output), batch, epochs_sup, conv_param, latent, freeze, transfer=transfer)
+        #train_type(version, type_class, output, params, "{}/encoder.h5".format(output), batch, epochs_sup, conv_param, latent, freeze, transfer)
+        #evaluate_encoder(version, unsupervised, output, "{}/encoder.h5".format(output), params, viz_k)        
+        #test_reconstruction(silence, output, params)
 
         # TODO find threshold using labels
 
+        enc             = load_model("{}/encoder.h5".format(output))
         silence         = load_model("{}/sil.h5".format(output))
         type_classifier = load_model("{}/type.h5".format(output))
         clusterer       = pkl.load(open('{}/clusterer.pkl'.format(output), "rb"))
         embedder        = SequenceEmbedder(enc, params, silence, type_classifier, clusterer)
-        clustering(inp, output, embedder, "test", dist_th, embedding_batch, clustering_type=CLUSTERING_KMEANS, min_len=min_len, min_support=min_support, max_written=max_written, n_writers=n_writers)    
+        #clustering(inp, output, embedder, "test", dist_th, embedding_batch, clustering_type=CLUSTERING_KMEANS, min_len=min_len, min_support=min_support, max_written=max_written, n_writers=n_writers)    
         clustering(inp, output, embedder, "test_sequential", dist_th, embedding_batch, clustering_type=CLUSTERING_HC, min_len=min_len, min_support=min_support, max_written=max_written, n_writers=n_writers)   
-    elif len(sys.argv) == 4 and sys.argv[1] == 'generate':
+    elif len(sys.argv) == 5 and sys.argv[1] == 'generate':
         input_folder   = sys.argv[2]  
         dataset_folder = sys.argv[3] 
         prefix         = sys.argv[4] 

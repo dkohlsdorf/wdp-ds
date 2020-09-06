@@ -30,9 +30,9 @@ class AudioSnippetCollection:
             self.is_writing = True
 
         frames = params.rate // 10
-        b = bytearray(data)
-        self.obj.writeframesraw(b)
         b = bytearray(np.zeros(frames, dtype=params.dtype))
+        self.obj.writeframesraw(b)
+        b = bytearray(data)
         self.obj.writeframesraw(b)
     
     def close(self):

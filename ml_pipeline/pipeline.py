@@ -72,6 +72,16 @@ def sil(f, x):
         return 0.0
 
 
+def cluster_number(f, x):
+    '''
+    For fine tuning based on clusters
+
+    :returns: cluster id
+    '''
+    cluster_number = f.split('/')[-1].split('_')[0][1:]
+    return int(cluster_number)
+
+
 def auto_encode(f, x):
     """
     For auto encoding the label is the spectrogram itself
@@ -467,6 +477,91 @@ def clustering(inp, out, embedder, prefix, dist_th, batch, clustering_type=CLUST
                     fp.write("{},{},{},{},{},{}\n".format(start, stop, f, c, t, i))
     log.info('Done Logs')
     
+    
+def fine_tuning(input_folder, output_folder, params, latent, encoder_file, batch, epoch):
+    '''
+    Fine tune the model using the triplet loss
+    '''
+    enc = load_model(encoder_file)
+    enc, model = triplet_model((params.spec_win, params.n_fft_bins, 1), enc, latent)
+    model.summary()
+
+    n = 0    
+    total_loss = 0.0
+    negative_stream = dataset(input_folder, params, no_label, True)
+    for epoch in range(epochs):
+        positive_stream = dataset(input_folder, params, no_label, True)
+        anchor   = next(positive_stream, None)
+        batch_pos = []
+        batch_neg = []
+        batch_anc = []
+        while anchor is not None:            
+            negative = next(negative_stream, None)
+            if negative is None:                
+                negative_stream = dataset(input_folder, params, auto_encode, True)
+                negative = next(negative_stream, None)
+            anchor   = anchor[0].reshape((params.spec_win, params.n_fft_bins, 1))
+            negative = negative[0].reshape((params.spec_win, params.n_fft_bins, 1))
+            if np.random.uniform() < 0.5:
+                positive = anchor + np.random.normal(0, 1, (params.spec_win, params.n_fft_bins, 1))
+            else:
+                positive = (anchor + negative) / 2
+            batch_pos.append(positive)
+            batch_neg.append(negative)
+            batch_anc.append(anchor)
+            anchor = next(positive_stream, None)
+            if len(batch_pos) == batch:      
+                batch_pos = np.stack(batch_pos)
+                batch_neg = np.stack(batch_neg)
+                batch_anc = np.stack(batch_anc)
+                loss = model.train_on_batch(x=[batch_pos, batch_neg, batch_anc], y=np.zeros((batch,  256)))
+                total_loss += loss
+                n += 1
+                if n % 10 == 0:
+                    log.info("EPOCH: {} LOSS: {}".format(epoch, total_loss))
+                    total_loss = 0.0
+                    n = 0
+                batch_pos = []
+                batch_neg = []
+                batch_anc = []
+    enc.save('{}/encoder.h5'.format(output_folder))
+    model.save('{}/triplet.h5'.format(output_folder))
+
+
+def clusters_as_dataset(input_folder, dataset_folder, prefix):
+    '''
+    Generate a dataset from clusters
+
+    :param input_folder: folder with finished model and clustering
+    :param dataset_folder: where we want the dataset to be generated
+    :param prefix: the prefix for the clustering
+    '''
+    os.mkdir(dataset_folder)
+    for filename in os.listdir(input_folder):
+        if filename.startswith(prefix) and filename.endswith('.csv'):
+            path = "{}/{}".format(input_folder, filename)
+            log.info("Reading: {}".format(path))
+            df = pd.read_csv(path)
+            snippets  = []
+            clusters  = []
+            region_id = []
+            for _, row in df.iterrows():
+                start   = row['start']
+                stop    = row['stop']
+                infile  = row['file']
+                cluster = row['cluster']
+                rid     = row['region_id'] 
+                snippets.append((start, stop))
+                clusters.append(cluster)
+                region_id.append(rid)
+            for i, x in enumerate(audio_regions(infile, snippets)):
+                cluster_file = "{}/c{}_r{}.wav".format(dataset_folder, clusters[i], region_id[i])
+                log.info("\tWriting: {}".format(cluster_file))
+                writer = AudioSnippetCollection(cluster_file)
+                writer.write(x)
+                writer.close()
+
+
 
 def header():
     return """
@@ -474,12 +569,13 @@ def header():
     Dolphin Machine Learning Pipeline
                 
     usage for training:      python ml_pipeline/pipeline.py train config/default_config.yaml 
+    generate dataset:        python ml_pipeline/pipeline.py generate inputfolder outputfolder prefix
 
     by Daniel Kyu Hwa Kohlsdorf
     =================================================================
     """
-    
-    
+
+
 if __name__== "__main__":
     log.info(header())
     if len(sys.argv) == 3 and sys.argv[1] == 'train':
@@ -515,16 +611,26 @@ if __name__== "__main__":
         n_writers    = c['n_writers']
         min_len      = c['min_len']
         
-        train_auto_encoder(version, unsupervised, output, params, latent, batch, epochs, conv_param)
-        evaluate_encoder(version, unsupervised, output, "{}/encoder.h5".format(output), params, viz_k)        
-        train_silence(version, silence, output, params, "{}/encoder.h5".format(output), batch, epochs_sup, conv_param, latent, freeze, transfer=transfer)
-        train_type(version, type_class, output, params, "{}/encoder.h5".format(output), batch, epochs_sup, conv_param, latent, freeze, transfer)
-        test_reconstruction(silence, output, params)
-    
+        #train_auto_encoder(version, unsupervised, output, params, latent, batch, epochs, conv_param)
+        #fine_tuning(unsupervised, output, params, latent, "{}/encoder.h5".format(output), batch, epochs_sup) 
+        
+        # TODO labeled fine tuning           
+        #train_silence(version, silence, output, params, "{}/encoder.h5".format(output), batch, epochs_sup, conv_param, latent, freeze, transfer=transfer)
+        #train_type(version, type_class, output, params, "{}/encoder.h5".format(output), batch, epochs_sup, conv_param, latent, freeze, transfer)
+        #evaluate_encoder(version, unsupervised, output, "{}/encoder.h5".format(output), params, viz_k)        
+        #test_reconstruction(silence, output, params)
+
+        # TODO find threshold using labels
+
         enc             = load_model("{}/encoder.h5".format(output))
         silence         = load_model("{}/sil.h5".format(output))
         type_classifier = load_model("{}/type.h5".format(output))
         clusterer       = pkl.load(open('{}/clusterer.pkl'.format(output), "rb"))
         embedder        = SequenceEmbedder(enc, params, silence, type_classifier, clusterer)
-        clustering(inp, output, embedder, "test", dist_th, embedding_batch, clustering_type=CLUSTERING_KMEANS, min_len=min_len, min_support=min_support, max_written=max_written, n_writers=n_writers)    
+        #clustering(inp, output, embedder, "test", dist_th, embedding_batch, clustering_type=CLUSTERING_KMEANS, min_len=min_len, min_support=min_support, max_written=max_written, n_writers=n_writers)    
         clustering(inp, output, embedder, "test_sequential", dist_th, embedding_batch, clustering_type=CLUSTERING_HC, min_len=min_len, min_support=min_support, max_written=max_written, n_writers=n_writers)   
+    elif len(sys.argv) == 5 and sys.argv[1] == 'generate':
+        input_folder   = sys.argv[2]  
+        dataset_folder = sys.argv[3] 
+        prefix         = sys.argv[4] 
+        clusters_as_dataset(input_folder, dataset_folder, prefix)

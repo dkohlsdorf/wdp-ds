@@ -16,7 +16,7 @@ epochs_sup     : 15
 transfer     : true
 freeze       : false
 
-frame_dist_th: 0.005
+frame_dist_th: 0.01
 viz_k        : 1024
 
 conv_w       : 8

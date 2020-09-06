@@ -72,16 +72,6 @@ def sil(f, x):
         return 0.0
 
 
-def cluster_number(f, x):
-    '''
-    For fine tuning based on clusters
-
-    :returns: cluster id
-    '''
-    cluster_number = f.split('/')[-1].split('_')[0][1:]
-    return int(cluster_number)
-
-
 def auto_encode(f, x):
     """
     For auto encoding the label is the spectrogram itself

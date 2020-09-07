@@ -81,6 +81,16 @@ def auto_encode(f, x):
     return x
 
 
+def label_cluster(f, x):
+    """
+    For cluster labeling the label is the cluster number
+
+    :returns: cluster number
+    """
+    return int(f.split('/')[-1].split('_')[0][1:])
+
+
+
 def train(folder, output_folder, params, enc, ae, batch_size=10, epochs=128, keep=lambda x: True):
     """
     Train the model for some epochs with a specific batch size
@@ -120,8 +130,67 @@ def train(folder, output_folder, params, enc, ae, batch_size=10, epochs=128, kee
         enc.save('{}/encoder_{}.h5'.format(output_folder, epoch))
         ae.save('{}/auto_encoder_{}.h5'.format(output_folder, epoch))
     training_log.close()
+
+
+def train_clusters(version_tag, input_folder, output_folder, params, encoder_file, batch, epoch, conv_param, latent, freeze, transfer=True):
+    """
+    Train a multiclass cluster id classifier
+
+    :param version_tag: basically the model name
+    :param input_folder: the folder with the training data
+    :param output_folder: the folder to save the model
+    :param params: window parameters
+    :param encoder_file: a saved encoder
+    :param batch: batch size
+    :param epochs: number of training epochs
+    :param latent: dimension of the latent space
+    :param freeze: freeze weights or not
+    :param transfer: pretrained weights
+    """
+    if transfer:
+        log.info(encoder_file)
+        enc = load_model(encoder_file)
+    else:
+        _, enc = auto_encoder(
+            (params.spec_win, params.n_fft_bins, 1), latent, conv_param
+        )
+
+    df = pd.read_csv("{}/labels.csv".format(input_folder), header=None)
+    df['is_clean'] = df[1].apply(lambda x: 'BAD' not in x)
+    df = df[df['is_clean']]
+    clusters = dict([(c, i) for i, c in enumerate(df[0])])
+    n_cluster = len(clusters)
+    cls_clusters = classifier(enc, n_cluster, freeze)
     
-    
+    x_train = []
+    x_test = []
+    y_train = []
+    y_test = []
+    for (x, label, _, _, _) in dataset(input_folder, params, label_cluster, True):
+        if label in clusters:
+            y = clusters[label] 
+            if np.random.uniform() > 0.6:                
+                x_test.append(x)
+                y_test.append(y)
+            else:
+                x_train.append(x.reshape(x.shape[0], x.shape[1], 1))
+                y_train.append(y)
+    print("Split: x = {} / {}".format(len(x_train), len(x_test)))
+    x_train = np.stack(x_train)
+    y_train = np.stack(y_train)    
+    cls_clusters.fit(x=x_train, y=y_train, batch_size=batch, epochs=epoch, )
+    confusion = np.zeros((4,4))
+    for x, y in zip(x_test, y_test):
+            _y = np.argmax(cls_clusters.predict(x.reshape(1, x.shape[0], x.shape[1], 1)), axis=1)[0]
+            confusion[y][_y] += 1            
+    np.savetxt('{}/confusion_clusters.csv'.format(output_folder), confusion)
+    accuracy = np.sum(confusion * np.eye(n_cluster)) / np.sum(confusion)
+    log.info(accuracy)
+    log.info(confusion)
+    cls_clusters.save('{}/clustering_predictor.h5'.format(output_folder))
+    encoder.save('{}/encoder.h5'.format(output_folder))
+
+
 def train_type(version_tag, input_folder, output_folder, params, encoder_file, batch, epoch, conv_param, latent, freeze, transfer=True):
     """
     Train a multiclass type classifier
@@ -603,7 +672,8 @@ if __name__== "__main__":
         
         train_auto_encoder(version, unsupervised, output, params, latent, batch, epochs, conv_param)
         fine_tuning(unsupervised, output, params, latent, "{}/encoder.h5".format(output), batch, epochs_sup) 
-        
+        train_clusters(version, 'data/v6_clustering', output, params, "{}/encoder.h5".format(output), batch, epochs_sup, conv_param, latent, freeze, transfer)
+
         train_silence(version, silence, output, params, "{}/encoder.h5".format(output), batch, epochs_sup, conv_param, latent, freeze, transfer=transfer)
         train_type(version, type_class, output, params, "{}/encoder.h5".format(output), batch, epochs_sup, conv_param, latent, freeze, transfer)
         evaluate_encoder(version, unsupervised, output, "{}/encoder.h5".format(output), params, viz_k)        

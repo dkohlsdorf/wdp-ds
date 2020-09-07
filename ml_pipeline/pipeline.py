@@ -188,7 +188,8 @@ def train_clusters(version_tag, input_folder, output_folder, params, encoder_fil
     log.info(accuracy)
     log.info(confusion)
     cls_clusters.save('{}/clustering_predictor.h5'.format(output_folder))
-    encoder.save('{}/encoder.h5'.format(output_folder))
+    enc.save('{}/encoder_clustering.h5'.format(output_folder))
+    enc.save('{}/encoder.h5'.format(output_folder))
 
 
 def train_type(version_tag, input_folder, output_folder, params, encoder_file, batch, epoch, conv_param, latent, freeze, transfer=True):
@@ -238,6 +239,8 @@ def train_type(version_tag, input_folder, output_folder, params, encoder_file, b
     log.info(accuracy)
     log.info(confusion)
     cls_type.save('{}/type.h5'.format(output_folder))
+    enc.save('{}/encoder.h5'.format(output_folder))
+    enc.save('{}/encoder_type.h5'.format(output_folder))
     plot_confusion_matrix(confusion, ["noise", "echo", "burst", "whistle"], 'Type Classification')
     plt.savefig('{}/confusion_type.png'.format(output_folder))
     plt.close()
@@ -285,6 +288,8 @@ def train_silence(version_tag, input_folder, output_folder, params, encoder_file
     y_train = np.stack(y_train) 
     cls_sil.fit(x=x_train, y=y_train, batch_size=batch, epochs=epoch)
     cls_sil.save('{}/sil.h5'.format(output_folder))
+    enc.save('{}/encoder.h5'.format(output_folder))
+    enc.save('{}/encoder_sil.h5'.format(output_folder))
 
     confusion = np.zeros((2,2))
     for x, y in zip(x_test, y_test):
@@ -330,8 +335,60 @@ def train_auto_encoder(version_tag, input_folder, output_folder, params, latent,
     train(input_folder, output_folder, params, enc, ae, batch, epochs)
     w_after = enc.layers[1].get_weights()[0].flatten()
     log.info("DELTA W:", np.sum(np.square(w_before - w_after)))
+    enc.save('{}/encoder_reconstruction.h5'.format(output_folder))
     enc.save('{}/encoder.h5'.format(output_folder))
     ae.save('{}/auto_encoder.h5'.format(output_folder))
+
+
+def fine_tuning(input_folder, output_folder, params, latent, encoder_file, batch, epoch):
+    '''
+    Fine tune the model using the triplet loss
+    '''
+    enc = load_model(encoder_file)
+    enc, model = triplet_model((params.spec_win, params.n_fft_bins, 1), enc, latent)
+    model.summary()
+
+    n = 0    
+    total_loss = 0.0
+    negative_stream = dataset(input_folder, params, no_label, True)
+    for epoch in range(epochs):
+        positive_stream = dataset(input_folder, params, no_label, True)
+        anchor   = next(positive_stream, None)
+        batch_pos = []
+        batch_neg = []
+        batch_anc = []
+        while anchor is not None:            
+            negative = next(negative_stream, None)
+            if negative is None:                
+                negative_stream = dataset(input_folder, params, auto_encode, True)
+                negative = next(negative_stream, None)
+            anchor   = anchor[0].reshape((params.spec_win, params.n_fft_bins, 1))
+            negative = negative[0].reshape((params.spec_win, params.n_fft_bins, 1))
+            if np.random.uniform() < 0.5:
+                positive = anchor + np.random.normal(0, 1, (params.spec_win, params.n_fft_bins, 1))
+            else:
+                positive = (anchor + negative) / 2
+            batch_pos.append(positive)
+            batch_neg.append(negative)
+            batch_anc.append(anchor)
+            anchor = next(positive_stream, None)
+            if len(batch_pos) == batch:      
+                batch_pos = np.stack(batch_pos)
+                batch_neg = np.stack(batch_neg)
+                batch_anc = np.stack(batch_anc)
+                loss = model.train_on_batch(x=[batch_anc, batch_pos, batch_neg], y=np.zeros((batch,  256)))
+                total_loss += loss
+                n += 1
+                if n % 10 == 0:
+                    log.info("EPOCH: {} LOSS: {}".format(epoch, total_loss))
+                    total_loss = 0.0
+                    n = 0
+                batch_pos = []
+                batch_neg = []
+                batch_anc = []
+    enc.save('{}/encoder.h5'.format(output_folder))
+    enc.save('{}/fine_tuning.h5'.format(output_folder))
+    model.save('{}/triplet.h5'.format(output_folder))
 
 
 def evaluate_encoder(version_tag, input_folder, output_folder, encoder_file, params, k):
@@ -536,56 +593,6 @@ def clustering(inp, out, embedder, prefix, dist_th, batch, clustering_type=CLUST
                     fp.write("{},{},{},{},{},{}\n".format(start, stop, f, c, t, i))
     log.info('Done Logs')
     
-    
-def fine_tuning(input_folder, output_folder, params, latent, encoder_file, batch, epoch):
-    '''
-    Fine tune the model using the triplet loss
-    '''
-    enc = load_model(encoder_file)
-    enc, model = triplet_model((params.spec_win, params.n_fft_bins, 1), enc, latent)
-    model.summary()
-
-    n = 0    
-    total_loss = 0.0
-    negative_stream = dataset(input_folder, params, no_label, True)
-    for epoch in range(epochs):
-        positive_stream = dataset(input_folder, params, no_label, True)
-        anchor   = next(positive_stream, None)
-        batch_pos = []
-        batch_neg = []
-        batch_anc = []
-        while anchor is not None:            
-            negative = next(negative_stream, None)
-            if negative is None:                
-                negative_stream = dataset(input_folder, params, auto_encode, True)
-                negative = next(negative_stream, None)
-            anchor   = anchor[0].reshape((params.spec_win, params.n_fft_bins, 1))
-            negative = negative[0].reshape((params.spec_win, params.n_fft_bins, 1))
-            if np.random.uniform() < 0.5:
-                positive = anchor + np.random.normal(0, 1, (params.spec_win, params.n_fft_bins, 1))
-            else:
-                positive = (anchor + negative) / 2
-            batch_pos.append(positive)
-            batch_neg.append(negative)
-            batch_anc.append(anchor)
-            anchor = next(positive_stream, None)
-            if len(batch_pos) == batch:      
-                batch_pos = np.stack(batch_pos)
-                batch_neg = np.stack(batch_neg)
-                batch_anc = np.stack(batch_anc)
-                loss = model.train_on_batch(x=[batch_anc, batch_pos, batch_neg], y=np.zeros((batch,  256)))
-                total_loss += loss
-                n += 1
-                if n % 10 == 0:
-                    log.info("EPOCH: {} LOSS: {}".format(epoch, total_loss))
-                    total_loss = 0.0
-                    n = 0
-                batch_pos = []
-                batch_neg = []
-                batch_anc = []
-    enc.save('{}/encoder.h5'.format(output_folder))
-    model.save('{}/triplet.h5'.format(output_folder))
-
 
 def clusters_as_dataset(input_folder, dataset_folder, prefix):
     '''
@@ -671,11 +678,11 @@ if __name__== "__main__":
         min_len      = c['min_len']
         
         train_auto_encoder(version, unsupervised, output, params, latent, batch, epochs, conv_param)
-        fine_tuning(unsupervised, output, params, latent, "{}/encoder.h5".format(output), batch, epochs_sup) 
-        train_clusters(version, 'data/v6_clustering', output, params, "{}/encoder.h5".format(output), batch, epochs_sup, conv_param, latent, freeze, transfer)
-
         train_silence(version, silence, output, params, "{}/encoder.h5".format(output), batch, epochs_sup, conv_param, latent, freeze, transfer=transfer)
         train_type(version, type_class, output, params, "{}/encoder.h5".format(output), batch, epochs_sup, conv_param, latent, freeze, transfer)
+        train_clusters(version, 'data/v6_clustering', output, params, "{}/encoder.h5".format(output), batch, epochs_sup, conv_param, latent, freeze, transfer)
+        fine_tuning(unsupervised, output, params, latent, "{}/encoder.h5".format(output), batch, epochs_sup) 
+
         evaluate_encoder(version, unsupervised, output, "{}/encoder.h5".format(output), params, viz_k)        
         test_reconstruction(silence, output, params)
 

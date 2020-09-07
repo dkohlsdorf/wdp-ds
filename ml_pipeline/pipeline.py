@@ -504,7 +504,7 @@ def fine_tuning(input_folder, output_folder, params, latent, encoder_file, batch
                 batch_pos = np.stack(batch_pos)
                 batch_neg = np.stack(batch_neg)
                 batch_anc = np.stack(batch_anc)
-                loss = model.train_on_batch(x=[batch_pos, batch_neg, batch_anc], y=np.zeros((batch,  256)))
+                loss = model.train_on_batch(x=[batch_anc, batch_pos, batch_neg], y=np.zeros((batch,  256)))
                 total_loss += loss
                 n += 1
                 if n % 10 == 0:

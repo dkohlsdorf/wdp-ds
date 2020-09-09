@@ -179,7 +179,7 @@ def train_clusters(version_tag, input_folder, output_folder, params, encoder_fil
     x_train = np.stack(x_train)
     y_train = np.stack(y_train)    
     cls_clusters.fit(x=x_train, y=y_train, batch_size=batch, epochs=epoch, )
-    confusion = np.zeros((4,4))
+    confusion = np.zeros((n_cluster, n_cluster))
     for x, y in zip(x_test, y_test):
             _y = np.argmax(cls_clusters.predict(x.reshape(1, x.shape[0], x.shape[1], 1)), axis=1)[0]
             confusion[y][_y] += 1            
@@ -677,10 +677,10 @@ if __name__== "__main__":
         n_writers    = c['n_writers']
         min_len      = c['min_len']
         
-        train_auto_encoder(version, unsupervised, output, params, latent, batch, epochs, conv_param)
-        train_silence(version, silence, output, params, "{}/encoder.h5".format(output), batch, epochs_sup, conv_param, latent, freeze, transfer=transfer)
-        train_type(version, type_class, output, params, "{}/encoder.h5".format(output), batch, epochs_sup, conv_param, latent, freeze, transfer)        
-        train_clusters(version, 'data/v6_clustering', output, params, "{}/encoder.h5".format(output), batch, epochs_sup, conv_param, latent, freeze, transfer)
+        #train_auto_encoder(version, unsupervised, output, params, latent, batch, epochs, conv_param)
+        #train_silence(version, silence, output, params, "{}/encoder.h5".format(output), batch, epochs_sup, conv_param, latent, freeze, transfer=transfer)
+        #train_type(version, type_class, output, params, "{}/encoder.h5".format(output), batch, epochs_sup, conv_param, latent, freeze, transfer)        
+        #train_clusters(version, 'data/v6_clustering', output, params, "{}/encoder.h5".format(output), batch, epochs_sup, conv_param, latent, freeze, transfer)
         fine_tuning(unsupervised, output, params, latent, "{}/encoder.h5".format(output), batch, epochs_sup) 
         
         evaluate_encoder(version, unsupervised, output, "{}/encoder.h5".format(output), params, viz_k)        

@@ -340,10 +340,11 @@ def train_auto_encoder(version_tag, input_folder, output_folder, params, latent,
     ae.save('{}/auto_encoder.h5'.format(output_folder))
 
 
-def fine_tuning(input_folder, output_folder, params, latent, encoder_file, batch, epoch):
+def fine_tuning(input_folder, output_folder, params, latent, encoder_file, batch, epochs):
     '''
     Fine tune the model using the triplet loss
     '''
+    print("Fine Tuning: {}".format(epochs))
     enc = load_model(encoder_file)
     enc, model = triplet_model((params.spec_win, params.n_fft_bins, 1), enc, latent)
     model.summary()
@@ -658,6 +659,7 @@ if __name__== "__main__":
         embedding_batch = c['embedding_batch']
         epochs          = c['epochs']
         epochs_sup      = c['epochs_sup']
+        epochs_finetune = c['epochs_finetune']
         conv_param      = (c['conv_w'],  c['conv_h'],  c['conv_filters'])
         transfer        = c['transfer']
         freeze          = c['freeze'] 
@@ -681,7 +683,7 @@ if __name__== "__main__":
         #train_silence(version, silence, output, params, "{}/encoder.h5".format(output), batch, epochs_sup, conv_param, latent, freeze, transfer=transfer)
         #train_type(version, type_class, output, params, "{}/encoder.h5".format(output), batch, epochs_sup, conv_param, latent, freeze, transfer)        
         #train_clusters(version, 'data/v6_clustering', output, params, "{}/encoder.h5".format(output), batch, epochs_sup, conv_param, latent, freeze, transfer)
-        fine_tuning(unsupervised, output, params, latent, "{}/encoder.h5".format(output), batch, epochs_sup) 
+        fine_tuning(unsupervised, output, params, latent, "{}/encoder.h5".format(output), batch, epochs_finetune) 
         
         evaluate_encoder(version, unsupervised, output, "{}/encoder.h5".format(output), params, viz_k)        
         test_reconstruction(silence, output, params)

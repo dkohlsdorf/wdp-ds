@@ -12,6 +12,7 @@ batch          : 10
 version        : "v7.0"
 epochs         : 50
 epochs_sup     : 15
+epochs_finetune : 5
 
 transfer     : true
 freeze       : false

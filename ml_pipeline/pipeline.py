@@ -102,7 +102,6 @@ def train(folder, output_folder, params, enc, ae, batch_size=10, epochs=128, kee
     :param keep: function from label to keep or not
     """
     n_processed = 0
-    history = []
     training_log = open('{}/loss.csv'.format(output_folder), 'w') 
     for epoch in range(epochs):
         batch = []
@@ -115,7 +114,6 @@ def train(folder, output_folder, params, enc, ae, batch_size=10, epochs=128, kee
                     x = np.stack([x.reshape(x.shape[0], x.shape[1], 1) for x, _ in batch])
                     y = np.stack([y.reshape(y.shape[0], y.shape[1], 1) for _, y in batch])
                     loss = ae.train_on_batch(x=x, y=y)
-                    history.append(loss)
                     total_loss += loss
                     batch = []
                     if n_processed % 10 == 0:
@@ -125,10 +123,6 @@ def train(folder, output_folder, params, enc, ae, batch_size=10, epochs=128, kee
                     epoch_loss += loss
         training_log.write('{},{},{}\n'.format(epoch, n_processed, epoch_loss))
         training_log.flush()
-        plt.plot(history)
-        plt.savefig('{}/history_{}.png'.format(output_folder, epoch))
-        enc.save('{}/encoder_{}.h5'.format(output_folder, epoch))
-        ae.save('{}/auto_encoder_{}.h5'.format(output_folder, epoch))
     training_log.close()
 
 

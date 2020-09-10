@@ -126,8 +126,8 @@ def triplet_model(in_shape, encoder, latent, margin=0.1):
     z_p    = encoder(pos)
     z_n    = encoder(neg)
     conc   = Concatenate()([z_a, z_p, z_n])
-
+    
     model   = tf.keras.models.Model(inputs=[anchor, pos, neg], outputs=conc)  
     triplet_loss = TripletLoss(margin, latent)
     model.compile(optimizer = 'adam', loss = triplet_loss)
-    return e, model
+    return encoder, model

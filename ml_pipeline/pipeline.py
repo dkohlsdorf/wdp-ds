@@ -652,7 +652,7 @@ if __name__== "__main__":
         batch           = c['batch']
         embedding_batch = c['embedding_batch']
         epochs          = c['epochs']
-        epchs_encoder   = c['epochs_encoder']
+        epochs_encoder  = c['epochs_encoder']
         epochs_sup      = c['epochs_sup']
         epochs_finetune = c['epochs_finetune']
         conv_param      = (c['conv_w'],  c['conv_h'],  c['conv_filters'])

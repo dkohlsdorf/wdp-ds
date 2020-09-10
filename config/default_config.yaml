@@ -10,8 +10,10 @@ latent       : 256
 embedding_batch: 1000
 batch          : 10
 version        : "v7.0"
-epochs         : 50
-epochs_sup     : 15
+
+epochs          : 10
+epochs_encoder  : 5
+epochs_sup      : 5
 epochs_finetune : 5
 
 transfer     : true

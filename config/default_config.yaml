@@ -17,7 +17,7 @@ epochs_finetune : 5
 transfer     : true
 freeze       : false
 
-frame_dist_th: 0.01
+frame_dist_th: 0.08
 viz_k        : 1024
 
 conv_w       : 8

@@ -552,6 +552,7 @@ def clustering(inp, out, embedder, prefix, dist_th, batch, min_len=5, min_suppor
             k = c
         i += 1
     k = k + 1
+
     log.info('n clusters: {}'.format(k))
     instances_clusters = np.zeros(k, dtype=np.int32)
     for c, collection in grouped_by_cluster.items():
@@ -674,8 +675,7 @@ if __name__== "__main__":
         enc             = load_model("{}/encoder.h5".format(output))
         silence         = load_model("{}/sil.h5".format(output))
         type_classifier = load_model("{}/type.h5".format(output))
-        clusterer       = pkl.load(open('{}/clusterer.pkl'.format(output), "rb"))
-        embedder        = SequenceEmbedder(enc, params, silence, type_classifier, clusterer)
+        embedder        = SequenceEmbedder(enc, params, silence, type_classifier)
         clustering(inp, output, embedder, "test", dist_th, embedding_batch, min_len=min_len, min_support=min_support, max_written=max_written, n_writers=n_writers)    
         clustering(inp, output, embedder, "test_sequential", dist_th, embedding_batch, min_len=min_len, min_support=min_support, max_written=max_written, n_writers=n_writers)   
     elif len(sys.argv) == 5 and sys.argv[1] == 'generate':

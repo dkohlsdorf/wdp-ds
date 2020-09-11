@@ -33,6 +33,7 @@ def encoder(in_shape, latent_dim, conv_params):
     x   = BatchNormalization()(loc)
     x   = Bidirectional(LSTM(latent_dim, return_sequences=True))(x)
     x   = LSTM(latent_dim)(x)            
+    x   = tf.keras.layers.Lambda(lambda x: tf.math.l2_normalize(x, axis=1))(x)
     return Model(inputs =[inp], outputs=[x])
 
 
@@ -114,20 +115,16 @@ def triplet_model(in_shape, encoder, latent, margin=0.1):
 
     return triplet model
     '''
-    i = Input(in_shape)
     e = encoder(i)
-    e = tf.keras.layers.Lambda(lambda x: tf.math.l2_normalize(x, axis=1))(e)
-    encoder = tf.keras.models.Model(inputs=i, outputs=e)  
-
     anchor = Input(in_shape)
     pos    = Input(in_shape)
     neg    = Input(in_shape)
-    z_a    = encoder(anchor)
-    z_p    = encoder(pos)
-    z_n    = encoder(neg)
+    z_a    = e(anchor)
+    z_p    = e(pos)
+    z_n    = e(neg)
     conc   = Concatenate()([z_a, z_p, z_n])
     
     model   = tf.keras.models.Model(inputs=[anchor, pos, neg], outputs=conc)  
     triplet_loss = TripletLoss(margin, latent)
     model.compile(optimizer = 'adam', loss = triplet_loss)
-    return encoder, model
+    return e, model

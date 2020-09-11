@@ -1,11 +1,11 @@
-spec_win     : 128
-spec_step    : 64
+spec_win     : 64
+spec_step    : 32
 
 fft_win      : 512
-fft_step     : 128
+fft_step     : 256
 highpass     : 25
 
-latent       : 256
+latent       : 64
 
 embedding_batch: 1000
 batch          : 10
@@ -20,7 +20,7 @@ transfer     : true
 freeze       : false
 
 frame_dist_th: 0.08
-viz_k        : 1024
+viz_k        : 128
 
 conv_w       : 8
 conv_h       : 32

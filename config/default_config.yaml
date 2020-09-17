@@ -1,17 +1,17 @@
 spec_win     : 64
-spec_step    : 32
+spec_step    : 16
 
 fft_win      : 512
-fft_step     : 256
-highpass     : 25
+fft_step     : 64
+highpass     : 0
 
 latent       : 64
 
 embedding_batch: 1000
-batch          : 10
+batch          : 25
 version        : "v8.0"
 
-epochs          : 10
+epochs          : 4
 epochs_encoder  : 5
 epochs_sup      : 5
 epochs_finetune : 5

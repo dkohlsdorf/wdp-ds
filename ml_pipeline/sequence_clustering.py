@@ -1,3 +1,4 @@
+import os
 import multiprocessing as mp
 import numpy as np
 from dtw import *
@@ -32,7 +33,7 @@ def dtw_process(i, j, ri, rj, w):
     return dtw(i,j, np.stack(ri), np.stack(rj), w)
     
                 
-def hc(regions, n_workers = 5, threshold = 0.5, warping=0.1):
+def hc(regions, out, n_workers = 5, threshold = 0.5, warping=0.1):
     '''
     Hierarchical Clustering
 
@@ -43,14 +44,20 @@ def hc(regions, n_workers = 5, threshold = 0.5, warping=0.1):
     :return: array of n cluster ids
     '''
     logcluster.info("Start clustering distance precompute with {} workers".format(n_workers))
-    n = len(regions)
-    with mp.Pool(processes=n_workers) as pool:
-        results = pool.starmap(dtw_process, (distance_compute_job(regions, threshold, warping)))
-    logcluster.info("Done distance computation for {} instances".format(n))
-    distances = np.zeros((n, n))
-    for i, j, d in results:
-        distances[i, j] = d
-        distances[j, i] = d
+    if os.path.isfile('{}/distances.npy'.format(out)):
+        logcluster.info("Loading Precomputed Distances")
+        distances = np.load('{}/distances.npy'.format(out))
+    else:
+        n = len(regions)
+        with mp.Pool(processes=n_workers) as pool:
+            results = pool.starmap(dtw_process, (distance_compute_job(regions, threshold, warping)))
+        logcluster.info("Done distance computation for {} instances".format(n))
+        distances = np.zeros((n, n))
+        for i, j, d in results:
+            distances[i, j] = d
+            distances[j, i] = d
+        np.save('{}/distances.npy'.format(out), distances)
+        
     logcluster.info("Done writing distances: p95 = {}, p1 = {}, p5 = {}, median = {}".format(
         np.percentile(distances, 95),
         np.percentile(distances, 1),

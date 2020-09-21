@@ -102,7 +102,6 @@ def train(folder, output_folder, params, enc, ae, batch_size=10, epochs=128, kee
     :param keep: function from label to keep or not
     """
     n_processed = 0
-    history = []
     training_log = open('{}/loss.csv'.format(output_folder), 'w') 
     for epoch in range(epochs):
         batch = []
@@ -115,7 +114,6 @@ def train(folder, output_folder, params, enc, ae, batch_size=10, epochs=128, kee
                     x = np.stack([x.reshape(x.shape[0], x.shape[1], 1) for x, _ in batch])
                     y = np.stack([y.reshape(y.shape[0], y.shape[1], 1) for _, y in batch])
                     loss = ae.train_on_batch(x=x, y=y)
-                    history.append(loss)
                     total_loss += loss
                     batch = []
                     if n_processed % 10 == 0:
@@ -125,10 +123,6 @@ def train(folder, output_folder, params, enc, ae, batch_size=10, epochs=128, kee
                     epoch_loss += loss
         training_log.write('{},{},{}\n'.format(epoch, n_processed, epoch_loss))
         training_log.flush()
-        plt.plot(history)
-        plt.savefig('{}/history_{}.png'.format(output_folder, epoch))
-        enc.save('{}/encoder_{}.h5'.format(output_folder, epoch))
-        ae.save('{}/auto_encoder_{}.h5'.format(output_folder, epoch))
     training_log.close()
 
 
@@ -407,7 +401,7 @@ def evaluate_encoder(version_tag, input_folder, output_folder, encoder_file, par
     enc = load_model(encoder_file)
     visualize_2dfilters(output_folder, enc, [1], n_rows = 8)    
     x = np.stack([x.reshape(x.shape[0], x.shape[1], 1) for (x,_,_,_,_) in dataset(
-        input_folder, params, no_label, False)])
+        input_folder, params, no_label, False) if np.random.uniform() < 0.1])
     log.info(x.shape)
     h = enc.predict(x)
     clustering = visualize_embedding("{}/embeddings.png".format(output_folder), h, x, k)
@@ -509,7 +503,7 @@ def analysis(path):
     log.info(" - gaps: {} type_dist: {}".format(n_gaps(starts, stops), n_types(types)))
 
 
-def clustering(inp, out, embedder, prefix, dist_th, batch, clustering_type=CLUSTERING_KMEANS, min_len=5, min_support=1, max_written = 100, n_writers=10):    
+def clustering(inp, out, embedder, prefix, dist_th, batch, min_len=5, min_support=1, max_written = 100, n_writers=10):    
     """
     Clustering all embeddings
     """
@@ -526,33 +520,20 @@ def clustering(inp, out, embedder, prefix, dist_th, batch, clustering_type=CLUST
                 embedder.embed(in_path, out_path, batch)
             analysis(out_path)
 
-    if clustering_type == CLUSTERING_KMEANS:
-        clusters = []
-        for file in tf.io.gfile.listdir(out):        
-            if file.startswith("embedding") and file.endswith(".csv"):
-                path = "{}/{}".format(out, file)
-                log.info("\tReading {}".format(path))
-                df                    = pd.read_csv(path, sep="\t")
-                signals               = df
-                for _, row in signals.iterrows():
-                    clusters.append((
-                        row['start'], row['stop'], row['filename'], row['type'], row['cluster']  
-                    ))
-    else:
-        overlapping = []
-        for file in tf.io.gfile.listdir(out):        
-            if file.startswith("embedding") and file.endswith(".csv"):
-                path = "{}/{}".format(out, file)
-                log.info("\tReading {} {}".format(path, len(overlapping)))
-                df                    = pd.read_csv(path, sep="\t")
-                signals               = df
-                signals['embedding']  = df['embedding'].apply(
-                    lambda x: np.array([float(i) for i in x.split(",")]))
-                annotated             = [(row['start'], row['stop'], row['filename'], row['type'], row['embedding'])
-                                        for _ , row in signals.iterrows()]
-                overlapping += groupBy(annotated, overlap, min_len)
-        assignment = hc([o for _,_,_,_, o in overlapping], n_writers, dist_th)
-        clusters   = [(start, stop, f, t, c) for (start, stop, f, t, _), c in zip(overlapping, assignment)]
+    overlapping = []
+    for file in tf.io.gfile.listdir(out):        
+        if file.startswith("embedding") and file.endswith(".csv"):
+            path = "{}/{}".format(out, file)
+            log.info("\tReading {} {}".format(path, len(overlapping)))
+            df                    = pd.read_csv(path, sep="\t")
+            signals               = df
+            signals['embedding']  = df['embedding'].apply(
+                lambda x: np.array([float(i) for i in x.split(",")]))
+            annotated             = [(row['start'], row['stop'], row['filename'], row['type'], row['embedding'])
+                                    for _ , row in signals.iterrows()]
+            overlapping += groupBy(annotated, overlap, min_len)
+    assignment  = hc([o for _,_,_,_, o in overlapping], out, n_writers, dist_th)
+    clusters    = [(start, stop, f, t, c) for (start, stop, f, t, _), c in zip(overlapping, assignment)]
 
     grouped_by_filename = {}
     grouped_by_cluster  = {}
@@ -571,6 +552,7 @@ def clustering(inp, out, embedder, prefix, dist_th, batch, clustering_type=CLUST
             k = c
         i += 1
     k = k + 1
+
     log.info('n clusters: {}'.format(k))
     instances_clusters = np.zeros(k, dtype=np.int32)
     for c, collection in grouped_by_cluster.items():
@@ -658,6 +640,7 @@ if __name__== "__main__":
         batch           = c['batch']
         embedding_batch = c['embedding_batch']
         epochs          = c['epochs']
+        epochs_encoder  = c['epochs_encoder']
         epochs_sup      = c['epochs_sup']
         epochs_finetune = c['epochs_finetune']
         conv_param      = (c['conv_w'],  c['conv_h'],  c['conv_filters'])
@@ -678,23 +661,22 @@ if __name__== "__main__":
         max_written  = c['max2write']
         n_writers    = c['n_writers']
         min_len      = c['min_len']
-        
-        train_auto_encoder(version, unsupervised, output, params, latent, batch, epochs, conv_param)
-        train_silence(version, silence, output, params, "{}/encoder.h5".format(output), batch, epochs_sup, conv_param, latent, freeze, transfer=transfer)
-        train_type(version, type_class, output, params, "{}/encoder.h5".format(output), batch, epochs_sup, conv_param, latent, freeze, transfer)        
-        train_clusters(version, 'data/v6_clustering', output, params, "{}/encoder.h5".format(output), batch, epochs_sup, conv_param, latent, freeze, transfer)
-        fine_tuning(unsupervised, output, params, latent, "{}/encoder.h5".format(output), batch, epochs_finetune) 
+
+        for i in range(0, epochs):
+            log.info("Mixed Training Epoch: {}".format(i))
+            train_auto_encoder(version, unsupervised, output, params, latent, batch, epochs_encoder, conv_param)
+            train_silence(version, silence, output, params, "{}/encoder.h5".format(output), batch, epochs_sup, conv_param, latent, freeze, transfer=transfer)
+            train_type(version, type_class, output, params, "{}/encoder.h5".format(output), batch, epochs_sup, conv_param, latent, freeze, transfer)        
+            train_clusters(version, 'data/v6_clustering', output, params, "{}/encoder.h5".format(output), batch, epochs_sup, conv_param, latent, freeze, transfer)
+            fine_tuning(unsupervised, output, params, latent, "{}/encoder.h5".format(output), batch, epochs_finetune)             
         
         evaluate_encoder(version, unsupervised, output, "{}/encoder.h5".format(output), params, viz_k)        
         test_reconstruction(silence, output, params)
-
         enc             = load_model("{}/encoder.h5".format(output))
         silence         = load_model("{}/sil.h5".format(output))
         type_classifier = load_model("{}/type.h5".format(output))
-        clusterer       = pkl.load(open('{}/clusterer.pkl'.format(output), "rb"))
-        embedder        = SequenceEmbedder(enc, params, silence, type_classifier, clusterer)
-        clustering(inp, output, embedder, "test", dist_th, embedding_batch, clustering_type=CLUSTERING_KMEANS, min_len=min_len, min_support=min_support, max_written=max_written, n_writers=n_writers)    
-        clustering(inp, output, embedder, "test_sequential", dist_th, embedding_batch, clustering_type=CLUSTERING_HC, min_len=min_len, min_support=min_support, max_written=max_written, n_writers=n_writers)   
+        embedder        = SequenceEmbedder(enc, params, silence, type_classifier)
+        clustering(inp, output, embedder, "test_sequential", dist_th, embedding_batch, min_len=min_len, min_support=min_support, max_written=max_written, n_writers=n_writers)   
     elif len(sys.argv) == 5 and sys.argv[1] == 'generate':
         input_folder   = sys.argv[2]  
         dataset_folder = sys.argv[3] 

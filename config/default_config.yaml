@@ -13,7 +13,6 @@ version        : "v9.0"
 
 epochs          : 4
 epochs_encoder  : 15
-epochs_sup      : 15
 epochs_finetune : 15
 
 transfer     : true

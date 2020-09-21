@@ -532,7 +532,6 @@ def clustering(inp, out, embedder, prefix, dist_th, batch, min_len=5, min_suppor
             annotated             = [(row['start'], row['stop'], row['filename'], row['type'], row['embedding'])
                                     for _ , row in signals.iterrows()]
             overlapping += groupBy(annotated, overlap, min_len)
-    # TODO maybe overlapping = [o for o in overlapping if np.random.uniform() > 0.75]
     assignment  = hc([o for _,_,_,_, o in overlapping], out, n_writers, dist_th)
     clusters    = [(start, stop, f, t, c) for (start, stop, f, t, _), c in zip(overlapping, assignment)]
 
@@ -663,16 +662,16 @@ if __name__== "__main__":
         n_writers    = c['n_writers']
         min_len      = c['min_len']
 
-        #for i in range(0, epochs):
-        #log.info("Mixed Training Epoch: {}".format(i))
-        #train_auto_encoder(version, unsupervised, output, params, latent, batch, epochs_encoder, conv_param)
-        #train_silence(version, silence, output, params, "{}/encoder.h5".format(output), batch, epochs_sup, conv_param, latent, freeze, transfer=transfer)
-        #train_type(version, type_class, output, params, "{}/encoder.h5".format(output), batch, epochs_sup, conv_param, latent, freeze, transfer)        
-        #train_clusters(version, 'data/v6_clustering', output, params, "{}/encoder.h5".format(output), batch, epochs_sup, conv_param, latent, freeze, transfer)
-        #fine_tuning(unsupervised, output, params, latent, "{}/encoder.h5".format(output), batch, epochs_finetune)             
+        for i in range(0, epochs):
+            log.info("Mixed Training Epoch: {}".format(i))
+            train_auto_encoder(version, unsupervised, output, params, latent, batch, epochs_encoder, conv_param)
+            train_silence(version, silence, output, params, "{}/encoder.h5".format(output), batch, epochs_sup, conv_param, latent, freeze, transfer=transfer)
+            train_type(version, type_class, output, params, "{}/encoder.h5".format(output), batch, epochs_sup, conv_param, latent, freeze, transfer)        
+            train_clusters(version, 'data/v6_clustering', output, params, "{}/encoder.h5".format(output), batch, epochs_sup, conv_param, latent, freeze, transfer)
+            fine_tuning(unsupervised, output, params, latent, "{}/encoder.h5".format(output), batch, epochs_finetune)             
         
-        #evaluate_encoder(version, unsupervised, output, "{}/encoder.h5".format(output), params, viz_k)        
-        #test_reconstruction(silence, output, params)
+        evaluate_encoder(version, unsupervised, output, "{}/encoder.h5".format(output), params, viz_k)        
+        test_reconstruction(silence, output, params)
         enc             = load_model("{}/encoder.h5".format(output))
         silence         = load_model("{}/sil.h5".format(output))
         type_classifier = load_model("{}/type.h5".format(output))

@@ -401,7 +401,7 @@ def evaluate_encoder(version_tag, input_folder, output_folder, encoder_file, par
     enc = load_model(encoder_file)
     visualize_2dfilters(output_folder, enc, [1], n_rows = 8)    
     x = np.stack([x.reshape(x.shape[0], x.shape[1], 1) for (x,_,_,_,_) in dataset(
-        input_folder, params, no_label, False)])
+        input_folder, params, no_label, False) if np.random.uniform() < 0.1])
     log.info(x.shape)
     h = enc.predict(x)
     clustering = visualize_embedding("{}/embeddings.png".format(output_folder), h, x, k)
@@ -532,8 +532,9 @@ def clustering(inp, out, embedder, prefix, dist_th, batch, min_len=5, min_suppor
             annotated             = [(row['start'], row['stop'], row['filename'], row['type'], row['embedding'])
                                     for _ , row in signals.iterrows()]
             overlapping += groupBy(annotated, overlap, min_len)
-    assignment = hc([o for _,_,_,_, o in overlapping], n_writers, dist_th)
-    clusters   = [(start, stop, f, t, c) for (start, stop, f, t, _), c in zip(overlapping, assignment)]
+    # TODO maybe overlapping = [o for o in overlapping if np.random.uniform() > 0.75]
+    assignment  = hc([o for _,_,_,_, o in overlapping], out, n_writers, dist_th)
+    clusters    = [(start, stop, f, t, c) for (start, stop, f, t, _), c in zip(overlapping, assignment)]
 
     grouped_by_filename = {}
     grouped_by_cluster  = {}
@@ -662,21 +663,20 @@ if __name__== "__main__":
         n_writers    = c['n_writers']
         min_len      = c['min_len']
 
-        for i in range(0, epochs):
-            log.info("Mixed Training Epoch: {}".format(i))
-            train_auto_encoder(version, unsupervised, output, params, latent, batch, epochs_encoder, conv_param)
-            train_silence(version, silence, output, params, "{}/encoder.h5".format(output), batch, epochs_sup, conv_param, latent, freeze, transfer=transfer)
-            train_type(version, type_class, output, params, "{}/encoder.h5".format(output), batch, epochs_sup, conv_param, latent, freeze, transfer)        
-            train_clusters(version, 'data/v6_clustering', output, params, "{}/encoder.h5".format(output), batch, epochs_sup, conv_param, latent, freeze, transfer)
-            fine_tuning(unsupervised, output, params, latent, "{}/encoder.h5".format(output), batch, epochs_finetune)             
+        #for i in range(0, epochs):
+        #log.info("Mixed Training Epoch: {}".format(i))
+        #train_auto_encoder(version, unsupervised, output, params, latent, batch, epochs_encoder, conv_param)
+        #train_silence(version, silence, output, params, "{}/encoder.h5".format(output), batch, epochs_sup, conv_param, latent, freeze, transfer=transfer)
+        #train_type(version, type_class, output, params, "{}/encoder.h5".format(output), batch, epochs_sup, conv_param, latent, freeze, transfer)        
+        #train_clusters(version, 'data/v6_clustering', output, params, "{}/encoder.h5".format(output), batch, epochs_sup, conv_param, latent, freeze, transfer)
+        #fine_tuning(unsupervised, output, params, latent, "{}/encoder.h5".format(output), batch, epochs_finetune)             
         
-        evaluate_encoder(version, unsupervised, output, "{}/encoder.h5".format(output), params, viz_k)        
-        test_reconstruction(silence, output, params)
+        #evaluate_encoder(version, unsupervised, output, "{}/encoder.h5".format(output), params, viz_k)        
+        #test_reconstruction(silence, output, params)
         enc             = load_model("{}/encoder.h5".format(output))
         silence         = load_model("{}/sil.h5".format(output))
         type_classifier = load_model("{}/type.h5".format(output))
         embedder        = SequenceEmbedder(enc, params, silence, type_classifier)
-        clustering(inp, output, embedder, "test", dist_th, embedding_batch, min_len=min_len, min_support=min_support, max_written=max_written, n_writers=n_writers)    
         clustering(inp, output, embedder, "test_sequential", dist_th, embedding_batch, min_len=min_len, min_support=min_support, max_written=max_written, n_writers=n_writers)   
     elif len(sys.argv) == 5 and sys.argv[1] == 'generate':
         input_folder   = sys.argv[2]  

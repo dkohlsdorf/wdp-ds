@@ -334,19 +334,23 @@ def train_auto_encoder(version_tag, input_folder, output_folder, params, latent,
     ae.save('{}/auto_encoder.h5'.format(output_folder))
 
 
-def clustering_loss(input_folder, output_folder, params, latent, encoder_file, batch, epochs):
+def clustering_loss(input_folder, output_folder, params, latent, encoder_file, batch_size, epochs):
+    '''
+    Retrain by clustering loss
+    '''
     enc   = load_model(encoder_file)
     model = classifier(enc, 0, False)
     model.summary()
     w_before = enc.layers[1].get_weights()[0].flatten()
     for epoch in range(epochs):
         batch = []
-        for (x, _, _, _, _) in dataset(folder, params, no_label, True):
+        epoch_loss = 0.0
+        for (x, _, _, _, _) in dataset(input_folder, params, no_label, True):
             batch.append((x))
             if len(batch) == batch_size:
-                x = np.stack([x.reshape(x.shape[0], x.shape[1], 1) for x, _ in batch])
-                loss = model.train_on_batch(x=x, y=np.zeros((batch, latent)))
-                epoch_loss += loss
+                x = np.stack([x.reshape(x.shape[0], x.shape[1], 1) for x in batch])
+                loss = model.train_on_batch(x=x, y=np.zeros((batch_size, latent)))
+                epoch_loss += loss[0]
         training_log.write('{},{}\n'.format(epoch, epoch_loss))
         training_log.flush()
     w_after = enc.layers[1].get_weights()[0].flatten()
@@ -354,7 +358,6 @@ def clustering_loss(input_folder, output_folder, params, latent, encoder_file, b
     enc.save('{}/clustering_loss.h5'.format(output_folder))
     log.info("DELTA W:", np.sum(np.square(w_before - w_after)))
     
-
 
 def fine_tuning(input_folder, output_folder, params, latent, encoder_file, batch, epochs):
     '''
@@ -683,7 +686,7 @@ if __name__== "__main__":
         max_written  = c['max2write']
         n_writers    = c['n_writers']
         min_len      = c['min_len']
-
+        
         for i in range(0, epochs):
             log.info("Mixed Training Epoch: {}".format(i))
             train_auto_encoder(version, unsupervised, output, params, latent, batch, epochs_encoder, conv_param)
@@ -691,7 +694,9 @@ if __name__== "__main__":
             train_type(version, type_class, output, params, "{}/encoder.h5".format(output), batch, epochs_sup, conv_param, latent, freeze, transfer)        
             train_clusters(version, 'data/v6_clustering', output, params, "{}/encoder.h5".format(output), batch, epochs_sup, conv_param, latent, freeze, transfer)
             fine_tuning(unsupervised, output, params, latent, "{}/encoder.h5".format(output), batch, epochs_finetune)             
-        
+            clustering_loss(unsupervised, output, params, latent, "{}/encoder.h5".format(output), batch, epochs_finetune)
+            train_auto_encoder(version, unsupervised, output, params, latent, batch, epochs_encoder, conv_param)
+
         evaluate_encoder(version, unsupervised, output, "{}/encoder.h5".format(output), params, viz_k)        
         test_reconstruction(silence, output, params)
         enc             = load_model("{}/encoder.h5".format(output))

@@ -340,6 +340,28 @@ def train_auto_encoder(version_tag, input_folder, output_folder, params, latent,
     ae.save('{}/auto_encoder.h5'.format(output_folder))
 
 
+def clustering_loss(input_folder, output_folder, params, latent, encoder_file, batch, epochs):
+    enc   = load_model(encoder_file)
+    model = classifier(enc, 0, False)
+    model.summary()
+    w_before = enc.layers[1].get_weights()[0].flatten()
+    for epoch in range(epochs):
+        batch = []
+        for (x, _, _, _, _) in dataset(folder, params, no_label, True):
+            batch.append((x))
+            if len(batch) == batch_size:
+                x = np.stack([x.reshape(x.shape[0], x.shape[1], 1) for x, _ in batch])
+                loss = model.train_on_batch(x=x, y=np.zeros((batch, latent)))
+                epoch_loss += loss
+        training_log.write('{},{}\n'.format(epoch, epoch_loss))
+        training_log.flush()
+    w_after = enc.layers[1].get_weights()[0].flatten()
+    enc.save('{}/encoder.h5'.format(output_folder))
+    enc.save('{}/clustering_loss.h5'.format(output_folder))
+    log.info("DELTA W:", np.sum(np.square(w_before - w_after)))
+    
+
+
 def fine_tuning(input_folder, output_folder, params, latent, encoder_file, batch, epochs):
     '''
     Fine tune the model using the triplet loss

@@ -6,7 +6,28 @@
 
 from tensorflow.keras.layers import *
 from tensorflow.keras.models import *
+from tensorflow.keras.activations import * 
 from tensorflow.keras.regularizers import l2
+
+
+class ClusteringLoss(Loss):
+ 
+  def __init__(self, gamma=1.0):
+    super().__init__()
+    self.gamma = gamma
+ 
+  def call(self, true, pred):
+    y  = pred + 1e-6
+    h1 = -1.0 * tf.reduce_sum(
+         tf.math.log(y) * y, axis=-1
+    )
+    H1 = tf.math.reduce_mean(h1)
+    total_y = tf.math.reduce_mean(y, axis=0)
+    H2 = -1 * tf.reduce_sum(
+       tf.math.log(total_y) * total_y
+    )
+    return H1 - self.gamma * H2
+
 
 def classifier(encoder, n_labels=1, freeze=True):
     """
@@ -26,18 +47,22 @@ def classifier(encoder, n_labels=1, freeze=True):
     shape = encoder.layers[0].input_shape[0][1:]
     inp = Input(shape)
     x   = encoder(inp)
-    x   = BatchNormalization()(x)    
-
-    # Multi layer neural network for classification on top of the encoder
-    x   = Dense(64, activation='relu')(x)
-    x   = Dense(32, activation='relu')(x)
-    x   = Dropout(0.5)(x)
-    if n_labels == 1:
-        x = Dense(1, activation='sigmoid')(x)
+    if n_labels == 0:
+        x = Activation(softmax)
         model = Model(inputs = [inp], outputs = [x])
-        model.compile(optimizer='adam', loss='binary_crossentropy', metrics=['accuracy'])
+        model.compile(optimizer='adam', loss=ClusteringLoss(), metrics=['accuracy'])        
     else:
-        x = Dense(n_labels, activation='softmax')(x)
-        model = Model(inputs = [inp], outputs = [x])
-        model.compile(optimizer='adam', loss='sparse_categorical_crossentropy', metrics=['accuracy'])        
+        x   = BatchNormalization()(x)    
+        # Multi layer neural network for classification on top of the encoder
+        x   = Dense(64, activation='relu')(x)
+        x   = Dense(32, activation='relu')(x)
+        x   = Dropout(0.5)(x)
+        if n_labels == 1:
+            x = Dense(1, activation='sigmoid')(x)
+            model = Model(inputs = [inp], outputs = [x])
+            model.compile(optimizer='adam', loss='binary_crossentropy', metrics=['accuracy'])        
+        else
+            x = Dense(n_labels, activation='softmax')(x)
+            model = Model(inputs = [inp], outputs = [x])
+            model.compile(optimizer='adam', loss='sparse_categorical_crossentropy', metrics=['accuracy'])        
     return model

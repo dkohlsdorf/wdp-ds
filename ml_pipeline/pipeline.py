@@ -686,15 +686,21 @@ if __name__== "__main__":
         max_written  = c['max2write']
         n_writers    = c['n_writers']
         min_len      = c['min_len']
-        
+
         for i in range(0, epochs):
-            log.info("Mixed Training Epoch: {}".format(i))
+            log.info("Mixed Training Epoch AE: {}".format(i))
             train_auto_encoder(version, unsupervised, output, params, latent, batch, epochs_encoder, conv_param)
+            log.info("Mixed Training Epoch SIL: {}".format(i))
             train_silence(version, silence, output, params, "{}/encoder.h5".format(output), batch, epochs_sup, conv_param, latent, freeze, transfer=transfer)
+            log.info("Mixed Training Epoch TYPE: {}".format(i))
             train_type(version, type_class, output, params, "{}/encoder.h5".format(output), batch, epochs_sup, conv_param, latent, freeze, transfer)        
+            log.info("Mixed Training Epoch CLUSTER: {}".format(i))
             train_clusters(version, 'data/v6_clustering', output, params, "{}/encoder.h5".format(output), batch, epochs_sup, conv_param, latent, freeze, transfer)
+            log.info("Mixed Training Epoch FINE_TUNE: {}".format(i))
             fine_tuning(unsupervised, output, params, latent, "{}/encoder.h5".format(output), batch, epochs_finetune)             
+            log.info("Mixed Training Epoch CLUSTER_LOSS: {}".format(i))
             clustering_loss(unsupervised, output, params, latent, "{}/encoder.h5".format(output), batch, epochs_finetune)
+            log.info("Mixed Training Epoch AE: {}".format(i))
             train_auto_encoder(version, unsupervised, output, params, latent, batch, epochs_encoder, conv_param)
 
         evaluate_encoder(version, unsupervised, output, "{}/encoder.h5".format(output), params, viz_k)        

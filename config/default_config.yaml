@@ -9,10 +9,10 @@ latent       : 64
 
 embedding_batch: 1000
 batch          : 25
-version        : "v8.0"
+version        : "v9.0"
 
 epochs          : 4
-epochs_encoder  : 5
+epochs_encoder  : 10
 epochs_sup      : 5
 epochs_finetune : 5
 
@@ -34,6 +34,6 @@ min_len      : 5
 sil          : 'data/classification_noise'
 type_class   : 'data/classification'
 unsupervised : 'data/unsupervised'
-output       : 'models/v8_lstm_v1/'
+output       : 'models/v9_lstm_v1/'
 input        : 'gs://wdp-ds-data/2011'
 

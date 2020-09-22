@@ -26,7 +26,7 @@ cythonize -if ml_pipeline/*.pyx
 ## Usage:
 The machine learning pipeline can be run in 4 modes:
 ```
-    usage for training:      python ml_pipeline/pipeline.py train config/default_config.yaml
+    usage for training:      python ml_pipeline/pipeline.py train config/default_config.yaml 2>debug.log
 ```
 
 + training:   learn the auto encoder as well as the silence detector and type classifier 

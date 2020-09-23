@@ -11,10 +11,9 @@ embedding_batch: 1000
 batch          : 25
 version        : "v9.0"
 
-epochs          : 4
 epochs_sup      : 15
-epochs_encoder  : 15
-epochs_finetune : 15
+epochs_encoder  : 5
+epochs_finetune : 5
 
 transfer     : true
 freeze       : false

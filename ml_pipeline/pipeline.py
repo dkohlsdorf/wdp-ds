@@ -351,8 +351,7 @@ def clustering_loss(input_folder, output_folder, params, latent, encoder_file, b
                 x = np.stack([x.reshape(x.shape[0], x.shape[1], 1) for x in batch])
                 loss = model.train_on_batch(x=x, y=np.zeros((batch_size, latent)))
                 epoch_loss += loss[0]
-        training_log.write('{},{}\n'.format(epoch, epoch_loss))
-        training_log.flush()
+                log.info('{},{}'.format(epoch, epoch_loss))
     w_after = enc.layers[1].get_weights()[0].flatten()
     enc.save('{}/encoder.h5'.format(output_folder))
     enc.save('{}/clustering_loss.h5'.format(output_folder))
@@ -642,7 +641,7 @@ def header():
     =================================================================
     Dolphin Machine Learning Pipeline
                 
-    usage for training:      python ml_pipeline/pipeline.py train config/default_config.yaml 
+    usage for training:      python ml_pipeline/pipeline.py train config/default_config.yaml do_cluster
     generate dataset:        python ml_pipeline/pipeline.py generate inputfolder outputfolder prefix
 
     by Daniel Kyu Hwa Kohlsdorf
@@ -652,8 +651,9 @@ def header():
 
 if __name__== "__main__":
     log.info(header())
-    if len(sys.argv) == 3 and sys.argv[1] == 'train':
+    if len(sys.argv) == 4 and sys.argv[1] == 'train':
         c = yaml.load(open(sys.argv[2]))
+        do_cluster  = sys.argv[3] == "do_cluster"
         log.info("Parameters: {}".format(c))
         version      = c['version']
 
@@ -686,28 +686,28 @@ if __name__== "__main__":
         n_writers    = c['n_writers']
         min_len      = c['min_len']
 
-        log.info("Mixed Training Epoch AE: {}".format(i))
+        log.info("Mixed Training Epoch AE")
         train_auto_encoder(version, unsupervised, output, params, latent, batch, epochs_encoder, conv_param)
-        log.info("Mixed Training Epoch SIL: {}".format(i))
+        log.info("Mixed Training Epoch SIL")
         train_silence(version, silence, output, params, "{}/encoder.h5".format(output), batch, epochs_sup, conv_param, latent, freeze, transfer=transfer)
-        log.info("Mixed Training Epoch TYPE: {}".format(i))
+        log.info("Mixed Training Epoch TYPE")
         train_type(version, type_class, output, params, "{}/encoder.h5".format(output), batch, epochs_sup, conv_param, latent, freeze, transfer)        
-        log.info("Mixed Training Epoch CLUSTER: {}".format(i))
+        log.info("Mixed Training Epoch CLUSTER")
         train_clusters(version, 'data/v6_clustering', output, params, "{}/encoder.h5".format(output), batch, epochs_sup, conv_param, latent, freeze, transfer)
-        log.info("Mixed Training Epoch FINE_TUNE: {}".format(i))
-        fine_tuning(unsupervised, output, params, latent, "{}/encoder.h5".format(output), batch, epochs_finetune)             
-        log.info("Mixed Training Epoch CLUSTER_LOSS: {}".format(i))
+        log.info("Mixed Training Epoch FINE_TUNE")
+        fine_tuning(unsupervised, output, params, latent, "{}/encoder.h5".format(output), batch, epochs_finetune)     
+        log.info("Mixed Training Epoch CLUSTER_LOSS")
         clustering_loss(unsupervised, output, params, latent, "{}/encoder.h5".format(output), batch, epochs_finetune)
-        log.info("Mixed Training Epoch AE: {}".format(i))
+        log.info("Mixed Training Epoch AE")
         train_auto_encoder(version, unsupervised, output, params, latent, batch, epochs_encoder, conv_param)
-
-        evaluate_encoder(version, unsupervised, output, "{}/encoder.h5".format(output), params, viz_k)        
-        test_reconstruction(silence, output, params)
-        enc             = load_model("{}/encoder.h5".format(output))
-        silence         = load_model("{}/sil.h5".format(output))
-        type_classifier = load_model("{}/type.h5".format(output))
-        embedder        = SequenceEmbedder(enc, params, silence, type_classifier)
-        clustering(inp, output, embedder, "test_sequential", dist_th, embedding_batch, min_len=min_len, min_support=min_support, max_written=max_written, n_writers=n_writers)   
+        if do_cluster:
+          evaluate_encoder(version, unsupervised, output, "{}/encoder.h5".format(output), params, viz_k)        
+          test_reconstruction(silence, output, params)
+          enc             = load_model("{}/encoder.h5".format(output))
+          silence         = load_model("{}/sil.h5".format(output))
+          type_classifier = load_model("{}/type.h5".format(output))
+          embedder        = SequenceEmbedder(enc, params, silence, type_classifier)
+          clustering(inp, output, embedder, "test_sequential", dist_th, embedding_batch, min_len=min_len, min_support=min_support, max_written=max_written, n_writers=n_writers)        
     elif len(sys.argv) == 5 and sys.argv[1] == 'generate':
         input_folder   = sys.argv[2]  
         dataset_folder = sys.argv[3] 

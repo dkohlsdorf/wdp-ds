@@ -30,7 +30,7 @@ def distance_compute_job(regions, distance_threshold_frame, warping_band_percent
 
 
 def dtw_process(i, j, ri, rj, w):
-    if i % 100 == 0:
+    if i % 100 == 0 and j % 100 == 0:
         logcluster.info("Process dtw({}, {})".format(i, j, w))
     return dtw(i,j, np.stack(ri), np.stack(rj), w)
     

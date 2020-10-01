@@ -169,7 +169,7 @@ def train_clusters(version_tag, input_folder, output_folder, params, encoder_fil
             else:
                 x_train.append(x.reshape(x.shape[0], x.shape[1], 1))
                 y_train.append(y)
-    print("Split: x = {} / {}".format(len(x_train), len(x_test)))
+    log.info("Split: x = {} / {}".format(len(x_train), len(x_test)))
     x_train = np.stack(x_train)
     y_train = np.stack(y_train)    
     cls_clusters.fit(x=x_train, y=y_train, batch_size=batch, epochs=epoch, )
@@ -527,7 +527,7 @@ def analysis(path):
     log.info(" - gaps: {} type_dist: {}".format(n_gaps(starts, stops), n_types(types)))
 
 
-def clustering(inp, out, embedder, prefix, dist_th, batch, min_len=5, min_support=1, max_written = 100, n_writers=10):    
+def clustering(inp, out, embedder, prefix, dist_th, batch, min_len=5, min_support=1, max_written = 100, n_writers=10, subsample = 0.1):    
     """
     Clustering all embeddings
     """
@@ -556,6 +556,8 @@ def clustering(inp, out, embedder, prefix, dist_th, batch, min_len=5, min_suppor
             annotated             = [(row['start'], row['stop'], row['filename'], row['type'], row['embedding'])
                                     for _ , row in signals.iterrows()]
             overlapping += groupBy(annotated, overlap, min_len)
+    overlapping = [x for x in overlapping if np.random.uniform() < subsample]
+    print("Cluster: {} examples".format(len(overlapping)))
     assignment  = hc([o for _,_,_,_, o in overlapping], out, n_writers, dist_th)
     clusters    = [(start, stop, f, t, c) for (start, stop, f, t, _), c in zip(overlapping, assignment)]
 
@@ -685,7 +687,8 @@ if __name__== "__main__":
         max_written  = c['max2write']
         n_writers    = c['n_writers']
         min_len      = c['min_len']
-
+        subsample    = c['subsample']
+        
         log.info("Mixed Training Epoch AE")
         train_auto_encoder(version, unsupervised, output, params, latent, batch, epochs_encoder, conv_param)
         log.info("Mixed Training Epoch SIL")
@@ -701,13 +704,13 @@ if __name__== "__main__":
         log.info("Mixed Training Epoch AE")
         train_auto_encoder(version, unsupervised, output, params, latent, batch, epochs_encoder, conv_param)
         if do_cluster:
-          evaluate_encoder(version, unsupervised, output, "{}/encoder.h5".format(output), params, viz_k)        
-          test_reconstruction(silence, output, params)
-          enc             = load_model("{}/encoder.h5".format(output))
-          silence         = load_model("{}/sil.h5".format(output))
-          type_classifier = load_model("{}/type.h5".format(output))
-          embedder        = SequenceEmbedder(enc, params, silence, type_classifier)
-          clustering(inp, output, embedder, "test_sequential", dist_th, embedding_batch, min_len=min_len, min_support=min_support, max_written=max_written, n_writers=n_writers)        
+            evaluate_encoder(version, unsupervised, output, "{}/encoder.h5".format(output), params, viz_k)        
+            test_reconstruction(silence, output, params)
+            enc             = load_model("{}/encoder.h5".format(output))
+            silence         = load_model("{}/sil.h5".format(output))
+            type_classifier = load_model("{}/type.h5".format(output))
+            embedder        = SequenceEmbedder(enc, params, silence, type_classifier)
+            clustering(inp, output, embedder, "test_sequential", dist_th, embedding_batch, min_len=min_len, min_support=min_support, max_written=max_written, n_writers=n_writers, subsample=subsample)        
     elif len(sys.argv) == 5 and sys.argv[1] == 'generate':
         input_folder   = sys.argv[2]  
         dataset_folder = sys.argv[3] 

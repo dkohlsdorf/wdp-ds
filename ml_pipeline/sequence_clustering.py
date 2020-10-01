@@ -33,7 +33,7 @@ def dtw_process(i, j, ri, rj, w):
     return dtw(i,j, np.stack(ri), np.stack(rj), w)
     
                 
-def hc(regions, out, n_workers = 5, threshold = 0.5, warping=0.1):
+def hc(regions, out, n_workers = 5, threshold = 0.5, warping=0.01):
     '''
     Hierarchical Clustering
 

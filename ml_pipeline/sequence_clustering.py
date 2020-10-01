@@ -30,10 +30,12 @@ def distance_compute_job(regions, distance_threshold_frame, warping_band_percent
 
 
 def dtw_process(i, j, ri, rj, w):
+    if i % 100 == 0:
+        logcluster.info("Process dtw({}, {})".format(i, j, w))
     return dtw(i,j, np.stack(ri), np.stack(rj), w)
     
                 
-def hc(regions, out, n_workers = 5, threshold = 0.5, warping=0.01):
+def hc(regions, out, n_workers = 5, threshold = 0.5, warping=0.1):
     '''
     Hierarchical Clustering
 

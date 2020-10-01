@@ -557,7 +557,7 @@ def clustering(inp, out, embedder, prefix, dist_th, batch, min_len=5, min_suppor
                                     for _ , row in signals.iterrows()]
             overlapping += groupBy(annotated, overlap, min_len)
     overlapping = [x for x in overlapping if np.random.uniform() < subsample]
-    print("Cluster: {} examples".format(len(overlapping)))
+    log.info("Cluster: {} examples".format(len(overlapping)))
     assignment  = hc([o for _,_,_,_, o in overlapping], out, n_writers, dist_th)
     clusters    = [(start, stop, f, t, c) for (start, stop, f, t, _), c in zip(overlapping, assignment)]
 

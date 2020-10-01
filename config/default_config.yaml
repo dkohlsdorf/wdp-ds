@@ -30,6 +30,7 @@ min2write    : 3
 max2write    : 100
 min_len      : 5
 subsample    : 0.1
+
 sil          : 'data/classification_noise'
 type_class   : 'data/classification'
 unsupervised : 'data/unsupervised'

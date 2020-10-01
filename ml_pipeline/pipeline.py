@@ -169,7 +169,7 @@ def train_clusters(version_tag, input_folder, output_folder, params, encoder_fil
             else:
                 x_train.append(x.reshape(x.shape[0], x.shape[1], 1))
                 y_train.append(y)
-    print("Split: x = {} / {}".format(len(x_train), len(x_test)))
+    log.info("Split: x = {} / {}".format(len(x_train), len(x_test)))
     x_train = np.stack(x_train)
     y_train = np.stack(y_train)    
     cls_clusters.fit(x=x_train, y=y_train, batch_size=batch, epochs=epoch, )
@@ -333,6 +333,30 @@ def train_auto_encoder(version_tag, input_folder, output_folder, params, latent,
     enc.save('{}/encoder.h5'.format(output_folder))
     ae.save('{}/auto_encoder.h5'.format(output_folder))
 
+
+def clustering_loss(input_folder, output_folder, params, latent, encoder_file, batch_size, epochs):
+    '''
+    Retrain by clustering loss
+    '''
+    enc   = load_model(encoder_file)
+    model = classifier(enc, 0, False)
+    model.summary()
+    w_before = enc.layers[1].get_weights()[0].flatten()
+    for epoch in range(epochs):
+        batch = []
+        epoch_loss = 0.0
+        for (x, _, _, _, _) in dataset(input_folder, params, no_label, True):
+            batch.append((x))
+            if len(batch) == batch_size:
+                x = np.stack([x.reshape(x.shape[0], x.shape[1], 1) for x in batch])
+                loss = model.train_on_batch(x=x, y=np.zeros((batch_size, latent)))
+                epoch_loss += loss[0]
+                log.info('{},{}'.format(epoch, epoch_loss))
+    w_after = enc.layers[1].get_weights()[0].flatten()
+    enc.save('{}/encoder.h5'.format(output_folder))
+    enc.save('{}/clustering_loss.h5'.format(output_folder))
+    log.info("DELTA W:", np.sum(np.square(w_before - w_after)))
+    
 
 def fine_tuning(input_folder, output_folder, params, latent, encoder_file, batch, epochs):
     '''
@@ -503,7 +527,7 @@ def analysis(path):
     log.info(" - gaps: {} type_dist: {}".format(n_gaps(starts, stops), n_types(types)))
 
 
-def clustering(inp, out, embedder, prefix, dist_th, batch, min_len=5, min_support=1, max_written = 100, n_writers=10):    
+def clustering(inp, out, embedder, prefix, dist_th, batch, min_len=5, min_support=1, max_written = 100, n_writers=10, subsample = 0.1):    
     """
     Clustering all embeddings
     """
@@ -532,6 +556,8 @@ def clustering(inp, out, embedder, prefix, dist_th, batch, min_len=5, min_suppor
             annotated             = [(row['start'], row['stop'], row['filename'], row['type'], row['embedding'])
                                     for _ , row in signals.iterrows()]
             overlapping += groupBy(annotated, overlap, min_len)
+    overlapping = [x for x in overlapping if np.random.uniform() < subsample]
+    log.info("Cluster: {} examples".format(len(overlapping)))
     assignment  = hc([o for _,_,_,_, o in overlapping], out, n_writers, dist_th)
     clusters    = [(start, stop, f, t, c) for (start, stop, f, t, _), c in zip(overlapping, assignment)]
 
@@ -617,7 +643,7 @@ def header():
     =================================================================
     Dolphin Machine Learning Pipeline
                 
-    usage for training:      python ml_pipeline/pipeline.py train config/default_config.yaml 
+    usage for training:      python ml_pipeline/pipeline.py train config/default_config.yaml do_cluster
     generate dataset:        python ml_pipeline/pipeline.py generate inputfolder outputfolder prefix
 
     by Daniel Kyu Hwa Kohlsdorf
@@ -627,8 +653,9 @@ def header():
 
 if __name__== "__main__":
     log.info(header())
-    if len(sys.argv) == 3 and sys.argv[1] == 'train':
+    if len(sys.argv) == 4 and sys.argv[1] == 'train':
         c = yaml.load(open(sys.argv[2]))
+        do_cluster  = sys.argv[3] == "do_cluster"
         log.info("Parameters: {}".format(c))
         version      = c['version']
 
@@ -639,7 +666,6 @@ if __name__== "__main__":
         latent          = c['latent']
         batch           = c['batch']
         embedding_batch = c['embedding_batch']
-        epochs          = c['epochs']
         epochs_encoder  = c['epochs_encoder']
         epochs_sup      = c['epochs_sup']
         epochs_finetune = c['epochs_finetune']
@@ -661,22 +687,31 @@ if __name__== "__main__":
         max_written  = c['max2write']
         n_writers    = c['n_writers']
         min_len      = c['min_len']
-
-        for i in range(0, epochs):
-            log.info("Mixed Training Epoch: {}".format(i))
-            train_auto_encoder(version, unsupervised, output, params, latent, batch, epochs_encoder, conv_param)
-            train_silence(version, silence, output, params, "{}/encoder.h5".format(output), batch, epochs_sup, conv_param, latent, freeze, transfer=transfer)
-            train_type(version, type_class, output, params, "{}/encoder.h5".format(output), batch, epochs_sup, conv_param, latent, freeze, transfer)        
-            train_clusters(version, 'data/v6_clustering', output, params, "{}/encoder.h5".format(output), batch, epochs_sup, conv_param, latent, freeze, transfer)
-            fine_tuning(unsupervised, output, params, latent, "{}/encoder.h5".format(output), batch, epochs_finetune)             
-        
-        evaluate_encoder(version, unsupervised, output, "{}/encoder.h5".format(output), params, viz_k)        
-        test_reconstruction(silence, output, params)
-        enc             = load_model("{}/encoder.h5".format(output))
-        silence         = load_model("{}/sil.h5".format(output))
-        type_classifier = load_model("{}/type.h5".format(output))
-        embedder        = SequenceEmbedder(enc, params, silence, type_classifier)
-        clustering(inp, output, embedder, "test_sequential", dist_th, embedding_batch, min_len=min_len, min_support=min_support, max_written=max_written, n_writers=n_writers)   
+        subsample    = c['subsample']
+        '''
+        log.info("Mixed Training Epoch AE")
+        train_auto_encoder(version, unsupervised, output, params, latent, batch, epochs_encoder, conv_param)
+        log.info("Mixed Training Epoch SIL")
+        train_silence(version, silence, output, params, "{}/encoder.h5".format(output), batch, epochs_sup, conv_param, latent, freeze, transfer=transfer)
+        log.info("Mixed Training Epoch TYPE")
+        train_type(version, type_class, output, params, "{}/encoder.h5".format(output), batch, epochs_sup, conv_param, latent, freeze, transfer)        
+        log.info("Mixed Training Epoch CLUSTER")
+        train_clusters(version, 'data/v6_clustering', output, params, "{}/encoder.h5".format(output), batch, epochs_sup, conv_param, latent, freeze, transfer)
+        log.info("Mixed Training Epoch FINE_TUNE")
+        fine_tuning(unsupervised, output, params, latent, "{}/encoder.h5".format(output), batch, epochs_finetune)     
+        log.info("Mixed Training Epoch CLUSTER_LOSS")
+        clustering_loss(unsupervised, output, params, latent, "{}/encoder.h5".format(output), batch, epochs_finetune)
+        log.info("Mixed Training Epoch AE")
+        train_auto_encoder(version, unsupervised, output, params, latent, batch, epochs_encoder, conv_param)
+        '''
+        if do_cluster:
+            #evaluate_encoder(version, unsupervised, output, "{}/encoder.h5".format(output), params, viz_k)        
+            #test_reconstruction(silence, output, params)
+            enc             = load_model("{}/encoder.h5".format(output))
+            silence         = load_model("{}/sil.h5".format(output))
+            type_classifier = load_model("{}/type.h5".format(output))
+            embedder        = SequenceEmbedder(enc, params, silence, type_classifier)
+            clustering(inp, output, embedder, "test_sequential", dist_th, embedding_batch, min_len=min_len, min_support=min_support, max_written=max_written, n_writers=n_writers, subsample=subsample)        
     elif len(sys.argv) == 5 and sys.argv[1] == 'generate':
         input_folder   = sys.argv[2]  
         dataset_folder = sys.argv[3] 

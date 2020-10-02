@@ -688,7 +688,6 @@ if __name__== "__main__":
         n_writers    = c['n_writers']
         min_len      = c['min_len']
         subsample    = c['subsample']
-        '''
         log.info("Mixed Training Epoch AE")
         train_auto_encoder(version, unsupervised, output, params, latent, batch, epochs_encoder, conv_param)
         log.info("Mixed Training Epoch SIL")
@@ -703,10 +702,9 @@ if __name__== "__main__":
         clustering_loss(unsupervised, output, params, latent, "{}/encoder.h5".format(output), batch, epochs_finetune)
         log.info("Mixed Training Epoch AE")
         train_auto_encoder(version, unsupervised, output, params, latent, batch, epochs_encoder, conv_param)
-        '''
         if do_cluster:
-            #evaluate_encoder(version, unsupervised, output, "{}/encoder.h5".format(output), params, viz_k)        
-            #test_reconstruction(silence, output, params)
+            evaluate_encoder(version, unsupervised, output, "{}/encoder.h5".format(output), params, viz_k)        
+            test_reconstruction(silence, output, params)
             enc             = load_model("{}/encoder.h5".format(output))
             silence         = load_model("{}/sil.h5".format(output))
             type_classifier = load_model("{}/type.h5".format(output))

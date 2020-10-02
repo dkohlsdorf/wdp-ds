@@ -30,10 +30,6 @@ from audio import *
 from sequence_clustering import * 
 
 
-CLUSTERING_KMEANS = 0
-CLUSTERING_HC     = 1
-
-
 def no_label(f,x):
     """
     Return none for no label

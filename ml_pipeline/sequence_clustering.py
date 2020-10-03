@@ -46,7 +46,7 @@ def process_dtw(assignment, overlapping, max_dist, warping_band_percentage):
     return [], []
 
                 
-def hc(overlapping, n_workers = 5, threshold = 0.5, warping=0.1, paa = 5, sax = 6):
+def hc(overlapping, n_workers = 5, threshold = 0.5, warping=0.1, paa = 3, sax = 3):
     '''
     Hierarchical Clustering
 

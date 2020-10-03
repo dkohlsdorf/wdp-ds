@@ -553,9 +553,8 @@ def clustering(inp, out, embedder, prefix, dist_th, batch, min_len=5, min_suppor
                                     for _ , row in signals.iterrows()]
             overlapping += groupBy(annotated, overlap, min_len)
     overlapping = [x for x in overlapping if np.random.uniform() < subsample]
+    clusters = hc(overlapping, n_writers, dist_th)
     log.info("Cluster: {} examples".format(len(overlapping)))
-    assignment  = hc([o for _,_,_,_, o in overlapping], out, n_writers, dist_th)
-    clusters    = [(start, stop, f, t, c) for (start, stop, f, t, _), c in zip(overlapping, assignment)]
 
     grouped_by_filename = {}
     grouped_by_cluster  = {}
@@ -700,8 +699,8 @@ if __name__== "__main__":
             log.info("Mixed Training Epoch AE")
             train_auto_encoder(version, unsupervised, output, params, latent, batch, epochs_encoder, conv_param)
         elif sys.argv[1] == 'evaluate':
-            evaluate_encoder(version, unsupervised, output, "{}/encoder.h5".format(output), params, viz_k)        
-            test_reconstruction(silence, output, params)
+            #evaluate_encoder(version, unsupervised, output, "{}/encoder.h5".format(output), params, viz_k)        
+            #test_reconstruction(silence, output, params)
             enc             = load_model("{}/encoder.h5".format(output))
             silence         = load_model("{}/sil.h5".format(output))
             type_classifier = load_model("{}/type.h5".format(output))

@@ -8,7 +8,7 @@ highpass     : 10
 latent       : 64
 
 embedding_batch: 1000
-batch          : 5
+batch          : 1
 version        : "v10.0"
 
 epochs_sup      : 15
@@ -35,5 +35,5 @@ sil          : 'data/classification_noise'
 type_class   : 'data/classification'
 unsupervised : 'data/unsupervised'
 output       : 'models/v10_lstm_v1/'
-input        : 'data/2011'
+input        : 'gs://wdp-ds-data/dolphin_ogg'
 

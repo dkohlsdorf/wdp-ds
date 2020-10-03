@@ -33,7 +33,6 @@ def encoder(in_shape, latent_dim, conv_params):
     x   = BatchNormalization()(loc)
     x   = Bidirectional(LSTM(latent_dim, return_sequences=True))(x)
     x   = LSTM(latent_dim)(x)            
-    x   = tf.keras.layers.Lambda(lambda x: tf.math.l2_normalize(x, axis=1))(x)
     return Model(inputs =[inp], outputs=[x])
 
 

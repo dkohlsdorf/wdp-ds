@@ -8,17 +8,17 @@ highpass     : 10
 latent       : 64
 
 embedding_batch: 1000
-batch          : 1
+batch          : 25
 version        : "v10.0"
 
-epochs_sup      : 15
-epochs_encoder  : 5
-epochs_finetune : 5
+epochs_sup      : 50
+epochs_encoder  : 25
+epochs_finetune : 10
 
 transfer     : true
 freeze       : false
 
-frame_dist_th: 0.005
+frame_dist_th: 1.5
 viz_k        : 128
 
 conv_w       : 8

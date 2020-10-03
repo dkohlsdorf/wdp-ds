@@ -8,8 +8,8 @@ highpass     : 10
 latent       : 64
 
 embedding_batch: 1000
-batch          : 10
-version        : "v9.0"
+batch          : 5
+version        : "v10.0"
 
 epochs_sup      : 15
 epochs_encoder  : 5
@@ -34,6 +34,6 @@ subsample    : 1.0
 sil          : 'data/classification_noise'
 type_class   : 'data/classification'
 unsupervised : 'data/unsupervised'
-output       : 'models/v9_lstm_v1/'
+output       : 'models/v10_lstm_v1/'
 input        : 'data/2011'
 

@@ -11,7 +11,7 @@ logcluster = logging.getLogger('cluster')
 logcluster.setLevel(logging.INFO)    
                 
 
-def process_dtw(assignment, overlapping, max_dist):
+def process_dtw(assignment, overlapping, max_dist, warping_band_percentage):
     """
     Cluster sequences
     :param assignment: Assignment id for bucket to cluster
@@ -67,7 +67,7 @@ def hc(overlapping, n_workers = 5, threshold = 0.5, warping=0.1, paa = 5, sax = 
     
     logcluster.info("Bucketed Clustering")
     with mp.Pool(processes=n_workers) as pool:
-        outputs = pool.starmap(process_dtw, ((assignment, overlapping, threshold) for assignment, overlapping in by_assignment.items()))
+        outputs = pool.starmap(process_dtw, ((assignment, overlapping, threshold, warping) for assignment, overlapping in by_assignment.items()))
 
     logcluster.info("Process Results")
     cur = 0

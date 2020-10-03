@@ -34,7 +34,7 @@ def process_dtw(assignment, overlapping, max_dist, warping_band_percentage):
                     m  = len(embedding_y)
                     th = max_dist * n * m
                     w  = int(max(n, m) * warping_band_percentage)
-                    d  = dtw(i, j, embedding_x, embedding_y, w)
+                    d  = dtw(np.stack(embedding_x), np.stack(embedding_y), w)
                     dist[i, j] = d 
                     dist[j, i] = d 
         logcluster.info("\t {} {} {} {} {} {} ".format(assignment, n, np.percentile(dist.flatten(), 5), np.percentile(dist.flatten(), 95), np.mean(dist), np.std(dist)))

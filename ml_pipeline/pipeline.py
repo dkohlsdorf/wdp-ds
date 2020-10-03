@@ -535,41 +535,6 @@ def clustering(inp, out, embedder, prefix, dist_th, batch, min_len=5, min_suppor
                 if instances_clusters[c] >= min_support:
                     fp.write("{},{},{},{},{},{}\n".format(start, stop, f, c, t, i))
     log.info('Done Logs')
-    
-
-def clusters_as_dataset(input_folder, dataset_folder, prefix):
-    '''
-    Generate a dataset from clusters
-
-    :param input_folder: folder with finished model and clustering
-    :param dataset_folder: where we want the dataset to be generated
-    :param prefix: the prefix for the clustering
-    '''
-    os.mkdir(dataset_folder)
-    for filename in os.listdir(input_folder):
-        if filename.startswith(prefix) and filename.endswith('.csv'):
-            path = "{}/{}".format(input_folder, filename)
-            log.info("Reading: {}".format(path))
-            df = pd.read_csv(path)
-            snippets  = []
-            clusters  = []
-            region_id = []
-            for _, row in df.iterrows():
-                start   = row['start']
-                stop    = row['stop']
-                infile  = row['file']
-                cluster = row['cluster']
-                rid     = row['region_id'] 
-                snippets.append((start, stop))
-                clusters.append(cluster)
-                region_id.append(rid)
-            for i, x in enumerate(audio_regions(infile, snippets)):
-                cluster_file = "{}/c{}_r{}.wav".format(dataset_folder, clusters[i], region_id[i])
-                log.info("\tWriting: {}".format(cluster_file))
-                writer = AudioSnippetCollection(cluster_file)
-                writer.write(x)
-                writer.close()
-
 
 
 def header():
@@ -579,7 +544,6 @@ def header():
                 
     usage for training:      python ml_pipeline/pipeline.py train config/default_config.yaml
     evaluate model:          python ml_pipeline/pipeline.py evaluate config/default_config.yaml
-    generate dataset:        python ml_pipeline/pipeline.py generate inputfolder outputfolder prefix
 
     by Daniel Kyu Hwa Kohlsdorf
     =================================================================
@@ -642,9 +606,4 @@ if __name__== "__main__":
             silence         = load_model("{}/sil.h5".format(output))
             type_classifier = load_model("{}/type.h5".format(output))
             embedder        = SequenceEmbedder(enc, params, silence, type_classifier)
-            clustering(inp, output, embedder, "test_sequential", dist_th, embedding_batch, min_len=min_len, min_support=min_support, max_written=max_written, n_writers=n_writers, subsample=subsample)        
-    elif len(sys.argv) == 5 and sys.argv[1] == 'generate':
-        input_folder   = sys.argv[2]  
-        dataset_folder = sys.argv[3] 
-        prefix         = sys.argv[4] 
-        clusters_as_dataset(input_folder, dataset_folder, prefix)
+            clustering(inp, output, embedder, "test_sequential", dist_th, embedding_batch, min_len=min_len, min_support=min_support, max_written=max_written, n_writers=n_writers, subsample=subsample)

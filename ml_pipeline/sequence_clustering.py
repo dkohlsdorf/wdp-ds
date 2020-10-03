@@ -27,7 +27,7 @@ def process_dtw(assignment, overlapping, max_dist, warping_band_percentage):
         dist = np.zeros((n, n))
         for i, (start_x, stop_x, f_x, t_x, embedding_x) in enumerate(overlapping):
             if i % 250 == 0 and i > 0:
-                logstructure.info("\t\t Processing: {} {}".format(i, len(overlapping)))            
+                logcluster.info("\t\t Processing: {} {}".format(i, len(overlapping)))            
             for j, (start_y, stop_y, f_y, t_y, embedding_y) in enumerate(overlapping):
                 if i < j:
                     n  = len(embedding_x)

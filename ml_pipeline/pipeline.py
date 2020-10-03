@@ -639,7 +639,8 @@ def header():
     =================================================================
     Dolphin Machine Learning Pipeline
                 
-    usage for training:      python ml_pipeline/pipeline.py train config/default_config.yaml do_cluster
+    usage for training:      python ml_pipeline/pipeline.py train config/default_config.yaml
+    evaluate model:          python ml_pipeline/pipeline.py evaluate config/default_config.yaml
     generate dataset:        python ml_pipeline/pipeline.py generate inputfolder outputfolder prefix
 
     by Daniel Kyu Hwa Kohlsdorf
@@ -649,9 +650,8 @@ def header():
 
 if __name__== "__main__":
     log.info(header())
-    if len(sys.argv) == 4 and sys.argv[1] == 'train':
+    if len(sys.argv) == 3: 
         c = yaml.load(open(sys.argv[2]))
-        do_cluster  = sys.argv[3] == "do_cluster"
         log.info("Parameters: {}".format(c))
         version      = c['version']
 
@@ -684,21 +684,22 @@ if __name__== "__main__":
         n_writers    = c['n_writers']
         min_len      = c['min_len']
         subsample    = c['subsample']
-        log.info("Mixed Training Epoch AE")
-        train_auto_encoder(version, unsupervised, output, params, latent, batch, epochs_encoder, conv_param)
-        log.info("Mixed Training Epoch SIL")
-        train_silence(version, silence, output, params, "{}/encoder.h5".format(output), batch, epochs_sup, conv_param, latent, freeze, transfer=transfer)
-        log.info("Mixed Training Epoch TYPE")
-        train_type(version, type_class, output, params, "{}/encoder.h5".format(output), batch, epochs_sup, conv_param, latent, freeze, transfer)        
-        log.info("Mixed Training Epoch CLUSTER")
-        train_clusters(version, 'data/v6_clustering', output, params, "{}/encoder.h5".format(output), batch, epochs_sup, conv_param, latent, freeze, transfer)
-        log.info("Mixed Training Epoch FINE_TUNE")
-        fine_tuning(unsupervised, output, params, latent, "{}/encoder.h5".format(output), batch, epochs_finetune)     
-        log.info("Mixed Training Epoch CLUSTER_LOSS")
-        clustering_loss(unsupervised, output, params, latent, "{}/encoder.h5".format(output), batch, epochs_finetune)
-        log.info("Mixed Training Epoch AE")
-        train_auto_encoder(version, unsupervised, output, params, latent, batch, epochs_encoder, conv_param)
-        if do_cluster:
+        if sys.argv[1] == 'train':
+            log.info("Mixed Training Epoch AE")
+            train_auto_encoder(version, unsupervised, output, params, latent, batch, epochs_encoder, conv_param)
+            log.info("Mixed Training Epoch SIL")
+            train_silence(version, silence, output, params, "{}/encoder.h5".format(output), batch, epochs_sup, conv_param, latent, freeze, transfer=transfer)
+            log.info("Mixed Training Epoch TYPE")
+            train_type(version, type_class, output, params, "{}/encoder.h5".format(output), batch, epochs_sup, conv_param, latent, freeze, transfer)        
+            log.info("Mixed Training Epoch CLUSTER")
+            train_clusters(version, 'data/v6_clustering', output, params, "{}/encoder.h5".format(output), batch, epochs_sup, conv_param, latent, freeze, transfer)
+            log.info("Mixed Training Epoch FINE_TUNE")
+            fine_tuning(unsupervised, output, params, latent, "{}/encoder.h5".format(output), batch, epochs_finetune)     
+            log.info("Mixed Training Epoch CLUSTER_LOSS")
+            clustering_loss(unsupervised, output, params, latent, "{}/encoder.h5".format(output), batch, epochs_finetune)
+            log.info("Mixed Training Epoch AE")
+            train_auto_encoder(version, unsupervised, output, params, latent, batch, epochs_encoder, conv_param)
+        elif sys.argv[1] == 'evaluate':
             evaluate_encoder(version, unsupervised, output, "{}/encoder.h5".format(output), params, viz_k)        
             test_reconstruction(silence, output, params)
             enc             = load_model("{}/encoder.h5".format(output))

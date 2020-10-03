@@ -59,7 +59,6 @@ def hc(regions, out, n_workers = 5, threshold = 0.5, warping=0.1):
             distances[i, j] = d
             distances[j, i] = d
         np.save('{}/distances.npy'.format(out), distances)
-        
     logcluster.info("Done writing distances: p95 = {}, p1 = {}, p5 = {}, median = {}".format(
         np.percentile(distances, 95),
         np.percentile(distances, 1),

@@ -18,7 +18,6 @@ log.setLevel(logging.INFO)
 
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3' 
 
-
 from tensorflow.keras.backend import set_learning_phase
 from tensorflow.keras.models import load_model
 from feature_extractor import *
@@ -28,6 +27,10 @@ from sequence_embedder import *
 from audio_collection import *
 from audio import * 
 from sequence_clustering import * 
+
+
+tf.keras.backend.set_floatx('float16')
+tf.keras.backend.set_epsilon(1e-4)
 
 
 def no_label(f,x):

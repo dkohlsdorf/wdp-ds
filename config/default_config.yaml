@@ -11,9 +11,9 @@ embedding_batch: 1000
 batch          : 25
 version        : "v10.0"
 
-epochs_sup      : 50
-epochs_encoder  : 25
-epochs_finetune : 10
+epochs_sup      : 15
+epochs_encoder  : 5
+epochs_finetune : 5
 
 transfer     : true
 freeze       : false
@@ -23,7 +23,7 @@ viz_k        : 128
 
 conv_w       : 8
 conv_h       : 8
-conv_filters : 1024
+conv_filters : 256
 
 n_writers    : 5
 min2write    : 3

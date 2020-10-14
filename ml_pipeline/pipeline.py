@@ -29,9 +29,6 @@ from audio import *
 from sequence_clustering import * 
 
 
-tf.keras.backend.set_floatx('float16')
-tf.keras.backend.set_epsilon(1e-4)
-
 
 def no_label(f,x):
     """

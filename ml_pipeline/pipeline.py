@@ -167,9 +167,9 @@ def train_type(version_tag, input_folder, output_folder, params, encoder_file, b
     accuracy = np.sum(confusion * np.eye(4)) / np.sum(confusion)
     log.info(accuracy)
     log.info(confusion)
-    cls_type.save('{}/type.h5'.format(output_folder))
-    enc.save('{}/encoder.h5'.format(output_folder))
-    enc.save('{}/encoder_type.h5'.format(output_folder))
+    cls_type.save('{}/type.h5'.format(output_folder), include_optimizer=False)
+    enc.save('{}/encoder.h5'.format(output_folder), include_optimizer=False)
+    enc.save('{}/encoder_type.h5'.format(output_folder), include_optimizer=False)
     plot_confusion_matrix(confusion, ["noise", "echo", "burst", "whistle"], 'Type Classification')
     plt.savefig('{}/confusion_type.png'.format(output_folder))
     plt.close()
@@ -216,9 +216,9 @@ def train_silence(version_tag, input_folder, output_folder, params, encoder_file
     x_train = np.stack(x_train)
     y_train = np.stack(y_train) 
     cls_sil.fit(x=x_train, y=y_train, batch_size=batch, epochs=epoch)
-    cls_sil.save('{}/sil.h5'.format(output_folder))
-    enc.save('{}/encoder.h5'.format(output_folder))
-    enc.save('{}/encoder_sil.h5'.format(output_folder))
+    cls_sil.save('{}/sil.h5'.format(output_folder), include_optimizer=False)
+    enc.save('{}/encoder.h5'.format(output_folder), include_optimizer=False)
+    enc.save('{}/encoder_sil.h5'.format(output_folder), include_optimizer=False)
 
     confusion = np.zeros((2,2))
     for x, y in zip(x_test, y_test):
@@ -264,9 +264,9 @@ def train_auto_encoder(version_tag, input_folder, output_folder, params, latent,
     train(input_folder, output_folder, params, enc, ae, batch, epochs)
     w_after = enc.layers[1].get_weights()[0].flatten()
     log.info("DELTA W:", np.sum(np.square(w_before - w_after)))
-    enc.save('{}/encoder_reconstruction.h5'.format(output_folder))
-    enc.save('{}/encoder.h5'.format(output_folder))
-    ae.save('{}/auto_encoder.h5'.format(output_folder))
+    enc.save('{}/encoder_reconstruction.h5'.format(output_folder), include_optimizer=False)
+    enc.save('{}/encoder.h5'.format(output_folder), include_optimizer=False)
+    ae.save('{}/auto_encoder.h5'.format(output_folder), include_optimizer=False)
 
 
 def clustering_loss(input_folder, output_folder, params, latent, encoder_file, batch_size, epochs):
@@ -288,8 +288,8 @@ def clustering_loss(input_folder, output_folder, params, latent, encoder_file, b
                 epoch_loss += loss[0]
                 log.info('{},{}'.format(epoch, epoch_loss))
     w_after = enc.layers[1].get_weights()[0].flatten()
-    enc.save('{}/encoder.h5'.format(output_folder))
-    enc.save('{}/clustering_loss.h5'.format(output_folder))
+    enc.save('{}/encoder.h5'.format(output_folder), include_optimizer=False)
+    enc.save('{}/clustering_loss.h5'.format(output_folder), include_optimizer=False)
     log.info("DELTA W:", np.sum(np.square(w_before - w_after)))
     
 
@@ -340,9 +340,9 @@ def fine_tuning(input_folder, output_folder, params, latent, encoder_file, batch
                 batch_pos = []
                 batch_neg = []
                 batch_anc = []
-    enc.save('{}/encoder.h5'.format(output_folder))
-    enc.save('{}/fine_tuning.h5'.format(output_folder))
-    model.save('{}/triplet.h5'.format(output_folder))
+    enc.save('{}/encoder.h5'.format(output_folder), include_optimizer=False)
+    enc.save('{}/fine_tuning.h5'.format(output_folder), include_optimizer=False)
+    model.save('{}/triplet.h5'.format(output_folder), include_optimizer=False)
 
 
 def evaluate_encoder(version_tag, input_folder, output_folder, encoder_file, params, k):

@@ -11,7 +11,7 @@ embedding_batch: 1000
 batch          : 25
 version        : "v10.0"
 
-epochs_sup      : 15
+epochs_sup      : 50
 epochs_encoder  : 5
 epochs_finetune : 5
 

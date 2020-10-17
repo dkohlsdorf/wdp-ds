@@ -18,14 +18,14 @@ epochs_finetune : 5
 transfer     : true
 freeze       : false
 
-frame_dist_th: 1.5
+frame_dist_th: 0.1
 viz_k        : 128
 
 conv_w       : 8
 conv_h       : 8
 conv_filters : 256
 
-n_writers    : 5
+n_writers    : 3
 min2write    : 3
 max2write    : 100
 min_len      : 5
@@ -33,7 +33,7 @@ subsample    : 1.0
 
 sil          : 'data/classification_noise'
 type_class   : 'data/classification'
-unsupervised : 'data/unsupervised'
+unsupervised : 'data/unsupervised_small'
 output       : 'models/v10_lstm_v1/'
-input        : 'gs://wdp-ds-data/dolphin_ogg'
+input        : '/home/dkohlsdorf/dolphin_2011'
 

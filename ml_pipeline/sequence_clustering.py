@@ -8,8 +8,8 @@ from sequence_hashing import similarity_bucketing
 import logging
 logging.basicConfig()
 logcluster = logging.getLogger('cluster')
-logcluster.setLevel(logging.INFO)    
-                
+logcluster.setLevel(logging.INFO)                    
+
 
 def process_dtw(assignment, overlapping, max_dist, warping_band_percentage):
     """
@@ -66,9 +66,10 @@ def hc(overlapping, n_workers = 5, threshold = 0.5, warping=0.1, paa = 5, sax = 
         by_assignment[s].append(o)
     
     logcluster.info("Bucketed Clustering")
-    with mp.Pool(processes=n_workers) as pool:
+    with mp.get_context("spawn").Pool(processes=n_workers) as pool: 
+        #with mp.Pool(processes=n_workers) as pool:
         outputs = pool.starmap(process_dtw, ((assignment, overlapping, threshold, warping) for assignment, overlapping in by_assignment.items()))
-
+    
     logcluster.info("Process Results")
     cur = 0
     assignments = []

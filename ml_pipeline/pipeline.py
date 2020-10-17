@@ -26,8 +26,7 @@ from plots import *
 from sequence_embedder import *
 from audio_collection import *
 from audio import * 
-from sequence_clustering import * 
-
+from sequence_clustering import *
 
 
 def no_label(f,x):
@@ -521,7 +520,7 @@ def clustering(inp, out, embedder, prefix, dist_th, batch, min_len=5, min_suppor
                 instances_clusters[c] += 1
 
     log.info('Done Clustering')
-    with mp.Pool(processes=n_writers) as pool:
+    with mp.get_context("spawn").Pool(processes=n_writers) as pool: 
         pool.starmap(write_audio, ((out, prefix, cluster_id, instances_clusters, grouped_by_cluster, min_support, max_written) for cluster_id in range(0, k)))
     log.info('Done Writing')
 
@@ -601,7 +600,7 @@ if __name__== "__main__":
             train_auto_encoder(version, unsupervised, output, params, latent, batch, epochs_encoder, conv_param)
         elif sys.argv[1] == 'evaluate':
             evaluate_encoder(version, unsupervised, output, "{}/encoder.h5".format(output), params, viz_k)        
-            test_reconstruction(silence, output, params)
+            #test_reconstruction(silence, output, params)
             enc             = load_model("{}/encoder.h5".format(output))
             silence         = load_model("{}/sil.h5".format(output))
             type_classifier = load_model("{}/type.h5".format(output))

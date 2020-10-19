@@ -24,7 +24,13 @@ cythonize -if ml_pipeline/*.pyx
 ```
 
 ## Usage:
-The machine learning pipeline can be run as often as necessary training will continue from the last encoder:
+The machine learning pipeline can be run as often as necessary. 
+Training will continue from the last encoder:
 ```
     usage for training:      python ml_pipeline/pipeline.py train config/default_config.yaml 2>debug.log
 ```
+Evaluation can be run using the same script:
+```
+    evaluate model:          python ml_pipeline/pipeline.py evaluate config/default_config.yaml
+```
+A demo training run can be found in the ```training_script.sh```.

@@ -12,7 +12,7 @@ logdtw = logging.getLogger('dtw')
 logdtw.setLevel(logging.INFO)
 
 
-def dtw(int id_x, int id_y, double[:, :] x, double[:,:] y, int band):
+def dtw(double[:, :] x, double[:,:] y, int band):
     """
     Align two sequences using dynamic time warping.
 
@@ -39,4 +39,4 @@ def dtw(int id_x, int id_y, double[:, :] x, double[:,:] y, int band):
             dp[i][j] = v + dist
 											
     score = dp[N, M] / (N * M)
-    return id_x, id_y, score
+    return score

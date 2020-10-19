@@ -3,39 +3,50 @@ import multiprocessing as mp
 import numpy as np
 from dtw import *
 from sklearn.cluster import AgglomerativeClustering
+from sequence_hashing import similarity_bucketing
 
 import logging
 logging.basicConfig()
 logcluster = logging.getLogger('cluster')
-logcluster.setLevel(logging.INFO)
+logcluster.setLevel(logging.INFO)                    
 
 
-def distance_compute_job(regions, distance_threshold_frame, warping_band_percentage):
-    '''
-    Iterator for distance computation jobs
+def process_dtw(assignment, overlapping, max_dist, warping_band_percentage):
+    """
+    Cluster sequences
+    :param assignment: Assignment id for bucket to cluster
+    :param overlapping: All sequences
+    :param max_dist: Distance for thresholding
+    :returns: clustering, overlapping
+    """
+    n = len(overlapping)
+    if n > 0:
+        if n == 1:
+            return [0], overlapping            
+        # Compute distance matrix
+        dist = np.zeros((n, n))
+        for i, (start_x, stop_x, f_x, t_x, embedding_x) in enumerate(overlapping):
+            if i % 250 == 0 and i > 0:
+                logcluster.info("\t\t Processing: {} {}".format(i, len(overlapping)))            
+            for j, (start_y, stop_y, f_y, t_y, embedding_y) in enumerate(overlapping):
+                if i < j:
+                    n  = len(embedding_x)
+                    m  = len(embedding_y)
+                    th = max_dist * n * m
+                    w  = int(max(n, m) * warping_band_percentage)
+                    d  = dtw(np.stack(embedding_x), np.stack(embedding_y), w)
+                    dist[i, j] = d 
+                    dist[j, i] = d 
+        logcluster.info("\t {} {} {} {} {} {} ".format(assignment, n, np.percentile(dist.flatten(), 5), np.percentile(dist.flatten(), 95), np.mean(dist), np.std(dist)))
+        
+        # clustering
+        agg = AgglomerativeClustering(n_clusters = None, distance_threshold = max_dist, linkage = 'complete', affinity='precomputed')
+        clustering = agg.fit_predict(dist)
+        return clustering, overlapping
+    return [], []
 
-    :param regions: regions to be clustered
-    :param distance_threshold_frame: threshold on each frame
-    :param warping_band_percentage: percentage of warping
-    :return: iterator over dtw job (i, j, region_i, region_j, th, w)
-    '''
-    for i, ri in enumerate(regions):    
-        for j, rj in enumerate(regions):
-            if i < j:
-                n = len(ri)
-                m = len(rj)
-                th = distance_threshold_frame * n * m
-                w  = int(max(n, m) * warping_band_percentage)
-                yield i, j, ri, rj, w
-
-
-def dtw_process(i, j, ri, rj, w):
-    if j % 100 == 0:
-        logcluster.info("Process dtw({}, {})".format(i, j, w))
-    return dtw(i,j, np.stack(ri), np.stack(rj), w)
-    
                 
-def hc(regions, out, n_workers = 5, threshold = 0.5, warping=0.1):
+def hc(overlapping, n_workers = 5, threshold = 0.5, warping=0.1, paa = 5, sax = 6):
     '''
     Hierarchical Clustering
 
@@ -45,30 +56,37 @@ def hc(regions, out, n_workers = 5, threshold = 0.5, warping=0.1):
     :param warping: percentage of allowed warping
     :return: array of n cluster ids
     '''
-    logcluster.info("Start clustering distance precompute with {} workers".format(n_workers))
-    if os.path.isfile('{}/distances.npy'.format(out)):
-        logcluster.info("Loading Precomputed Distances")
-        distances = np.load('{}/distances.npy'.format(out))
-    else:
-        n = len(regions)
-        with mp.Pool(processes=n_workers) as pool:
-            results = pool.starmap(dtw_process, (distance_compute_job(regions, threshold, warping)))
-        logcluster.info("Done distance computation for {} instances".format(n))
-        distances = np.zeros((n, n))
-        for i, j, d in results:
-            distances[i, j] = d
-            distances[j, i] = d
-        np.save('{}/distances.npy'.format(out), distances)
-        
-    logcluster.info("Done writing distances: p95 = {}, p1 = {}, p5 = {}, median = {}".format(
-        np.percentile(distances, 95),
-        np.percentile(distances, 1),
-        np.percentile(distances, 5),
-        np.percentile(distances, 50)
-    ))
-    agg = AgglomerativeClustering(n_clusters = None, distance_threshold = threshold, linkage = 'complete', affinity='precomputed')
-    assignment = agg.fit_predict(distances)
-    return assignment
+    sequences     = [np.stack(s) for _, _, _, _, s in overlapping]
+    assignments   = similarity_bucketing(sequences, paa, sax)
+    clusters      = max(assignments) + 1
+    by_assignment = {}
+    for o, s in zip(overlapping, assignments):
+        if s not in by_assignment:
+            by_assignment[s] = []
+        by_assignment[s].append(o)
+    
+    logcluster.info("Bucketed Clustering")
+    with mp.get_context("spawn").Pool(processes=n_workers) as pool: 
+        #with mp.Pool(processes=n_workers) as pool:
+        outputs = pool.starmap(process_dtw, ((assignment, overlapping, threshold, warping) for assignment, overlapping in by_assignment.items()))
+    
+    logcluster.info("Process Results")
+    cur = 0
+    assignments = []
+    overlapping = []
+    n_instances = {}
+    for clustering, o in outputs:
+        if len(clustering) > 0:
+            for c, (start, stop, f, t, sequence) in zip(clustering, o):
+                    if (c + cur) not in n_instances:
+                        n_instances[c + cur] = 1
+                    else:
+                        n_instances[c + cur] += 1                                            
+                    assignments.append(c + cur)
+                    overlapping.append((start, stop, f, t, c + cur))
+            for c in range(len(set(clustering))):
+                cur += 1
+    return overlapping
 
 
 def overlap(x1, x2):

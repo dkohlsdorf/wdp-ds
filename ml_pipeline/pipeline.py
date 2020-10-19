@@ -18,7 +18,6 @@ log.setLevel(logging.INFO)
 
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3' 
 
-
 from tensorflow.keras.backend import set_learning_phase
 from tensorflow.keras.models import load_model
 from feature_extractor import *
@@ -27,7 +26,7 @@ from plots import *
 from sequence_embedder import *
 from audio_collection import *
 from audio import * 
-from sequence_clustering import * 
+from sequence_clustering import *
 
 
 def no_label(f,x):
@@ -86,7 +85,6 @@ def label_cluster(f, x):
     return int(f.split('/')[-1].split('_')[0][1:])
 
 
-
 def train(folder, output_folder, params, enc, ae, batch_size=10, epochs=128, keep=lambda x: True):
     """
     Train the model for some epochs with a specific batch size
@@ -120,66 +118,6 @@ def train(folder, output_folder, params, enc, ae, batch_size=10, epochs=128, kee
         training_log.write('{},{},{}\n'.format(epoch, n_processed, epoch_loss))
         training_log.flush()
     training_log.close()
-
-
-def train_clusters(version_tag, input_folder, output_folder, params, encoder_file, batch, epoch, conv_param, latent, freeze, transfer=True):
-    """
-    Train a multiclass cluster id classifier
-
-    :param version_tag: basically the model name
-    :param input_folder: the folder with the training data
-    :param output_folder: the folder to save the model
-    :param params: window parameters
-    :param encoder_file: a saved encoder
-    :param batch: batch size
-    :param epochs: number of training epochs
-    :param latent: dimension of the latent space
-    :param freeze: freeze weights or not
-    :param transfer: pretrained weights
-    """
-    if transfer:
-        log.info(encoder_file)
-        enc = load_model(encoder_file)
-    else:
-        _, enc = auto_encoder(
-            (params.spec_win, params.n_fft_bins, 1), latent, conv_param
-        )
-
-    df = pd.read_csv("{}/labels.csv".format(input_folder), header=None)
-    df['is_clean'] = df[1].apply(lambda x: 'BAD' not in x)
-    df = df[df['is_clean']]
-    clusters = dict([(c, i) for i, c in enumerate(df[0])])
-    n_cluster = len(clusters)
-    cls_clusters = classifier(enc, n_cluster, freeze)
-    
-    x_train = []
-    x_test = []
-    y_train = []
-    y_test = []
-    for (x, label, _, _, _) in dataset(input_folder, params, label_cluster, True):
-        if label in clusters:
-            y = clusters[label] 
-            if np.random.uniform() > 0.6:                
-                x_test.append(x)
-                y_test.append(y)
-            else:
-                x_train.append(x.reshape(x.shape[0], x.shape[1], 1))
-                y_train.append(y)
-    log.info("Split: x = {} / {}".format(len(x_train), len(x_test)))
-    x_train = np.stack(x_train)
-    y_train = np.stack(y_train)    
-    cls_clusters.fit(x=x_train, y=y_train, batch_size=batch, epochs=epoch, )
-    confusion = np.zeros((n_cluster, n_cluster))
-    for x, y in zip(x_test, y_test):
-            _y = np.argmax(cls_clusters.predict(x.reshape(1, x.shape[0], x.shape[1], 1)), axis=1)[0]
-            confusion[y][_y] += 1            
-    np.savetxt('{}/confusion_clusters.csv'.format(output_folder), confusion)
-    accuracy = np.sum(confusion * np.eye(n_cluster)) / np.sum(confusion)
-    log.info(accuracy)
-    log.info(confusion)
-    cls_clusters.save('{}/clustering_predictor.h5'.format(output_folder))
-    enc.save('{}/encoder_clustering.h5'.format(output_folder))
-    enc.save('{}/encoder.h5'.format(output_folder))
 
 
 def train_type(version_tag, input_folder, output_folder, params, encoder_file, batch, epoch, conv_param, latent, freeze, transfer=True):
@@ -228,9 +166,9 @@ def train_type(version_tag, input_folder, output_folder, params, encoder_file, b
     accuracy = np.sum(confusion * np.eye(4)) / np.sum(confusion)
     log.info(accuracy)
     log.info(confusion)
-    cls_type.save('{}/type.h5'.format(output_folder))
-    enc.save('{}/encoder.h5'.format(output_folder))
-    enc.save('{}/encoder_type.h5'.format(output_folder))
+    cls_type.save('{}/type.h5'.format(output_folder), include_optimizer=False)
+    enc.save('{}/encoder.h5'.format(output_folder), include_optimizer=False)
+    enc.save('{}/encoder_type.h5'.format(output_folder), include_optimizer=False)
     plot_confusion_matrix(confusion, ["noise", "echo", "burst", "whistle"], 'Type Classification')
     plt.savefig('{}/confusion_type.png'.format(output_folder))
     plt.close()
@@ -277,9 +215,9 @@ def train_silence(version_tag, input_folder, output_folder, params, encoder_file
     x_train = np.stack(x_train)
     y_train = np.stack(y_train) 
     cls_sil.fit(x=x_train, y=y_train, batch_size=batch, epochs=epoch)
-    cls_sil.save('{}/sil.h5'.format(output_folder))
-    enc.save('{}/encoder.h5'.format(output_folder))
-    enc.save('{}/encoder_sil.h5'.format(output_folder))
+    cls_sil.save('{}/sil.h5'.format(output_folder), include_optimizer=False)
+    enc.save('{}/encoder.h5'.format(output_folder), include_optimizer=False)
+    enc.save('{}/encoder_sil.h5'.format(output_folder), include_optimizer=False)
 
     confusion = np.zeros((2,2))
     for x, y in zip(x_test, y_test):
@@ -325,9 +263,9 @@ def train_auto_encoder(version_tag, input_folder, output_folder, params, latent,
     train(input_folder, output_folder, params, enc, ae, batch, epochs)
     w_after = enc.layers[1].get_weights()[0].flatten()
     log.info("DELTA W:", np.sum(np.square(w_before - w_after)))
-    enc.save('{}/encoder_reconstruction.h5'.format(output_folder))
-    enc.save('{}/encoder.h5'.format(output_folder))
-    ae.save('{}/auto_encoder.h5'.format(output_folder))
+    enc.save('{}/encoder_reconstruction.h5'.format(output_folder), include_optimizer=False)
+    enc.save('{}/encoder.h5'.format(output_folder), include_optimizer=False)
+    ae.save('{}/auto_encoder.h5'.format(output_folder), include_optimizer=False)
 
 
 def clustering_loss(input_folder, output_folder, params, latent, encoder_file, batch_size, epochs):
@@ -349,8 +287,8 @@ def clustering_loss(input_folder, output_folder, params, latent, encoder_file, b
                 epoch_loss += loss[0]
                 log.info('{},{}'.format(epoch, epoch_loss))
     w_after = enc.layers[1].get_weights()[0].flatten()
-    enc.save('{}/encoder.h5'.format(output_folder))
-    enc.save('{}/clustering_loss.h5'.format(output_folder))
+    enc.save('{}/encoder.h5'.format(output_folder), include_optimizer=False)
+    enc.save('{}/clustering_loss.h5'.format(output_folder), include_optimizer=False)
     log.info("DELTA W:", np.sum(np.square(w_before - w_after)))
     
 
@@ -401,9 +339,9 @@ def fine_tuning(input_folder, output_folder, params, latent, encoder_file, batch
                 batch_pos = []
                 batch_neg = []
                 batch_anc = []
-    enc.save('{}/encoder.h5'.format(output_folder))
-    enc.save('{}/fine_tuning.h5'.format(output_folder))
-    model.save('{}/triplet.h5'.format(output_folder))
+    enc.save('{}/encoder.h5'.format(output_folder), include_optimizer=False)
+    enc.save('{}/fine_tuning.h5'.format(output_folder), include_optimizer=False)
+    model.save('{}/triplet.h5'.format(output_folder), include_optimizer=False)
 
 
 def evaluate_encoder(version_tag, input_folder, output_folder, encoder_file, params, k):
@@ -553,9 +491,8 @@ def clustering(inp, out, embedder, prefix, dist_th, batch, min_len=5, min_suppor
                                     for _ , row in signals.iterrows()]
             overlapping += groupBy(annotated, overlap, min_len)
     overlapping = [x for x in overlapping if np.random.uniform() < subsample]
+    clusters = hc(overlapping, n_writers, dist_th)
     log.info("Cluster: {} examples".format(len(overlapping)))
-    assignment  = hc([o for _,_,_,_, o in overlapping], out, n_writers, dist_th)
-    clusters    = [(start, stop, f, t, c) for (start, stop, f, t, _), c in zip(overlapping, assignment)]
 
     grouped_by_filename = {}
     grouped_by_cluster  = {}
@@ -583,7 +520,7 @@ def clustering(inp, out, embedder, prefix, dist_th, batch, min_len=5, min_suppor
                 instances_clusters[c] += 1
 
     log.info('Done Clustering')
-    with mp.Pool(processes=n_writers) as pool:
+    with mp.get_context("spawn").Pool(processes=n_writers) as pool: 
         pool.starmap(write_audio, ((out, prefix, cluster_id, instances_clusters, grouped_by_cluster, min_support, max_written) for cluster_id in range(0, k)))
     log.info('Done Writing')
 
@@ -597,41 +534,6 @@ def clustering(inp, out, embedder, prefix, dist_th, batch, min_len=5, min_suppor
                 if instances_clusters[c] >= min_support:
                     fp.write("{},{},{},{},{},{}\n".format(start, stop, f, c, t, i))
     log.info('Done Logs')
-    
-
-def clusters_as_dataset(input_folder, dataset_folder, prefix):
-    '''
-    Generate a dataset from clusters
-
-    :param input_folder: folder with finished model and clustering
-    :param dataset_folder: where we want the dataset to be generated
-    :param prefix: the prefix for the clustering
-    '''
-    os.mkdir(dataset_folder)
-    for filename in os.listdir(input_folder):
-        if filename.startswith(prefix) and filename.endswith('.csv'):
-            path = "{}/{}".format(input_folder, filename)
-            log.info("Reading: {}".format(path))
-            df = pd.read_csv(path)
-            snippets  = []
-            clusters  = []
-            region_id = []
-            for _, row in df.iterrows():
-                start   = row['start']
-                stop    = row['stop']
-                infile  = row['file']
-                cluster = row['cluster']
-                rid     = row['region_id'] 
-                snippets.append((start, stop))
-                clusters.append(cluster)
-                region_id.append(rid)
-            for i, x in enumerate(audio_regions(infile, snippets)):
-                cluster_file = "{}/c{}_r{}.wav".format(dataset_folder, clusters[i], region_id[i])
-                log.info("\tWriting: {}".format(cluster_file))
-                writer = AudioSnippetCollection(cluster_file)
-                writer.write(x)
-                writer.close()
-
 
 
 def header():
@@ -639,8 +541,8 @@ def header():
     =================================================================
     Dolphin Machine Learning Pipeline
                 
-    usage for training:      python ml_pipeline/pipeline.py train config/default_config.yaml do_cluster
-    generate dataset:        python ml_pipeline/pipeline.py generate inputfolder outputfolder prefix
+    usage for training:      python ml_pipeline/pipeline.py train config/default_config.yaml
+    evaluate model:          python ml_pipeline/pipeline.py evaluate config/default_config.yaml
 
     by Daniel Kyu Hwa Kohlsdorf
     =================================================================
@@ -649,9 +551,8 @@ def header():
 
 if __name__== "__main__":
     log.info(header())
-    if len(sys.argv) == 4 and sys.argv[1] == 'train':
+    if len(sys.argv) == 3: 
         c = yaml.load(open(sys.argv[2]))
-        do_cluster  = sys.argv[3] == "do_cluster"
         log.info("Parameters: {}".format(c))
         version      = c['version']
 
@@ -684,30 +585,24 @@ if __name__== "__main__":
         n_writers    = c['n_writers']
         min_len      = c['min_len']
         subsample    = c['subsample']
-        log.info("Mixed Training Epoch AE")
-        train_auto_encoder(version, unsupervised, output, params, latent, batch, epochs_encoder, conv_param)
-        log.info("Mixed Training Epoch SIL")
-        train_silence(version, silence, output, params, "{}/encoder.h5".format(output), batch, epochs_sup, conv_param, latent, freeze, transfer=transfer)
-        log.info("Mixed Training Epoch TYPE")
-        train_type(version, type_class, output, params, "{}/encoder.h5".format(output), batch, epochs_sup, conv_param, latent, freeze, transfer)        
-        log.info("Mixed Training Epoch CLUSTER")
-        train_clusters(version, 'data/v6_clustering', output, params, "{}/encoder.h5".format(output), batch, epochs_sup, conv_param, latent, freeze, transfer)
-        log.info("Mixed Training Epoch FINE_TUNE")
-        fine_tuning(unsupervised, output, params, latent, "{}/encoder.h5".format(output), batch, epochs_finetune)     
-        log.info("Mixed Training Epoch CLUSTER_LOSS")
-        clustering_loss(unsupervised, output, params, latent, "{}/encoder.h5".format(output), batch, epochs_finetune)
-        log.info("Mixed Training Epoch AE")
-        train_auto_encoder(version, unsupervised, output, params, latent, batch, epochs_encoder, conv_param)
-        if do_cluster:
+        if sys.argv[1] == 'train':
+            log.info("Mixed Training Epoch AE")
+            train_auto_encoder(version, unsupervised, output, params, latent, batch, epochs_encoder, conv_param)
+            log.info("Mixed Training Epoch SIL")
+            train_silence(version, silence, output, params, "{}/encoder.h5".format(output), batch, epochs_sup, conv_param, latent, freeze, transfer=transfer)
+            log.info("Mixed Training Epoch TYPE")
+            train_type(version, type_class, output, params, "{}/encoder.h5".format(output), batch, epochs_sup, conv_param, latent, freeze, transfer)        
+            log.info("Mixed Training Epoch FINE_TUNE")
+            fine_tuning(unsupervised, output, params, latent, "{}/encoder.h5".format(output), batch, epochs_finetune)     
+            log.info("Mixed Training Epoch CLUSTER_LOSS")
+            clustering_loss(unsupervised, output, params, latent, "{}/encoder.h5".format(output), batch, epochs_finetune)
+            log.info("Mixed Training Epoch AE")
+            train_auto_encoder(version, unsupervised, output, params, latent, batch, epochs_encoder, conv_param)
+        elif sys.argv[1] == 'evaluate':
             evaluate_encoder(version, unsupervised, output, "{}/encoder.h5".format(output), params, viz_k)        
-            test_reconstruction(silence, output, params)
+            #test_reconstruction(silence, output, params)
             enc             = load_model("{}/encoder.h5".format(output))
             silence         = load_model("{}/sil.h5".format(output))
             type_classifier = load_model("{}/type.h5".format(output))
             embedder        = SequenceEmbedder(enc, params, silence, type_classifier)
-            clustering(inp, output, embedder, "test_sequential", dist_th, embedding_batch, min_len=min_len, min_support=min_support, max_written=max_written, n_writers=n_writers, subsample=subsample)        
-    elif len(sys.argv) == 5 and sys.argv[1] == 'generate':
-        input_folder   = sys.argv[2]  
-        dataset_folder = sys.argv[3] 
-        prefix         = sys.argv[4] 
-        clusters_as_dataset(input_folder, dataset_folder, prefix)
+            clustering(inp, output, embedder, "test_sequential", dist_th, embedding_batch, min_len=min_len, min_support=min_support, max_written=max_written, n_writers=n_writers, subsample=subsample)

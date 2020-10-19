@@ -9,23 +9,23 @@ latent       : 64
 
 embedding_batch: 1000
 batch          : 25
-version        : "v9.0"
+version        : "v10.0"
 
-epochs_sup      : 15
-epochs_encoder  : 5
+epochs_sup      : 50
+epochs_encoder  : 10
 epochs_finetune : 5
 
 transfer     : true
 freeze       : false
 
-frame_dist_th: 0.005
+frame_dist_th: 0.25
 viz_k        : 128
 
 conv_w       : 8
-conv_h       : 32
-conv_filters : 1024
+conv_h       : 8
+conv_filters : 256
 
-n_writers    : 5
+n_writers    : 3
 min2write    : 3
 max2write    : 100
 min_len      : 5
@@ -33,7 +33,7 @@ subsample    : 1.0
 
 sil          : 'data/classification_noise'
 type_class   : 'data/classification'
-unsupervised : 'data/unsupervised'
-output       : 'models/v9_lstm_v1/'
-input        : 'data/2011'
+unsupervised : 'data/unsupervised_small'
+output       : 'models/v10_lstm_v1/'
+input        : '/home/dkohlsdorf/dolphin_2011'
 

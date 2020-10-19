@@ -185,7 +185,7 @@ def labeled_spectrogram_windows(filename, params, label_func, shuffle=False):
         yield (spectrogram, label, filename, start, stop)
 
 
-def spectrogram_windows(filename, params, shuffle=False, pcen=True):
+def spectrogram_windows(filename, params, shuffle=False, pcen=False):
     """
     Extract all spectrogram windows from an audio file.
     Also z-normalizes the spectrograms
@@ -220,7 +220,7 @@ def spectrogram_windows(filename, params, shuffle=False, pcen=True):
                 yield ((spec - mu) / sigma, filename, start, stop)
     
 
-def spectrogram_regions(filename, params, regions, pcen=True):
+def spectrogram_regions(filename, params, regions, pcen=False):
     """
     Spectrogram Region Extraction
 

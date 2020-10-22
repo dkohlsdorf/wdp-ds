@@ -200,12 +200,16 @@ def train_silence(version_tag, input_folder, output_folder, params, encoder_file
             (params.spec_win, params.n_fft_bins, 1), latent, conv_param
         )    
     cls_sil = classifier(enc, 1, freeze)
+    cls_sil.summary()
     x_train = []
     x_test = []
     y_train = []
     y_test = []
+    files = []
     for (x, y, f, _, _) in dataset(input_folder, params, sil, True):
+        files.append(f) 
         if np.random.uniform() > subsample[int(y)]:
+            log.info("\t READING sil: {} / {} [{}]".format(len(x_train), len(x_test), len(set(files))))
             if np.random.uniform() > 0.6:
                 x_test.append(x)
                 y_test.append(y)
@@ -214,6 +218,7 @@ def train_silence(version_tag, input_folder, output_folder, params, encoder_file
                 y_train.append(y)
     x_train = np.stack(x_train)
     y_train = np.stack(y_train) 
+    log.info("\t Done Reading{}/{}".format(x_train.shape, y_train.shape))
     cls_sil.fit(x=x_train, y=y_train, batch_size=batch, epochs=epoch)
     cls_sil.save('{}/sil.h5'.format(output_folder), include_optimizer=False)
     enc.save('{}/encoder.h5'.format(output_folder), include_optimizer=False)

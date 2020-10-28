@@ -33,7 +33,8 @@ subsample    : 1.0
 
 sil          : 'data/classification_noise'
 type_class   : 'data/classification'
-unsupervised : 'data/unsupervised_small'
+unsupervised : 'data/unsupervised'
 output       : 'models/v10_lstm_v1/'
-input        : '/home/dkohlsdorf/dolphin_2011'
+input        : '/media/dkohl/01fbc7f3-b65f-45af-bed7-259581da974d/dolphin_2011/'
+
 

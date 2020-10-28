@@ -605,7 +605,7 @@ if __name__== "__main__":
             train_auto_encoder(version, unsupervised, output, params, latent, batch, epochs_encoder, conv_param)
         elif sys.argv[1] == 'evaluate':
             evaluate_encoder(version, unsupervised, output, "{}/encoder.h5".format(output), params, viz_k)        
-            #test_reconstruction(silence, output, params)
+            test_reconstruction(silence, output, params)
             enc             = load_model("{}/encoder.h5".format(output))
             silence         = load_model("{}/sil.h5".format(output))
             type_classifier = load_model("{}/type.h5".format(output))

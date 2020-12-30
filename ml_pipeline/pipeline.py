@@ -165,7 +165,7 @@ def evaluate_encoder(version_tag, input_folder, output_folder, encoder_file, par
     grouped_by_cluster  = {}
     i = 0
     k = 0
-    for (_, f, start, stop), c in zip(x, c):
+    for (_, f, start, stop), c in zip(data, c):
         if c not in grouped_by_cluster:
             grouped_by_cluster[c] = {}
         if f not in grouped_by_cluster[c]:

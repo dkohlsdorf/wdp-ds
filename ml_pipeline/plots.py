@@ -145,4 +145,4 @@ def visualize_embedding(img_path, embeddings, examples, k, figsize=(80, 60), zoo
     imscatter([a[0] for a in l], [a[1] for a in l], c, examples, ax, zoom=zoom)
     plt.savefig(img_path)
     plt.close()
-    return clustering
+    return clustering, c

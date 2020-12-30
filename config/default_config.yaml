@@ -7,18 +7,11 @@ highpass     : 10
 
 latent       : 64
 
-embedding_batch: 1000
 batch          : 25
-version        : "v10.0"
+version        : "v11_juv"
 
-epochs_sup      : 50
-epochs_encoder  : 10
-epochs_finetune : 5
+epochs       : 50
 
-transfer     : true
-freeze       : false
-
-frame_dist_th: 0.1
 viz_k        : 128
 
 conv_w       : 8
@@ -26,15 +19,8 @@ conv_h       : 8
 conv_filters : 256
 
 n_writers    : 3
-min2write    : 3
-max2write    : 100
-min_len      : 5
-subsample    : 1.0
 
-sil          : 'data/classification_noise'
-type_class   : 'data/classification'
-unsupervised : 'data/unsupervised'
-output       : 'models/v10_lstm_v1/'
-input        : '/media/dkohl/01fbc7f3-b65f-45af-bed7-259581da974d/dolphin_2011/'
+unsupervised : 'data/juv'
+output       : 'models/v11_juv/'
 
 

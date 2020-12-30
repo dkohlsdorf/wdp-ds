@@ -3,7 +3,6 @@ import random
 import os
 import tensorflow as tf
 
-from health_checks import *
 import librosa
 import logging
 
@@ -142,13 +141,12 @@ def read(path, first_channel=True):
     return x
 
 
-def dataset(folder, params, label_func, shuffle):
+def dataset(folder, params, shuffle):
     """
     Build an iterator over labeled spectrograms from a folder
 
     :param folder: the folder we search
     :param params: window parameters
-    :param label_func: how to label the instances
     :param shuffle: if we shuffle the windows per file
 
     :returns: iterator (spectrogram, label, filename, start, stop)
@@ -160,29 +158,9 @@ def dataset(folder, params, label_func, shuffle):
     for i in ordered:
         filename  = f[i]
         path = "{}/{}".format(folder, filename)
-        spec_iter = labeled_spectrogram_windows(path, params, label_func, shuffle=shuffle)
+        spec_iter = spectrogram_windows(path, params, shuffle=shuffle)
         for x in spec_iter:
             yield x
-
-
-def labeled_spectrogram_windows(filename, params, label_func, shuffle=False):
-    """
-    Generate spectrogram windows from file as well as labels
-    generated from the filename or spectrogram.
-
-    For example:
-      a binary classifier: f(name, x) => 1 if name == 'noise' else 0
-      an auto encoder:     f(name, x) => x
-    :param filename: the filename
-    :param params: parameters
-    :param label_func: f(filename, spectrogram) => target
-    :param shuffle: shuffle the dataset
-
-    :returns: iterator (spectrogram, label, filename, start, stop)
-    """
-    for (spectrogram, _, start, stop) in spectrogram_windows(filename, params, shuffle):
-        label = label_func(filename, spectrogram)
-        yield (spectrogram, label, filename, start, stop)
 
 
 def spectrogram_windows(filename, params, shuffle=False, pcen=False):
@@ -281,7 +259,7 @@ def audio_regions(filename, regions):
             yield data[start:stop]
 
 
-def fwd_spectrogram(audio, win=512, step=64, print_stats=False):
+def fwd_spectrogram(audio, win=512, step=64):
     """
     Compute the spectrogram of audio data
 
@@ -297,6 +275,4 @@ def fwd_spectrogram(audio, win=512, step=64, print_stats=False):
         dft = np.abs(fft(audio[i - win: i] * hanning))
         spectrogram.append(dft)
     spectrogram = np.array(spectrogram)
-    if print_stats:
-        logaudio.info(statistics(spectrogram))
     return spectrogram

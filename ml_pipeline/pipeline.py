@@ -181,7 +181,7 @@ def evaluate_encoder(version_tag, input_folder, output_folder, encoder_file, par
 
     log.info('Done Clustering')
     with mp.get_context("spawn").Pool(processes=n_writers) as pool: 
-        pool.starmap(write_audio, ((out, prefix, cluster_id, instances_clusters, grouped_by_cluster, min_support, max_written) for cluster_id in range(0, k)))
+        pool.starmap(write_audio, ((output_folder, "clusters", cluster_id, grouped_by_cluster) for cluster_id in range(0, k)))
     log.info('Done Writing')
 
     for f, regions in grouped_by_filename.items():

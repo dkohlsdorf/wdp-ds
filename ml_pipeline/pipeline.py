@@ -232,11 +232,7 @@ if __name__== "__main__":
         viz_k        = c['viz_k']
 
         log.info("Mixed Training Epoch AE")
-        train_auto_encoder(version, unsupervised, output, params, latent, batch, epochs, conv_param)
-        evaluate_encoder(version, unsupervised, output, "{}/encoder.h5".format(output), params, viz_k)        
+        #train_auto_encoder(version, unsupervised, output, params, latent, batch, epochs, conv_param)
+        evaluate_encoder(version, unsupervised, output, "{}/encoder.h5".format(output), params, viz_k)       
         test_reconstruction(silence, output, params)
-        enc             = load_model("{}/encoder.h5".format(output))
-        silence         = load_model("{}/sil.h5".format(output))
-        type_classifier = load_model("{}/type.h5".format(output))
-        embedder        = SequenceEmbedder(enc, params, silence, type_classifier)
-        clustering(inp, output, embedder, "test_sequential", dist_th, embedding_batch, min_len=min_len, min_support=min_support, max_written=max_written, n_writers=n_writers, subsample=subsample)
+        

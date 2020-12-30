@@ -128,17 +128,17 @@ def write_audio(out, prefix, cluster_id, grouped_by_cluster):
     :param grouped_by_cluster: dict[clusters][filename][start, stop]
     :param returns: true if we stopped writing early
     """
-    if instances_clusters[cluster_id] >= min_support:
-        log.info("Audio result for cluster: {} {}".format(cluster_id))
-        audio_bank = AudioSnippetCollection("{}/{}_seq_cluster_{}.wav".format(out, prefix, cluster_id))
-        n_written = 0
-        for f, snippets in grouped_by_cluster[cluster_id].items():
-            log.info("Cluster: {}, {}, {}".format(cluster_id, f, len(snippets)))
-            for audio_snippet in audio_regions(f, snippets):                  
-                audio_bank.write(audio_snippet)
-                n_written += 1
-        audio_bank.close()
-        log.info("Done: {}".format(cluster_id))
+
+    log.info("Audio result for cluster: {} {}".format(cluster_id))
+    audio_bank = AudioSnippetCollection("{}/{}_seq_cluster_{}.wav".format(out, prefix, cluster_id))
+    n_written = 0
+    for f, snippets in grouped_by_cluster[cluster_id].items():
+        log.info("Cluster: {}, {}, {}".format(cluster_id, f, len(snippets)))
+        for audio_snippet in audio_regions(f, snippets):                  
+            audio_bank.write(audio_snippet)
+            n_written += 1
+    audio_bank.close()
+    log.info("Done: {}".format(cluster_id))
 
 
 def evaluate_encoder(version_tag, input_folder, output_folder, encoder_file, params, k):
@@ -232,7 +232,7 @@ if __name__== "__main__":
         viz_k        = c['viz_k']
 
         log.info("Mixed Training Epoch AE")
-        #train_auto_encoder(version, unsupervised, output, params, latent, batch, epochs, conv_param)
+        train_auto_encoder(version, unsupervised, output, params, latent, batch, epochs, conv_param)
         evaluate_encoder(version, unsupervised, output, "{}/encoder.h5".format(output), params, viz_k)       
         test_reconstruction(silence, output, params)
         

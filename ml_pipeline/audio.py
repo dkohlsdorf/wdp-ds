@@ -196,35 +196,7 @@ def spectrogram_windows(filename, params, shuffle=False, pcen=False):
                 mu      = np.mean(spec)
                 sigma   = np.std(spec) + 1.0
                 yield ((spec - mu) / sigma, filename, start, stop)
-    
-
-def spectrogram_regions(filename, params, regions, pcen=False):
-    """
-    Spectrogram Region Extraction
-
-    :param filename: the filename
-    :param params: Windowing parameters
-    :param regions: sequence of start, stop tuples
-    :param pcen: use per channel energy normalization?
-    :returns: spectrogram of the normalized region
-    """
-    data = read(filename)
-
-    for (start, stop) in regions:
-        audio = data[start:stop]
-        spec  = fwd_spectrogram(audio, params.fft_win_filtered, params.fft_step)
-        dft_start = params.fft_win - params.n_fft_bins
-        dft_stop  = params.fft_win
-        spec  = spec[:, dft_start:dft_stop]
-        if pcen:
-            e = librosa.pcen(spec.T, gain=0.2, bias=5).T
-            e = (e - np.mean(e)) / (np.std(e) + 1)
-            yield e
-        else:
-            mu      = np.mean(spec)
-            sigma   = np.std(spec) + 1.0
-            yield (spec - mu) / sigma
-        
+            
 
 def audio_snippets(snippets):
     """

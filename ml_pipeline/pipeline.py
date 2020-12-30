@@ -173,7 +173,7 @@ def evaluate_encoder(version_tag, input_folder, output_folder, encoder_file, par
         grouped_by_cluster[c][f].append((start, stop))
         if f not in grouped_by_filename:
             grouped_by_filename[f] = []
-        grouped_by_filename[f].append((start, stop, c, t, i))
+        grouped_by_filename[f].append((start, stop, c, i))
         if c > k:
             k = c
         i += 1
@@ -189,10 +189,10 @@ def evaluate_encoder(version_tag, input_folder, output_folder, encoder_file, par
         log_path = "{}/{}_clustering_log_{}.csv".format(out, prefix, filename)
         log.info("writing: {}".format(log_path))
         with open(log_path, "w") as fp:
-            fp.write("start,stop,file,cluster,type,region_id\n")
-            for start, stop, c, t, i in regions:
+            fp.write("start,stop,file,cluster,region_id\n")
+            for start, stop, c, i in regions:
                 if instances_clusters[c] >= min_support:
-                    fp.write("{},{},{},{},{},{}\n".format(start, stop, f, c, t, i))
+                    fp.write("{},{},{},{},{}\n".format(start, stop, f, c, i))
     log.info('Done Logs')
 
 
@@ -232,7 +232,7 @@ if __name__== "__main__":
         viz_k        = c['viz_k']
 
         log.info("Mixed Training Epoch AE")
-        #train_auto_encoder(version, unsupervised, output, params, latent, batch, epochs, conv_param)
+        train_auto_encoder(version, unsupervised, output, params, latent, batch, epochs, conv_param)
         evaluate_encoder(version, unsupervised, output, "{}/encoder.h5".format(output), params, viz_k)       
         test_reconstruction(silence, output, params)
         

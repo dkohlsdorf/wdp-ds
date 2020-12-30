@@ -15,7 +15,7 @@ epochs       : 5
 viz_k        : 128
 
 conv_w       : 8
-conv_h       : 128
+conv_h       : 32
 conv_filters : 256
 
 n_writers    : 3

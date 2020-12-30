@@ -43,10 +43,10 @@ def train(folder, output_folder, params, enc, ae, batch_size=10, epochs=128, kee
         batch = []
         epoch_loss = 0.0
         for (x, _, _, _) in dataset(folder, params, True):
-            batch.append((x,y))
+            batch.append(x)
             total_loss = 0.0
             if len(batch) == batch_size:
-                x = np.stack([x.reshape(x.shape[0], x.shape[1], 1) for x, _ in batch])
+                x = np.stack([x.reshape(x.shape[0], x.shape[1], 1) for x in batch])
                 loss = ae.train_on_batch(x=x, y=x)
                 total_loss += loss
                 batch = []

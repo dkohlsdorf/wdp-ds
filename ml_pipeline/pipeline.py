@@ -180,7 +180,7 @@ def evaluate_encoder(version_tag, input_folder, output_folder, encoder_file, par
     k = k + 1
 
     log.info('Done Clustering')
-    with mp.get_context("spawn").Pool(processes=n_writers) as pool: 
+    with mp.get_context("spawn").Pool(processes=5) as pool: 
         pool.starmap(write_audio, ((output_folder, "clusters", cluster_id, grouped_by_cluster) for cluster_id in range(0, k)))
     log.info('Done Writing')
 
@@ -232,7 +232,7 @@ if __name__== "__main__":
         viz_k        = c['viz_k']
 
         log.info("Mixed Training Epoch AE")
-        train_auto_encoder(version, unsupervised, output, params, latent, batch, epochs, conv_param)
+        #train_auto_encoder(version, unsupervised, output, params, latent, batch, epochs, conv_param)
         evaluate_encoder(version, unsupervised, output, "{}/encoder.h5".format(output), params, viz_k)       
         test_reconstruction(silence, output, params)
         

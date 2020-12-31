@@ -5,14 +5,14 @@ fft_win      : 512
 fft_step     : 64
 highpass     : 10
 
-latent       : 64
+latent       : 128
 
-batch          : 25
+batch          : 10
 version        : "v11_juv"
 
-epochs       : 5
+epochs       : 25
 
-viz_k        : 128
+viz_k        : 256
 
 conv_w       : 8
 conv_h       : 32

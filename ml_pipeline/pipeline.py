@@ -129,7 +129,7 @@ def write_audio(out, prefix, cluster_id, grouped_by_cluster):
     :param returns: true if we stopped writing early
     """
 
-    log.info("Audio result for cluster: {} {}".format(cluster_id))
+    log.info("Audio result for cluster: {}".format(cluster_id))
     audio_bank = AudioSnippetCollection("{}/{}_seq_cluster_{}.wav".format(out, prefix, cluster_id))
     n_written = 0
     for f, snippets in grouped_by_cluster[cluster_id].items():
@@ -186,7 +186,7 @@ def evaluate_encoder(version_tag, input_folder, output_folder, encoder_file, par
 
     for f, regions in grouped_by_filename.items():
         filename = f.split(".")[0].split("/")[-1]
-        log_path = "{}/{}_clustering_log_{}.csv".format(out, prefix, filename)
+        log_path = "{}/{}_clustering_log_{}.csv".format(output_folder, "clusters", filename)
         log.info("writing: {}".format(log_path))
         with open(log_path, "w") as fp:
             fp.write("start,stop,file,cluster,region_id\n")

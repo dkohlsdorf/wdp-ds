@@ -76,7 +76,7 @@ def visualize_2dfilters(img_path, encoder, layers, n_rows = 8):
         plt.close()
         
             
-def visualize_embedding(img_path, embeddings, examples, k, figsize=(80, 60), zoom=0.15):
+def visualize_embedding(img_path, embeddings, examples, figsize=(80, 60), zoom=0.15):
     """
     Plot the examples in the embedding space projected to 2D using
     t-sne
@@ -84,15 +84,21 @@ def visualize_embedding(img_path, embeddings, examples, k, figsize=(80, 60), zoo
     :param img_path: path where the image is saved including the name
     :param embeddings: the embeddings to visualize and cluster
     :param examples: the associated spectrograms
-    :param k: number of clusters
+    :param min_dist: distance threhsold 
     :param figsize: size of figure
     :param zoom: zoom the examples
-    :param sparse: sparsify clusters by shillouette 
     :returns: clusters    
     """
     
     tsne = TSNE()
-    clustering = KMeans(n_clusters=k, max_iter=1024)
+    distances = []
+    for _ in range(0, 1000):
+        i = np.random.randint(0, len(embeddings))
+        j = np.random.randint(0, len(embeddings))
+        d = np.sqrt(np.sum(np.square(embeddings[i] - embeddings[j])))
+        distances.append(d)
+    th = np.percentile(distances, 50)
+    clustering = AgglomerativeClustering(n_clusters=None, distance_threshold=th)
     c = clustering.fit_predict(embeddings)
     l = tsne.fit_transform(embeddings)
     f, ax = plt.subplots(figsize=figsize)

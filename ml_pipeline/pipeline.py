@@ -106,15 +106,15 @@ def test_reconstruction(folder, out, params):
     plt.figure(figsize=(40, 40))
     for (x, f, _, _) in gen:
         name = f.split('/')[-1]
-        if name.startswith('whistle') or name.startswith('burst'):
-            plt.subplot(10, 10, i + 1)
-            plt.axis('off')
-            plt.imshow(1.0 - ae.predict(x.reshape(1, params.spec_win, params.n_fft_bins, 1))[0, :, :, 0].T, cmap='gray')
-            i += 1
-            if i % 10 == 0:        
-                log.info(i)
-            if i == 100:
-                break
+
+        plt.subplot(10, 10, i + 1)
+        plt.axis('off')
+        plt.imshow(1.0 - ae.predict(x.reshape(1, params.spec_win, params.n_fft_bins, 1))[0, :, :, 0].T, cmap='gray')
+        i += 1
+        if i % 10 == 0:        
+            log.info(i)
+        if i == 100:
+            break
     plt.savefig('{}/reconstructions.png'.format(out))
     plt.close()
 
@@ -130,9 +130,11 @@ def write_audio(out, prefix, cluster_id, grouped_by_cluster):
     """
 
     log.info("Audio result for cluster: {}".format(cluster_id))
+    x = [a for a in grouped_by_cluster[cluster_id].items()]
+
     audio_bank = AudioSnippetCollection("{}/{}_seq_cluster_{}.wav".format(out, prefix, cluster_id))
-    n_written = 0
-    for f, snippets in grouped_by_cluster[cluster_id].items():
+    n_written = 0    
+    for f, snippets in x:
         log.info("Cluster: {}, {}, {}".format(cluster_id, f, len(snippets)))
         for audio_snippet in audio_regions(f, snippets):                  
             audio_bank.write(audio_snippet)
@@ -141,7 +143,7 @@ def write_audio(out, prefix, cluster_id, grouped_by_cluster):
     log.info("Done: {}".format(cluster_id))
 
 
-def evaluate_encoder(version_tag, input_folder, output_folder, encoder_file, params, k):
+def evaluate_encoder(version_tag, input_folder, output_folder, encoder_file, params, min_support=5):
     """
     Evaluate an encoder for feature embedding
     :param version_tag: basically the model name
@@ -149,7 +151,8 @@ def evaluate_encoder(version_tag, input_folder, output_folder, encoder_file, par
     :param output_folder: the folder to save the plots
     :param encoder_file: a saved encoder
     :param params: window parameters
-    :param k: number of clusters
+    :param dist_th: distance threshold for hierarchical
+    :param min_support: minimum support for a pattern
     """
     log.info("Evaluate Encoder: {}".format(version_tag))
     enc = load_model(encoder_file)
@@ -158,7 +161,7 @@ def evaluate_encoder(version_tag, input_folder, output_folder, encoder_file, par
     x = np.stack([x.reshape(x.shape[0], x.shape[1], 1) for (x,_,_,_) in data])
     log.info(x.shape)
     h = enc.predict(x)
-    clustering, c = visualize_embedding("{}/embeddings.png".format(output_folder), h, x, k)
+    clustering, c = visualize_embedding("{}/embeddings.png".format(output_folder), h, x)
     pkl.dump(clustering, open("{}/clusterer.pkl".format(output_folder), "wb"))
 
     grouped_by_filename = {}
@@ -178,10 +181,17 @@ def evaluate_encoder(version_tag, input_folder, output_folder, encoder_file, par
             k = c
         i += 1
     k = k + 1
+    
+    log.info('n clusters: {}'.format(k))
+    instances_clusters = np.zeros(k, dtype=np.int32)
+    for c, collection in grouped_by_cluster.items():
+        for f, regions in collection.items():
+            for r in regions:
+                instances_clusters[c] += 1
 
     log.info('Done Clustering')
     with mp.get_context("spawn").Pool(processes=5) as pool: 
-        pool.starmap(write_audio, ((output_folder, "clusters", cluster_id, grouped_by_cluster) for cluster_id in range(0, k)))
+        pool.starmap(write_audio, ((output_folder, "clusters", cluster_id, grouped_by_cluster) for cluster_id in range(0, k) if instances_clusters[cluster_id] >= min_support))
     log.info('Done Writing')
 
     for f, regions in grouped_by_filename.items():
@@ -194,7 +204,7 @@ def evaluate_encoder(version_tag, input_folder, output_folder, encoder_file, par
                 if instances_clusters[c] >= min_support:
                     fp.write("{},{},{},{},{}\n".format(start, stop, f, c, i))
     log.info('Done Logs')
-
+    
 
 def header():
     return """
@@ -229,10 +239,8 @@ if __name__== "__main__":
         output       = c['output']
 
         # clutering paams
-        viz_k        = c['viz_k']
-
         log.info("Mixed Training Epoch AE")
         train_auto_encoder(version, unsupervised, output, params, latent, batch, epochs, conv_param)
-        evaluate_encoder(version, unsupervised, output, "{}/encoder.h5".format(output), params, viz_k)       
-        test_reconstruction(silence, output, params)
+        evaluate_encoder(version, unsupervised, output, "{}/encoder.h5".format(output), params)       
+        test_reconstruction(unsupervised, output, params)
         

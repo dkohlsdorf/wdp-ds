@@ -148,22 +148,38 @@ def evaluate_encoder(version_tag, input_folder, output_folder, encoder_file, par
     :param output_folder: the folder to save the plots
     :param encoder_file: a saved encoder
     :param params: window parameters
-    :param dist_th: distance threshold for hierarchical
     :param min_support: minimum support for a pattern
     """
     log.info("Evaluate Encoder: {}".format(version_tag))
     enc = load_model(encoder_file)
     visualize_2dfilters(output_folder, enc, [1], n_rows = 8)    
-    data = [tuples for tuples in dataset(input_folder, params, False)]
-    x = np.stack([x.reshape(x.shape[0], x.shape[1], 1) for (x,_,_,_) in data])
+    
+    data   = [tuples for tuples in dataset(input_folder, params, False)]
+    log.info("#Input: {}".format(len(data)))
 
+    stds   = [np.std(x) for (x,_,_,_) in data]
+    std_th = np.percentile(stds, 95)
+    data   = [d for d, std in zip(data, stds) if std > std_th]
+    log.info("#Input after filtering {}: {}".format(std_th, len(data)))
+
+    x      = np.stack([x.reshape(x.shape[0], x.shape[1], 1) for (x,_,_,_) in data])
     h     = enc.predict(x)
     mu_h  = np.mean(h, axis=1)
     std_h = np.std(h, axis=1) 
     h     = ((h.T - mu_h) / std_h).T
-    
-    clustering, c = visualize_embedding("{}/embeddings.png".format(output_folder), h, x)
-    pkl.dump(clustering, open("{}/clusterer.pkl".format(output_folder), "wb"))
+
+    distances = []
+    for _ in range(0, 5000):
+        i = np.random.randint(0, len(h))
+        j = np.random.randint(0, len(h))
+        d = np.sqrt(np.sum(np.square(h[i] - h[j])))
+        distances.append(d)
+    th = np.percentile(distances, 25)
+    log.info("Clustering with: {} threshold: {}".format(h.shape, th))
+    clustering = AgglomerativeClustering(n_clusters=None, linkage='average', distance_threshold=th)
+    c = clustering.fit_predict(h)
+
+    visualize_embedding("{}/embeddings.png".format(output_folder), h, x, c)    
 
     grouped_by_filename = {}
     grouped_by_cluster  = {}

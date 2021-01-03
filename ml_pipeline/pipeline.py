@@ -128,14 +128,11 @@ def write_audio(out, prefix, cluster_id, grouped_by_cluster):
     :param grouped_by_cluster: dict[clusters][filename][start, stop]
     :param returns: true if we stopped writing early
     """
-
-    log.info("Audio result for cluster: {}".format(cluster_id))
     x = [a for a in grouped_by_cluster[cluster_id].items()]
 
     audio_bank = AudioSnippetCollection("{}/{}_seq_cluster_{}.wav".format(out, prefix, cluster_id))
     n_written = 0    
     for f, snippets in x:
-        log.info("Cluster: {}, {}, {}".format(cluster_id, f, len(snippets)))
         for audio_snippet in audio_regions(f, snippets):                  
             audio_bank.write(audio_snippet)
             n_written += 1
@@ -159,8 +156,12 @@ def evaluate_encoder(version_tag, input_folder, output_folder, encoder_file, par
     visualize_2dfilters(output_folder, enc, [1], n_rows = 8)    
     data = [tuples for tuples in dataset(input_folder, params, False)]
     x = np.stack([x.reshape(x.shape[0], x.shape[1], 1) for (x,_,_,_) in data])
-    log.info(x.shape)
-    h = enc.predict(x)
+
+    h     = enc.predict(x)
+    mu_h  = np.mean(h, axis=1)
+    std_h = np.std(h, axis=1) 
+    h     = ((h.T - mu_h) / std_h).T
+    
     clustering, c = visualize_embedding("{}/embeddings.png".format(output_folder), h, x)
     pkl.dump(clustering, open("{}/clusterer.pkl".format(output_folder), "wb"))
 
@@ -240,7 +241,7 @@ if __name__== "__main__":
 
         # clutering paams
         log.info("Mixed Training Epoch AE")
-        train_auto_encoder(version, unsupervised, output, params, latent, batch, epochs, conv_param)
+        #train_auto_encoder(version, unsupervised, output, params, latent, batch, epochs, conv_param)
         evaluate_encoder(version, unsupervised, output, "{}/encoder.h5".format(output), params)       
         test_reconstruction(unsupervised, output, params)
         

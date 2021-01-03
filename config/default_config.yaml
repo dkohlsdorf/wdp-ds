@@ -1,25 +1,24 @@
-spec_win     : 64
-spec_step    : 16
+spec_win     : 16
+spec_step    : 8
 
 fft_win      : 512
 fft_step     : 64
 highpass     : 10
 
-latent       : 128
+latent       : 32
 
 batch          : 10
-version        : "v11_juv"
+version        : "v11_juv_small"
 
-epochs       : 25
+epochs       : 50
 
-
-conv_w       : 8
+conv_w       : 4
 conv_h       : 32
-conv_filters : 256
+conv_filters : 64
 
 n_writers    : 3
 
 unsupervised : 'data/juv'
-output       : 'models/v11_juv/'
+output       : 'models/v11_juv_small/'
 
 

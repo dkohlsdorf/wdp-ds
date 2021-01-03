@@ -158,7 +158,7 @@ def evaluate_encoder(version_tag, input_folder, output_folder, encoder_file, par
     log.info("#Input: {}".format(len(data)))
 
     stds   = [np.std(x) for (x,_,_,_) in data]
-    std_th = np.percentile(stds, 95)
+    std_th = np.percentile(stds, 75)
     data   = [d for d, std in zip(data, stds) if std > std_th]
     log.info("#Input after filtering {}: {}".format(std_th, len(data)))
 
@@ -257,7 +257,7 @@ if __name__== "__main__":
 
         # clutering paams
         log.info("Mixed Training Epoch AE")
-        train_auto_encoder(version, unsupervised, output, params, latent, batch, epochs, conv_param)
+        #train_auto_encoder(version, unsupervised, output, params, latent, batch, epochs, conv_param)
         evaluate_encoder(version, unsupervised, output, "{}/encoder.h5".format(output), params)       
         test_reconstruction(unsupervised, output, params)
         

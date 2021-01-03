@@ -12,8 +12,8 @@ version        : "v11_juv_small"
 
 epochs       : 50
 
-conv_w       : 4
-conv_h       : 32
+conv_w       : 8
+conv_h       : 8
 conv_filters : 64
 
 n_writers    : 3

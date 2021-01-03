@@ -32,7 +32,7 @@ def encoder(in_shape, latent_dim, conv_params):
     loc = Reshape((in_shape[0], n_filters))(loc) # Reshape for temporal model (Time, 1, Filters)  -> (Time, Filters)
     x   = BatchNormalization()(loc)
     x   = Bidirectional(LSTM(latent_dim, return_sequences=True))(x)
-    x   = LSTM(latent_dim, activity_regularizer='l2')(x)            
+    x   = LSTM(latent_dim)(x)            
     return Model(inputs =[inp], outputs=[x])
 
 

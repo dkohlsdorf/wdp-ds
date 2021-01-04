@@ -174,9 +174,9 @@ def evaluate_encoder(version_tag, input_folder, output_folder, encoder_file, par
         j = np.random.randint(0, len(h))
         d = np.sqrt(np.sum(np.square(h[i] - h[j])))
         distances.append(d)
-    th = np.percentile(distances, 25)
+    th = np.percentile(distances, 50)
     log.info("Clustering with: {} threshold: {}".format(h.shape, th))
-    clustering = AgglomerativeClustering(n_clusters=None, linkage='average', distance_threshold=th)
+    clustering = AgglomerativeClustering(n_clusters=None, linkage='complete', distance_threshold=th)
     c = clustering.fit_predict(h)
 
     visualize_embedding("{}/embeddings.png".format(output_folder), h, x, c)    
@@ -193,7 +193,7 @@ def evaluate_encoder(version_tag, input_folder, output_folder, encoder_file, par
         grouped_by_cluster[c][f].append((start, stop))
         if f not in grouped_by_filename:
             grouped_by_filename[f] = []
-        grouped_by_filename[f].append((start, stop, c, i))
+        grouped_by_filename[f].append((start, stop, c, h[i]))
         if c > k:
             k = c
         i += 1
@@ -216,10 +216,11 @@ def evaluate_encoder(version_tag, input_folder, output_folder, encoder_file, par
         log_path = "{}/{}_clustering_log_{}.csv".format(output_folder, "clusters", filename)
         log.info("writing: {}".format(log_path))
         with open(log_path, "w") as fp:
-            fp.write("start,stop,file,cluster,region_id\n")
-            for start, stop, c, i in regions:
+            fp.write("start\tstop\tfile\tcluster\tembedding\n")
+            for start, stop, c, h in regions:
                 if instances_clusters[c] >= min_support:
-                    fp.write("{},{},{},{},{}\n".format(start, stop, f, c, i))
+                    vector = ",".join([str(x) for x in h.flatten()])
+                    fp.write("{}\t{}\t{}\t{}\t{}\n".format(start, stop, f, c, vector))
     log.info('Done Logs')
     
 

@@ -63,5 +63,4 @@ def dtw(sequence_i, sequence_j, double[:, :] x, double[:,:] y, int band):
             matches.append((sequence_i, sequence_j, _i, _j, d, d_sofar))       
         i = _i
         j = _j
-    score = dp[N, M] / (N * M)
-    return score, matches
+    return matches

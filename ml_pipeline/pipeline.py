@@ -7,8 +7,7 @@ import os
 import datetime
 import tensorflow as tf
 import pickle as pkl
-import matplotlib
-matplotlib.use('Agg')
+
 import multiprocessing as mp
 import re
 import logging
@@ -22,7 +21,6 @@ from tensorflow.keras.backend import set_learning_phase
 from tensorflow.keras.models import load_model
 from feature_extractor import *
 
-from plots import *
 from audio_collection import *
 from audio import * 
 
@@ -94,30 +92,6 @@ def train_auto_encoder(version_tag, input_folder, output_folder, params, latent,
     enc.save('{}/encoder.h5'.format(output_folder), include_optimizer=False)
     ae.save('{}/auto_encoder.h5'.format(output_folder), include_optimizer=False)
 
-    
-def test_reconstruction(folder, out, params):
-    """
-    Reconstruct 100 examples using the auto encoder
-    """
-    log.info("Testing Reconstruction")
-    ae = load_model('{}/auto_encoder.h5'.format(out))
-    gen = dataset(folder, params, True)
-    i = 0
-    plt.figure(figsize=(40, 40))
-    for (x, f, _, _) in gen:
-        name = f.split('/')[-1]
-
-        plt.subplot(10, 10, i + 1)
-        plt.axis('off')
-        plt.imshow(1.0 - ae.predict(x.reshape(1, params.spec_win, params.n_fft_bins, 1))[0, :, :, 0].T, cmap='gray')
-        i += 1
-        if i % 10 == 0:        
-            log.info(i)
-        if i == 100:
-            break
-    plt.savefig('{}/reconstructions.png'.format(out))
-    plt.close()
-
 
 def write_audio(out, prefix, cluster_id, grouped_by_cluster):
     """
@@ -152,7 +126,6 @@ def evaluate_encoder(version_tag, input_folder, output_folder, encoder_file, par
     """
     log.info("Evaluate Encoder: {}".format(version_tag))
     enc = load_model(encoder_file)
-    visualize_2dfilters(output_folder, enc, [1], n_rows = 8)    
     
     data   = [tuples for tuples in dataset(input_folder, params, False)]
     log.info("#Input: {}".format(len(data)))
@@ -178,8 +151,6 @@ def evaluate_encoder(version_tag, input_folder, output_folder, encoder_file, par
     log.info("Clustering with: {} threshold: {}".format(h.shape, th))
     clustering = AgglomerativeClustering(n_clusters=None, linkage='complete', distance_threshold=th)
     c = clustering.fit_predict(h)
-
-    visualize_embedding("{}/embeddings.png".format(output_folder), h, x, c)    
 
     grouped_by_filename = {}
     grouped_by_cluster  = {}

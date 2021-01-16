@@ -3,6 +3,8 @@ import random
 import os
 import tensorflow as tf
 
+from dtw import * 
+
 import librosa
 import logging
 
@@ -161,6 +163,63 @@ def dataset(folder, params, shuffle):
         spec_iter = spectrogram_windows(path, params, shuffle=shuffle)
         for x in spec_iter:
             yield x
+
+
+def encode(data, enc):
+    '''
+    Encode the data
+
+    :param data: a sequence [(vec, filename, start, stop) ... ]
+    :param enc: encoder neural network
+    :returns: matrix with encoded sequence
+    '''
+    x = np.stack([x.reshape(x.shape[0], x.shape[1], 1) for (x,_,_,_) in data])
+    h = enc.predict(x)
+    mu_h  = np.mean(h, axis=1)
+    std_h = np.std(h, axis=1) 
+    h     = ((h.T - mu_h) / std_h).T
+    return h
+
+
+def alignments(folder, params, encoder):
+    '''
+    Compute all matches between all sequences with distance
+
+    :param folder: folder with audio files
+    :param params: windowing parameters
+    :param encoder:encoder neural network
+    :returns: [(filename, start, stop) ... ], [(spec_i, spec_j, ti, tj, distance) ... ]
+    '''
+
+    f = [filename for filename in tf.io.gfile.listdir(folder) if filename.endswith('.ogg') or filename.endswith('.wav') or filename.endswith('.aiff') or filename.startswith('cluster') or filename.startswith('noise')]
+    n = len(f)
+
+    spectrograms = []
+    for i in range(0, n):
+        data   = [x for x in spectrogram_windows(f[i], params)]   
+        stds   = [np.std(x) for (x,_,_,_) in data]
+        std_th = np.percentile(stds, 75)
+        data   = [d for d, std in zip(data, stds) if std > std_th]
+        spectrograms.append(data)
+
+    indices = []
+    for spectrogram in spectrograms:
+        index = [(f, start, stop) for (_, f, start, stop) in spectrogram]
+        indices.append(index)
+
+    matches = []
+    for i in range(0, n):
+        x     = encode(spectrograms[i], encoder)
+        t,f,_ = x.shape 
+        x = x.reshape((t, f))
+        for j in range(i + 1, n):
+            y = encode(spectrograms[j], encoder)
+            t,f,_ = y.shape 
+            y = y.reshape((t, f))
+            w = int(max(len(x), len(y)) / 10)
+            for ti, tj, d in dtw(x, y, w):
+                matches.append(i, j, ti, tj, d)
+    return indices, matches
 
 
 def spectrogram_windows(filename, params, shuffle=False, pcen=False):

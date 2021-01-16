@@ -15,7 +15,7 @@ logdtw.setLevel(logging.INFO)
 GAP = -1
 
 
-def dtw(sequence_i, sequence_j, double[:, :] x, double[:,:] y, int band):
+def dtw(double[:, :] x, double[:,:] y, int band):
     """
     Align two sequences using dynamic time warping.
 
@@ -25,7 +25,7 @@ def dtw(sequence_i, sequence_j, double[:, :] x, double[:,:] y, int band):
     :param x: a sequence of length N and dimension d
     :param y: a sequence of length M and dimension d
     :param band: sakoe chiba band
-    :returns: alignment score, sequence of matches (i, j, distance, distance so far)
+    :returns: alignment score, sequence of matches (i, j, distance)
     """
     cdef int N = x.shape[0]
     cdef int M = y.shape[0]
@@ -60,7 +60,7 @@ def dtw(sequence_i, sequence_j, double[:, :] x, double[:,:] y, int band):
         _i, _j  = bp[i, j]        
 
         if i - 1 == _i and j - 1 == _j:
-            matches.append((sequence_i, sequence_j, _i, _j, d, d_sofar))       
+            matches.append((_i, _j, d))       
         i = _i
         j = _j
     return matches

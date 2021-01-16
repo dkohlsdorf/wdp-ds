@@ -8,7 +8,7 @@ highpass     : 10
 latent       : 32
 
 batch          : 10
-version        : "v11_juv_small"
+version        : "v12_juv"
 
 epochs       : 50
 
@@ -19,6 +19,6 @@ conv_filters : 64
 n_writers    : 3
 
 unsupervised : 'data/juv'
-output       : 'models/v11_juv_small/'
+output       : 'models/v12_juv/'
 
 

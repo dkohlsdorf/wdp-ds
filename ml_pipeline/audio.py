@@ -188,7 +188,7 @@ def alignments(folder, params, encoder):
     :param folder: folder with audio files
     :param params: windowing parameters
     :param encoder:encoder neural network
-    :returns: [(filename, start, stop) ... ], [(spec_i, spec_j, ti, tj, distance) ... ]
+    :returns: [(vector, filename, start, stop) ... ], [(spec_i, spec_j, ti, tj, distance) ... ]
     '''
 
     f = [filename for filename in tf.io.gfile.listdir(folder) if filename.endswith('.ogg') or filename.endswith('.wav') or filename.endswith('.aiff') or filename.startswith('cluster') or filename.startswith('noise')]
@@ -208,6 +208,7 @@ def alignments(folder, params, encoder):
         indices.append(index)
 
     matches = []
+    vectors = {}
     for i in range(0, n):
         x     = encode(spectrograms[i], encoder)
         t,f,_ = x.shape 
@@ -219,7 +220,13 @@ def alignments(folder, params, encoder):
             w = int(max(len(x), len(y)) / 10)
             for ti, tj, d in dtw(x, y, w):
                 matches.append(i, j, ti, tj, d)
-    return indices, matches
+                if (i, ti) not in matches:
+                    f, start, stop = indices[i][ti]
+                    vectors[(i, ti)] = (x[ti], f, start, stop)
+                if (j, tj) not in matches:
+                    f, start, stop = indices[j][tj]
+                    vectors[(j, tj)] = (y[tj], f, start, stop)
+    return vectors, matches
 
 
 def spectrogram_windows(filename, params, shuffle=False, pcen=False):

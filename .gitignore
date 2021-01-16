@@ -3,6 +3,7 @@ secret.json
 app/static/
 *.wav
 node_modules
+models/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

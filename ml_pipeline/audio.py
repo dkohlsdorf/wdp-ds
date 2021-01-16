@@ -181,14 +181,16 @@ def encode(data, enc):
     return h
 
 
-def alignments(folder, params, encoder):
+def alignments(folder, params, encoder, gap_penalty = 15.0, band = 0.1):
     '''
     Compute all matches between all sequences with distance
 
-    :param folder: folder with audio files
-    :param params: windowing parameters
-    :param encoder:encoder neural network
-    :returns: [(vector, filename, start, stop) ... ], [(spec_i, spec_j, ti, tj, distance) ... ]
+    :param folder:      folder with audio files
+    :param params:      windowing parameters
+    :param encoder:     encoder neural network
+    :param gap_penalty: add a penalty to gap alignments
+    :paran band:        warping band percentage
+    :returns: [(vector, i, ti, filename, start, stop) ... ], [(spec_i, spec_j, ti, tj, distance) ... ]
     '''
 
     f = [filename for filename in tf.io.gfile.listdir(folder) if filename.endswith('.ogg') or filename.endswith('.wav') or filename.endswith('.aiff') or filename.startswith('cluster') or filename.startswith('noise')]
@@ -217,16 +219,17 @@ def alignments(folder, params, encoder):
             y = encode(spectrograms[j], encoder)
             t,f,_ = y.shape 
             y = y.reshape((t, f))
-            w = int(max(len(x), len(y)) / 10)
-            for ti, tj, d in dtw(x, y, w):
-                matches.append(i, j, ti, tj, d)
+            w = int(max(len(x), len(y)) * band)
+            for ti, tj in dtw(x, y, w, gap_penalty):
+                matches.append(i, j, ti, tj)
                 if (i, ti) not in matches:
                     f, start, stop = indices[i][ti]
                     vectors[(i, ti)] = (x[ti], f, start, stop)
                 if (j, tj) not in matches:
                     f, start, stop = indices[j][tj]
                     vectors[(j, tj)] = (y[tj], f, start, stop)
-    return vectors, matches
+    vectors = [(vec, i, t, f, start, stop) for (i, t), (vec, f, start, stop) in vectors.items()]
+    return vectors, set(matches)
 
 
 def spectrogram_windows(filename, params, shuffle=False, pcen=False):

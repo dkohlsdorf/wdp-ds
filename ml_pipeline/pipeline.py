@@ -114,6 +114,22 @@ def write_audio(out, prefix, cluster_id, grouped_by_cluster):
     log.info("Done: {}".format(cluster_id))
 
 
+def distance_matrix(vectors, matches, aligned_weight = 0.75, overlapping_weight = 0.6):
+    n  = len(vectors) 
+    dp = np.ones((n, n)) * float('inf')
+    for idx_i, (x, i, ti, _, start_i, stop_i) in enumerate(vectors):
+        for idx_j, (y, j, tj, _, start_j, stop_j) in enumerate(vectors):
+            if idx_i < idx_j:
+                dist = np.sum(np.square(np.subtract(x, y))) 
+                if i == j and  max(start_i, start_j) <= min(stop_i, stop_j):
+                    dist *= overlapping_weight
+                if (i, j, ti, tj) in matches:
+                    dist *= aligned_weight
+                dp[idx_i, idx_j] = dist
+                dp[idx_j, idx_i] = dist
+    return dp
+
+
 def evaluate_encoder(version_tag, input_folder, output_folder, encoder_file, params, min_support=5):
     """
     Evaluate an encoder for feature embedding
@@ -127,36 +143,18 @@ def evaluate_encoder(version_tag, input_folder, output_folder, encoder_file, par
     log.info("Evaluate Encoder: {}".format(version_tag))
     enc = load_model(encoder_file)
     
-    data   = [tuples for tuples in dataset(input_folder, params, False)]
-    log.info("#Input: {}".format(len(data)))
-
-    stds   = [np.std(x) for (x,_,_,_) in data]
-    std_th = np.percentile(stds, 75)
-    data   = [d for d, std in zip(data, stds) if std > std_th]
-    log.info("#Input after filtering {}: {}".format(std_th, len(data)))
-
-    x      = np.stack([x.reshape(x.shape[0], x.shape[1], 1) for (x,_,_,_) in data])
-    h     = enc.predict(x)
-    mu_h  = np.mean(h, axis=1)
-    std_h = np.std(h, axis=1) 
-    h     = ((h.T - mu_h) / std_h).T
-
-    distances = []
-    for _ in range(0, 5000):
-        i = np.random.randint(0, len(h))
-        j = np.random.randint(0, len(h))
-        d = np.sqrt(np.sum(np.square(h[i] - h[j])))
-        distances.append(d)
+    vectors, matches = alignments(input_folder, params, enc)
+    distances = distance_matrix(vectors, matches)
     th = np.percentile(distances, 50)
-    log.info("Clustering with: {} threshold: {}".format(h.shape, th))
-    clustering = AgglomerativeClustering(n_clusters=None, linkage='complete', distance_threshold=th)
-    c = clustering.fit_predict(h)
+    log.info("Clustering with threshold: {}".format(th))
+    clustering = AgglomerativeClustering(n_clusters=None, linkage='complete', distance_threshold=th, affinity='precomputed')
+    c = clustering.fit_predict(distances)
 
     grouped_by_filename = {}
     grouped_by_cluster  = {}
     i = 0
     k = 0
-    for (_, f, start, stop), c in zip(data, c):
+    for (_, _, _, f, start, stop), c in zip(vectors, c):
         if c not in grouped_by_cluster:
             grouped_by_cluster[c] = {}
         if f not in grouped_by_cluster[c]:

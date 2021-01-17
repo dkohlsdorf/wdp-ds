@@ -1,14 +1,14 @@
-spec_win     : 16
-spec_step    : 8
+spec_win     : 32
+spec_step    : 16
 
 fft_win      : 512
 fft_step     : 64
 highpass     : 10
 
-latent       : 32
+latent       : 128
 
-batch          : 10
-version        : "v12_juv"
+batch        : 10
+version      : "v12_juv"
 
 epochs       : 50
 

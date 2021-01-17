@@ -116,21 +116,21 @@ def write_audio(out, prefix, cluster_id, grouped_by_cluster):
     log.info("Done: {}".format(cluster_id))
 
 
-def distance_matrix(vectors, matches, aligned_weight = 0.25, overlapping_weight = 0.2, default = 1e6):
+def distance_matrix(vectors, matches, aligned_weight = 0.75, overlapping_weight = 2.0, default = 1e6):
     n  = len(vectors) 
     dp = np.ones((n, n)) * default
     distances = []
     for idx_i, (x, i, ti, _, start_i, stop_i) in enumerate(vectors):
         for idx_j, (y, j, tj, _, start_j, stop_j) in enumerate(vectors):
             if idx_i < idx_j:
-                dist = np.sum(np.square(np.subtract(x, y))) 
+                dist = np.sum(np.square(np.subtract(x, y)))
                 if i == j and max(start_i, start_j) <= min(stop_i, stop_j):
                     dist *= overlapping_weight
                 elif (i, j, ti, tj) in matches:
                     dist *= aligned_weight
-                distances.append(dist)
                 dp[idx_i, idx_j] = dist
                 dp[idx_j, idx_i] = dist
+                distances.append(dist)
     th = np.percentile(distances, 25)
     return dp, th
 

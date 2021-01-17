@@ -21,6 +21,8 @@ from tensorflow.keras.backend import set_learning_phase
 from tensorflow.keras.models import load_model
 from feature_extractor import *
 
+from sklearn.cluster import *
+
 from audio_collection import *
 from audio import * 
 
@@ -114,20 +116,23 @@ def write_audio(out, prefix, cluster_id, grouped_by_cluster):
     log.info("Done: {}".format(cluster_id))
 
 
-def distance_matrix(vectors, matches, aligned_weight = 0.75, overlapping_weight = 0.6):
+def distance_matrix(vectors, matches, aligned_weight = 0.25, overlapping_weight = 0.2, default = 1e6):
     n  = len(vectors) 
-    dp = np.ones((n, n)) * float('inf')
+    dp = np.ones((n, n)) * default
+    distances = []
     for idx_i, (x, i, ti, _, start_i, stop_i) in enumerate(vectors):
         for idx_j, (y, j, tj, _, start_j, stop_j) in enumerate(vectors):
             if idx_i < idx_j:
                 dist = np.sum(np.square(np.subtract(x, y))) 
-                if i == j and  max(start_i, start_j) <= min(stop_i, stop_j):
+                if i == j and max(start_i, start_j) <= min(stop_i, stop_j):
                     dist *= overlapping_weight
-                if (i, j, ti, tj) in matches:
+                elif (i, j, ti, tj) in matches:
                     dist *= aligned_weight
+                distances.append(dist)
                 dp[idx_i, idx_j] = dist
                 dp[idx_j, idx_i] = dist
-    return dp
+    th = np.percentile(distances, 25)
+    return dp, th
 
 
 def evaluate_encoder(version_tag, input_folder, output_folder, encoder_file, params, min_support=5):
@@ -144,10 +149,9 @@ def evaluate_encoder(version_tag, input_folder, output_folder, encoder_file, par
     enc = load_model(encoder_file)
     
     vectors, matches = alignments(input_folder, params, enc)
-    distances = distance_matrix(vectors, matches)
-    th = np.percentile(distances, 50)
+    distances, th = distance_matrix(vectors, matches)
     log.info("Clustering with threshold: {}".format(th))
-    clustering = AgglomerativeClustering(n_clusters=None, linkage='complete', distance_threshold=th, affinity='precomputed')
+    clustering = AgglomerativeClustering(n_clusters=None, linkage='average', distance_threshold=th, affinity='precomputed')
     c = clustering.fit_predict(distances)
 
     grouped_by_filename = {}
@@ -162,7 +166,7 @@ def evaluate_encoder(version_tag, input_folder, output_folder, encoder_file, par
         grouped_by_cluster[c][f].append((start, stop))
         if f not in grouped_by_filename:
             grouped_by_filename[f] = []
-        grouped_by_filename[f].append((start, stop, c, h[i]))
+        grouped_by_filename[f].append((start, stop, c))
         if c > k:
             k = c
         i += 1
@@ -185,11 +189,10 @@ def evaluate_encoder(version_tag, input_folder, output_folder, encoder_file, par
         log_path = "{}/{}_clustering_log_{}.csv".format(output_folder, "clusters", filename)
         log.info("writing: {}".format(log_path))
         with open(log_path, "w") as fp:
-            fp.write("start\tstop\tfile\tcluster\tembedding\n")
-            for start, stop, c, h in regions:
+            fp.write("start\tstop\tfile\tcluster\n")
+            for start, stop, c in regions:
                 if instances_clusters[c] >= min_support:
-                    vector = ",".join([str(x) for x in h.flatten()])
-                    fp.write("{}\t{}\t{}\t{}\t{}\n".format(start, stop, f, c, vector))
+                    fp.write("{}\t{}\t{}\t{}\n".format(start, stop, f, c))
     log.info('Done Logs')
     
 
@@ -229,5 +232,5 @@ if __name__== "__main__":
         log.info("Mixed Training Epoch AE")
         # train_auto_encoder(version, unsupervised, output, params, latent, batch, epochs, conv_param)
         evaluate_encoder(version, unsupervised, output, "{}/encoder.h5".format(output), params)       
-        test_reconstruction(unsupervised, output, params)
+
         

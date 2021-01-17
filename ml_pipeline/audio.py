@@ -193,9 +193,9 @@ def alignments(folder, params, encoder, gap_penalty = 15.0, band = 0.1):
     :returns: [(vector, i, ti, filename, start, stop) ... ], [(spec_i, spec_j, ti, tj, distance) ... ]
     '''
 
-    f = [filename for filename in tf.io.gfile.listdir(folder) if filename.endswith('.ogg') or filename.endswith('.wav') or filename.endswith('.aiff') or filename.startswith('cluster') or filename.startswith('noise')]
+    f = ["{}/{}".format(folder, filename) for filename in tf.io.gfile.listdir(folder) if filename.endswith('.ogg') or filename.endswith('.wav') or filename.endswith('.aiff') or filename.startswith('cluster') or filename.startswith('noise')]
     n = len(f)
-
+    
     spectrograms = []
     for i in range(0, n):
         data   = [x for x in spectrogram_windows(f[i], params)]   
@@ -212,16 +212,13 @@ def alignments(folder, params, encoder, gap_penalty = 15.0, band = 0.1):
     matches = []
     vectors = {}
     for i in range(0, n):
-        x     = encode(spectrograms[i], encoder)
-        t,f,_ = x.shape 
-        x = x.reshape((t, f))
+        x     = encode(spectrograms[i], encoder)        
         for j in range(i + 1, n):
+            logaudio.info('Aligning sequences: {} and {}'.format(i, j))    
             y = encode(spectrograms[j], encoder)
-            t,f,_ = y.shape 
-            y = y.reshape((t, f))
             w = int(max(len(x), len(y)) * band)
             for ti, tj in dtw(x, y, w, gap_penalty):
-                matches.append(i, j, ti, tj)
+                matches.append((i, j, ti, tj))
                 if (i, ti) not in matches:
                     f, start, stop = indices[i][ti]
                     vectors[(i, ti)] = (x[ti], f, start, stop)

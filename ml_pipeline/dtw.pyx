@@ -15,7 +15,7 @@ logdtw.setLevel(logging.INFO)
 GAP = -1
 
 
-def dtw(double[:, :] x, double[:,:] y, int band, double gap_penalty):
+def dtw(float[:, :] x, float[:,:] y, int band, float gap_penalty):
     """
     Align two sequences using dynamic time warping.
 

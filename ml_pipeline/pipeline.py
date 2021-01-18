@@ -259,7 +259,7 @@ if __name__== "__main__":
 
         # clutering paams
         log.info("Mixed Training Epoch AE")
-        #train_auto_encoder(version, unsupervised, output, params, latent, batch, epochs, conv_param)
+        train_auto_encoder(version, unsupervised, output, params, latent, batch, epochs, conv_param)
         evaluate_encoder(version, unsupervised, output, "{}/encoder.h5".format(output), params)       
         test_reconstruction(unsupervised, output, params)
         

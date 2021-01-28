@@ -8,9 +8,6 @@ and communicate the results with domain experts.
 
 The models from [IJCNN20](https://arxiv.org/abs/2005.07623) are [here](https://github.com/dkohlsdorf/wdp-ds/tree/v4.0/).
 
-[![youtube](http://img.youtube.com/vi/1U0XDyVhKNA&t=13s/0.jpg)](https://www.youtube.com/watch?v=1U0XDyVhKNA&t=13s)
-
-
 
 ## Contents
 

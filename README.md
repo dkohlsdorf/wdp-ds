@@ -4,6 +4,14 @@ Data Science For The Wild Dolphin Project
 This is a collection of scripts to build and analyze dolphin communication models
 and communicate the results with domain experts. 
 
+## IJCNN
+
+The models from [IJCNN20](https://arxiv.org/abs/2005.07623) are [here](https://github.com/dkohlsdorf/wdp-ds/tree/v4.0/).
+
+[![youtube](http://img.youtube.com/vi/1U0XDyVhKNA&t=13s/0.jpg)](https://www.youtube.com/watch?v=1U0XDyVhKNA&t=13s)
+
+
+
 ## Contents
 
 + 1) `ml_pipeline`: Training and Evaluation of Machine Learning Models

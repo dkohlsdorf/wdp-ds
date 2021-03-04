@@ -19,3 +19,4 @@ The models from [IJCNN20](https://arxiv.org/abs/2005.07623) are [here](https://g
 + tensorflow 2.0
 + numpy / scipy
 + nmslib
++ numba

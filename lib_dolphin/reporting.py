@@ -90,10 +90,3 @@ def template(sids, folder, audios, regions_csv, clusters):
         else:
             template.append(line)
     return "\n".join(template)
-
-
-if __name__ == "__main__":    
-    with open("index.html", "w") as fp:
-        fp.write(template(["filtered", "filtered2"], 'static',
-                          ['data/filtered.wav', 'data/filtered.wav'],
-                          ['data/filtered.csv', 'data/filtered.csv'], False))

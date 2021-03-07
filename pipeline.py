@@ -38,12 +38,12 @@ BATCH        = 25
 EPOCHS       = 50
 
 N_DIST       = 10000
-PERC_TH      = 5
+PERC_TH      = 25
 
 IP_RADIUS    = 6
 IP_DB_TH     = 3
 
-KNN          = 25
+KNN          = 15
 PROC_BATCH   = 1000    
 
 
@@ -171,9 +171,11 @@ def apply_model_files(files, out_folder="output"):
     th, c, labels, label_dict = pkl.load(open("{}/labels.pkl".format(out_folder), "rb"))
     enc = load_model('{}/encoder.h5'.format(out_folder))   
     model = Model(c, labels, label_dict, index, enc, 5.0)
+
+    csv = []
     for file in files:
         annotations = apply_model(file, model)
-        name = "{}/{}".format(out_folder, file.split("/")[-1].replace('.wav', '.csv'))
+        name = "{}/{}".format(out_folder, file.split("/")[-1].replace('.wav', '.csv'))        
         print("Processing {} to {}".format(file, name))
         df = pd.DataFrame({
             'labels':  [label   for label, _, _, _, _   in annotations],
@@ -183,8 +185,10 @@ def apply_model_files(files, out_folder="output"):
             'density': [dense   for _, _, _, _, dense   in annotations]
         })
         df.to_csv(name, index=False)
-    
-                  
+        csv.append(name)
+    return csv
+
+
 if __name__ == '__main__':
     print("=====================================")
     print("Simplified WDP DS Pipeline")
@@ -195,11 +199,19 @@ if __name__ == '__main__':
             train(labels, wav)
     elif len(sys.argv) == 3 and sys.argv[1] == 'test':        
         path = sys.argv[2]
-        apply_model_files(["{}/{}".format(path, filename) for filename in os.listdir(path) if filename.endswith('.wav')])
+        out  = sys.argv[3]
+
+        wavfiles = ["{}/{}".format(path, filename) for filename in os.listdir(path) if filename.endswith('.wav')]
+        csv      = apply_model_files(wavfiles, out)
+        ids      = ["annotations_{}".format(i) for i in range(0, len(csv))]
+        with open("result_clusters.html", "w") as fp:
+            fp.write(template(ids, out, wavfiles, csv, True))
+        with open("result_type.html", "w") as fp:
+            fp.write(template(ids, out, wavfiles, csv, False))         
     else:
         print("""
             Usage:
                 + train: python pipeline.py train LABEL_FILE AUDIO_FILE
-                + test:  python pipeline.py test FOLDER
+                + test:  python pipeline.py test FOLDER OUT
         """)
     print("=====================================")

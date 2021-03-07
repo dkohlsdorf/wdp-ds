@@ -48,10 +48,10 @@ KNN          = 15
 PROC_BATCH   = 1000    
 
 
-def train(label_file, wav_file, noise_file, out_folder="output", labels = LABELS, perc_test=0.1):
+def train(label_file, wav_file, noise_file, out_folder="output", labels = LABELS, perc_test=0.25):
     _, instances, labels, label_dict = dataset_supervised(
         label_file, wav_file, labels, lo=FFT_LO, hi=FFT_HI, win=FFT_WIN, step=FFT_STEP, raw_size=RAW_AUDIO)
-    visualize_dataset(instances, "{}/dataset.png".format(out_folder))
+
 
     noise = spectrogram(raw(noise_file))
     instances_inp = []
@@ -59,6 +59,8 @@ def train(label_file, wav_file, noise_file, out_folder="output", labels = LABELS
         stop  = np.random.randint(36, len(noise))
         start = stop - 36
         instances_inp.append((instances[i] + noise[start:stop, :]) / 2.0)
+    visualize_dataset(instances, "{}/dataset.png".format(out_folder))
+    visualize_dataset(instances_inp, "{}/dataset_noisy.png".format(out_folder))
 
     y_train = []
     y_test  = []

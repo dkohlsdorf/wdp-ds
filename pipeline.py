@@ -48,26 +48,39 @@ KNN          = 15
 PROC_BATCH   = 1000    
 
 
-def train(label_file, wav_file, out_folder="output", labels = LABELS, perc_test=0.1):
+def train(label_file, wav_file, noise_file, out_folder="output", labels = LABELS, perc_test=0.1):
     _, instances, labels, label_dict = dataset_supervised(
         label_file, wav_file, labels, lo=FFT_LO, hi=FFT_HI, win=FFT_WIN, step=FFT_STEP, raw_size=RAW_AUDIO)
     visualize_dataset(instances, "{}/dataset.png".format(out_folder))
 
+    noise = spectrogram(raw(noise_file))
+    instances_inp = []
+    for i in range(0, len(instances)):
+        stop  = np.random.randint(36, len(noise))
+        start = stop - 36
+        instances_inp.append((instances[i] + noise[start:stop, :]) / 2.0)
+
+    y_train = []
+    y_test  = []
     x_train = []
-    x_test = []
+    x_test  = []
     for i in range(0, len(instances)):
         if np.random.uniform() < perc_test:
-            x_test.append(instances[i])
+            x_test.append(instances_inp[i])
+            y_test.append(instances[i])
         else:
-            x_train.append(instances[i])
+            y_train.append(instances[i])
+            x_train.append(instances_inp[i])
             
-    x       = np.stack(instances).reshape(len(instances), T, D, 1)
+    x       = np.stack(instances_inp).reshape(len(instances_inp), T, D, 1)
     x_train = np.stack(x_train).reshape(len(x_train), T, D, 1)
     x_test  = np.stack(x_test).reshape(len(x_test), T, D, 1)
+    y_train = np.stack(y_train).reshape(len(y_train), T, D, 1)
+    y_test  = np.stack(y_test).reshape(len(y_test), T, D, 1)
             
     ae, enc, dec = auto_encoder(WINDOW_PARAM, LATENT, CONV_PARAM)
     ae.compile(optimizer='adam', loss='mse', metrics=['mse'])
-    hist = ae.fit(x=x_train, y=x_train, validation_data=(x_test, x_test), batch_size=BATCH, epochs=EPOCHS, shuffle=True)
+    hist = ae.fit(x=x_train, y=y_train, validation_data=(x_test, y_test), batch_size=BATCH, epochs=EPOCHS, shuffle=True)
 
     enc_filters(enc, CONV_PARAM[-1], "{}/filters.png".format(out_folder))
     plot_tensorflow_hist(hist, "{}/history_train.png".format(out_folder))
@@ -199,10 +212,12 @@ if __name__ == '__main__':
     print("=====================================")
     print("Simplified WDP DS Pipeline")
     print("by Daniel Kyu Hwa Kohlsdorf")
-    if len(sys.argv) == 5 and sys.argv[1] == 'train':            
+    if len(sys.argv) == 6 and sys.argv[1] == 'train':            
             labels = sys.argv[2]
             wav    = sys.argv[3]
-            out    = sys.argv[4]
+            noise  = sys.argv[4]
+            out    = sys.argv[5]
+            
             train(labels, wav, out)
     elif len(sys.argv) == 4 and sys.argv[1] == 'test':        
         path = sys.argv[2]
@@ -218,7 +233,7 @@ if __name__ == '__main__':
     else:
         print("""
             Usage:
-                + train: python pipeline.py train LABEL_FILE AUDIO_FILE OUT_FOLDER
+                + train: python pipeline.py train LABEL_FILE AUDIO_FILE NOISE_FILE OUT_FOLDER
                 + test:  python pipeline.py test FOLDER OUT
         """)
     print("=====================================")

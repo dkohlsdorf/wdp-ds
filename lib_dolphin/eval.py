@@ -28,7 +28,7 @@ def reconstruct(ae, instances, output):
     t = instances[0][0]
     d = instances[0][1]
     for i in range(25):
-        idx = np.random.randint(len(x_train))
+        idx = np.random.randint(len(instances))
         reconstruction = ae.predict(x_train[idx].reshape(1, t, d, 1))
         reconstruction = reconstruction.reshape(t, d)
         plt.subplot(5, 5, i + 1)

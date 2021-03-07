@@ -7,6 +7,7 @@ import os
 from lib_dolphin.audio import *
 from lib_dolphin.features import *
 from lib_dolphin.interest_points import *
+from lib_dolphin.reporting import *
 
 from collections import namedtuple
 

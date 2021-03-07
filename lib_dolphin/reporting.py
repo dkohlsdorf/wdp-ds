@@ -1,3 +1,9 @@
+#
+# TODO: Visualize reconstructions
+# TODO: Visualize filters
+# TODO: Export Cluster WavFiles for train and test
+#
+
 import matplotlib.pyplot as plt
 import pandas as pd
 import imageio

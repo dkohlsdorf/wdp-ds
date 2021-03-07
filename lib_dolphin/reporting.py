@@ -8,7 +8,7 @@ import matplotlib.pyplot as plt
 import pandas as pd
 import imageio
 
-from audio import *
+from lib_dolphin.audio import *
 
 import json
 

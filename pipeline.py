@@ -8,7 +8,7 @@ from lib_dolphin.audio import *
 from lib_dolphin.features import *
 from lib_dolphin.interest_points import *
 from lib_dolphin.reporting import *
-
+from lib_dolphin.eval import *
 from collections import namedtuple
 
 from sklearn.cluster import * 
@@ -198,12 +198,12 @@ if __name__ == '__main__':
     print("=====================================")
     print("Simplified WDP DS Pipeline")
     print("by Daniel Kyu Hwa Kohlsdorf")
-    if len(sys.argv) == 4 and sys.argv[1] == 'train':            
+    if len(sys.argv) == 5 and sys.argv[1] == 'train':            
             labels = sys.argv[2]
             wav    = sys.argv[3]
             out    = sys.argv[4]
             train(labels, wav, out)
-    elif len(sys.argv) == 3 and sys.argv[1] == 'test':        
+    elif len(sys.argv) == 4 and sys.argv[1] == 'test':        
         path = sys.argv[2]
         out  = sys.argv[3]
 

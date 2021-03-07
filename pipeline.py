@@ -94,6 +94,7 @@ def train(label_file, wav_file, noise_file, out_folder="output", labels = LABELS
         if idx != idy:
             dist = np.sqrt(np.sum(np.square(x[idx] - x[idy])))
             distances.append(dist)
+    th = np.percentile(distances, PERC_TH)
     print("Threshold: {}".format(th))    
     
     agg = AgglomerativeClustering(n_clusters=None, distance_threshold=th, affinity='euclidean', linkage='complete')

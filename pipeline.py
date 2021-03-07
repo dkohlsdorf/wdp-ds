@@ -32,11 +32,11 @@ RAW_AUDIO    = 5120
 T            = int((RAW_AUDIO - FFT_WIN) / FFT_STEP)
 
 
-CONV_PARAM   = (8, 8, 128)
+CONV_PARAM   = (8, 32, 128)
 WINDOW_PARAM = (T, D, 1)
-LATENT       = 64
+LATENT       = 128
 BATCH        = 25
-EPOCHS       = 50
+EPOCHS       = 25
 
 N_DIST       = 10000
 PERC_TH      = 25
@@ -69,6 +69,7 @@ def train(label_file, wav_file, out_folder="output", labels = LABELS, perc_test=
     ae.compile(optimizer='adam', loss='mse', metrics=['mse'])
     hist = ae.fit(x=x_train, y=x_train, validation_data=(x_test, x_test), batch_size=BATCH, epochs=EPOCHS, shuffle=True)
 
+    enc_filters(enc, CONV_PARAM[-1], "{}/filters.png".format(out_folder))
     plot_tensorflow_hist(hist, "{}/history_train.png".format(out_folder))
     reconstruct(ae, instances, "{}/reconstruction.png".format(out_folder))
     
@@ -80,7 +81,6 @@ def train(label_file, wav_file, out_folder="output", labels = LABELS, perc_test=
         if idx != idy:
             dist = np.sqrt(np.sum(np.square(x[idx] - x[idy])))
             distances.append(dist)
-    th = np.percentile(distances, PERC_TH)
     print("Threshold: {}".format(th))    
     
     agg = AgglomerativeClustering(n_clusters=None, distance_threshold=th, affinity='euclidean', linkage='complete')
@@ -174,6 +174,7 @@ def apply_model_files(files, out_folder="output"):
     nmslib.loadIndex(index, '{}/index'.format(out_folder))
     
     th, c, labels, label_dict = pkl.load(open("{}/labels.pkl".format(out_folder), "rb"))
+    th = 10.0
     enc = load_model('{}/encoder.h5'.format(out_folder))   
     model = Model(c, labels, label_dict, index, enc, 5.0)
 

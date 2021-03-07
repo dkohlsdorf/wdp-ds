@@ -25,13 +25,24 @@ def visualize_dataset(instances, output):
     
 def reconstruct(ae, instances, output):    
     plt.figure(figsize=(5, 10))
-    t = instances[0][0]
-    d = instances[0][1]
+    t = instances[0].shape[0]
+    d = instances[0].shape[1]
     for i in range(25):
         idx = np.random.randint(len(instances))
-        reconstruction = ae.predict(x_train[idx].reshape(1, t, d, 1))
-        reconstruction = reconstruction.reshape(t, d)
+        reconstruction = ae.predict(instances[idx].reshape((1, t, d, 1)))
+        reconstruction = reconstruction.reshape((t, d))
         plt.subplot(5, 5, i + 1)
         plt.imshow(reconstruction.T)
     plt.savefig(output)
     plt.clf()   
+
+
+def enc_filters(enc, n_filters, output):
+    plt.figure(figsize=(10, 10))
+    w = enc.weights[0].numpy()
+    for i in range(w.shape[-1]):
+        weight = w[:, :, 0, i]
+        plt.subplot(n_filters / 8, 8, i + 1)
+        plt.imshow(weight.T, cmap='gray')
+    plt.savefig(output)
+    plt.clf()

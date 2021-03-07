@@ -48,7 +48,8 @@ PROC_BATCH   = 1000
 
 
 def train(label_file, wav_file, out_folder="output", labels = LABELS, perc_test=0.1):
-    _, instances, labels, label_dict = dataset_supervised(label_file, wav_file, labels)
+    _, instances, labels, label_dict = dataset_supervised(
+        label_file, wav_file, labels, lo=FFT_LO, hi=FFT_HI, win=FFT_WIN, step=FFT_STEP, raw_size=RAW_AUDIO)
     x_train = []
     x_test = []
     for i in range(0, len(instances)):
@@ -123,12 +124,12 @@ def process_batch(batch, batch_off, model, reverse):
         start = batch_off[xid] 
         stop  = batch_off[xid] + RAW_AUDIO
         if d[-1] < model.th:
-            yield [lab, cluster, start, stop]
+            yield [lab, cluster, start, stop, 1.0 / d[-1]]
 
     
 def apply_model(file, model):   
     x = raw(file)
-    s = spectrogram(x)
+    s = spectrogram(x, lo=FFT_LO, hi=FFT_HI, win=FFT_WIN, step=FFT_STEP)
     r = T // 2
     
     offsets = []
@@ -140,9 +141,6 @@ def apply_model(file, model):
             if t > r and t < len(x) - r:
                 offsets.append(offset)
                 spec  = s[t - r : t + r]
-                mu    = np.mean(spec)
-                sigma = np.std(spec) + 1.0
-                spec  = (spec - mu) / sigma
                 patches.append(spec)
                 
     offsets = [o for o,p in zip(offsets, patches) if p.shape == (T, D)]
@@ -178,10 +176,11 @@ def apply_model_files(files, out_folder="output"):
         name = "{}/{}".format(out_folder, file.split("/")[-1].replace('.wav', '.csv'))
         print("Processing {} to {}".format(file, name))
         df = pd.DataFrame({
-            'labels':  [label   for label, _, _, _ in annotations],
-            'cluster': [cluster for _, cluster, _, _ in annotations],
-            'start':   [start   for _, _, start, _ in annotations],
-            'stop':    [stop    for _, _, _, stop in annotations]
+            'labels':  [label   for label, _, _, _, _   in annotations],
+            'cluster': [cluster for _, cluster, _, _, _ in annotations],
+            'start':   [start   for _, _, start, _, _   in annotations],
+            'stop':    [stop    for _, _, _, stop, _    in annotations],
+            'density': [dense   for _, _, _, _, dense   in annotations]
         })
         df.to_csv(name, index=False)
     

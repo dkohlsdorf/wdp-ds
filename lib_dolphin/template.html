@@ -1,0 +1,38 @@
+<html>
+  <head>
+    <script type="text/javascript">
+      function paint(id, regions) {
+	  var img = document.getElementById(id  + "_img");
+	  var cnvs = document.getElementById(id + "_canvas");
+  
+	  cnvs.style.position = "absolute";
+	  cnvs.style.left     = img.offsetLeft + "px";
+	  cnvs.style.top      = img.offsetTop + "px";
+	  cnvs.width          = img.width;
+	  cnvs.height         = img.height;
+	  var ctx = cnvs.getContext("2d");
+	  
+	  var i;
+	  for (i = 0; i < regions.length; i++) {
+	      
+	      var start = regions[i].start / 128;
+	      var stop  = regions[i].stop  / 128;
+	      if (stop - start > 5) {
+		  ctx.font="8px arial,serif";
+		  ctx.fillStyle = "red";
+		  ctx.textAlign = "center";
+		  ctx.fillText(regions[i].annotation, start, 30);	      
+		  ctx.fillStyle = regions[i].color;
+		  ctx.fillRect(start, 0, stop - start, 256);
+	      }
+	  }	 
+      }
+      function init() {
+	  JS_HERE
+      }
+    </script>
+  </head>
+  <body onload='init()'>
+    HTML_HERE
+  </body>
+</html>

@@ -58,8 +58,10 @@ def html_paint(sid, folder, audio):
     filename = "{}/{}".format(folder, audio.split('/')[-1].replace('.wav', '.png'))
     savefig(audio, filename, 0, 256, 512, 128)
     return """
+    <hr/>
     <img id="{}_img" src="{}"/>
     <canvas id="{}_canvas"></canvas>   
+    <br/>
     """.format(sid, filename, sid)
 
 

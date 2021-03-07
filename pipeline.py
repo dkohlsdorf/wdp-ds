@@ -24,7 +24,7 @@ LABELS = set([
 
 FFT_STEP     = 128
 FFT_WIN      = 512
-FFT_HI       = 200
+FFT_HI       = 160
 FFT_LO       = 20
 
 D            = FFT_WIN // 2 - FFT_LO - (FFT_WIN // 2 - FFT_HI)
@@ -34,7 +34,7 @@ T            = int((RAW_AUDIO - FFT_WIN) / FFT_STEP)
 
 CONV_PARAM   = (8, 32, 128)
 WINDOW_PARAM = (T, D, 1)
-LATENT       = 128
+LATENT       = 512
 BATCH        = 25
 EPOCHS       = 25
 
@@ -42,9 +42,9 @@ N_DIST       = 10000
 PERC_TH      = 25
 
 IP_RADIUS    = 6
-IP_DB_TH     = 3
+IP_DB_TH     = 3.0
 
-KNN          = 15
+KNN          = 25
 PROC_BATCH   = 1000    
 
 
@@ -52,8 +52,7 @@ def train(label_file, wav_file, noise_file, out_folder="output", labels = LABELS
     _, instances, labels, label_dict = dataset_supervised(
         label_file, wav_file, labels, lo=FFT_LO, hi=FFT_HI, win=FFT_WIN, step=FFT_STEP, raw_size=RAW_AUDIO)
 
-
-    noise = spectrogram(raw(noise_file))
+    noise = spectrogram(raw(noise_file), lo=FFT_LO, hi=FFT_HI, win=FFT_WIN, step=FFT_STEP)
     instances_inp = []
     for i in range(0, len(instances)):
         stop  = np.random.randint(36, len(noise))
@@ -81,6 +80,7 @@ def train(label_file, wav_file, noise_file, out_folder="output", labels = LABELS
     y_test  = np.stack(y_test).reshape(len(y_test), T, D, 1)
             
     ae, enc, dec = auto_encoder(WINDOW_PARAM, LATENT, CONV_PARAM)
+    enc.summary()
     ae.compile(optimizer='adam', loss='mse', metrics=['mse'])
     hist = ae.fit(x=x_train, y=y_train, validation_data=(x_test, y_test), batch_size=BATCH, epochs=EPOCHS, shuffle=True)
 
@@ -190,9 +190,8 @@ def apply_model_files(files, out_folder="output"):
     nmslib.loadIndex(index, '{}/index'.format(out_folder))
     
     th, c, labels, label_dict = pkl.load(open("{}/labels.pkl".format(out_folder), "rb"))
-    th = 10.0
     enc = load_model('{}/encoder.h5'.format(out_folder))   
-    model = Model(c, labels, label_dict, index, enc, 5.0)
+    model = Model(c, labels, label_dict, index, enc, th)
 
     csv = []
     for file in files:
@@ -208,6 +207,7 @@ def apply_model_files(files, out_folder="output"):
         })
         df.to_csv(name, index=False)
         csv.append(name)
+        print("Threshold: {}".format(th))
     return csv
 
 

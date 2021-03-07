@@ -51,6 +51,8 @@ PROC_BATCH   = 1000
 def train(label_file, wav_file, out_folder="output", labels = LABELS, perc_test=0.1):
     _, instances, labels, label_dict = dataset_supervised(
         label_file, wav_file, labels, lo=FFT_LO, hi=FFT_HI, win=FFT_WIN, step=FFT_STEP, raw_size=RAW_AUDIO)
+    visualize_dataset(instances, "{}/dataset.png".format(out_folder))
+
     x_train = []
     x_test = []
     for i in range(0, len(instances)):
@@ -65,10 +67,12 @@ def train(label_file, wav_file, out_folder="output", labels = LABELS, perc_test=
             
     ae, enc, dec = auto_encoder(WINDOW_PARAM, LATENT, CONV_PARAM)
     ae.compile(optimizer='adam', loss='mse', metrics=['mse'])
-    ae.fit(x=x_train, y=x_train, validation_data=(x_test, x_test), batch_size=BATCH, epochs=EPOCHS, shuffle=True)
+    hist = ae.fit(x=x_train, y=x_train, validation_data=(x_test, x_test), batch_size=BATCH, epochs=EPOCHS, shuffle=True)
+
+    plot_tensorflow_hist(hist, "{}/history_train.png".format(out_folder))
+    reconstruct(ae, instances, "{}/reconstruction.png".format(out_folder))
     
-    x   = enc.predict(x)
-    
+    x   = enc.predict(x)    
     distances = []
     for i in range(N_DIST):
         idx  = np.random.randint(len(x))
@@ -197,7 +201,8 @@ if __name__ == '__main__':
     if len(sys.argv) == 4 and sys.argv[1] == 'train':            
             labels = sys.argv[2]
             wav    = sys.argv[3]
-            train(labels, wav)
+            out    = sys.argv[4]
+            train(labels, wav, out)
     elif len(sys.argv) == 3 and sys.argv[1] == 'test':        
         path = sys.argv[2]
         out  = sys.argv[3]
@@ -212,7 +217,7 @@ if __name__ == '__main__':
     else:
         print("""
             Usage:
-                + train: python pipeline.py train LABEL_FILE AUDIO_FILE
+                + train: python pipeline.py train LABEL_FILE AUDIO_FILE OUT_FOLDER
                 + test:  python pipeline.py test FOLDER OUT
         """)
     print("=====================================")

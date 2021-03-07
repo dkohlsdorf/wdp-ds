@@ -1,9 +1,6 @@
 import numpy as np
 import matplotlib.pyplot as plt
 
-from scipy.io.wavfile import write    
-from audio imoort *
-
 
 def plot_tensorflow_hist(hist, output):
     plt.plot(hist.history['mse'],     label="mse")
@@ -38,17 +35,3 @@ def reconstruct(ae, instances, output):
         plt.imshow(reconstruction.T)
     plt.savefig(output)
     plt.clf()   
-
-
-def audio_clustering(audio, anno, out):
-    x  = raw(audio)
-    x  = x[:, 0]
-    for annotation, ranges in anno.items():
-        audio = []
-        for start, stop in ranges:
-            for v in x[start:stop]:
-                audio.append(v)
-            for i in range(0, 1000):
-                audio.append(0)
-        audio = np.array(audio)
-        write('{}/{}.wav'.format(out, annotation), 44100, audio.astype(np.int16))       

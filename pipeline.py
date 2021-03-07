@@ -218,7 +218,7 @@ if __name__ == '__main__':
             noise  = sys.argv[4]
             out    = sys.argv[5]
             
-            train(labels, wav, out)
+            train(labels, wav, noise, out)
     elif len(sys.argv) == 4 and sys.argv[1] == 'test':        
         path = sys.argv[2]
         out  = sys.argv[3]

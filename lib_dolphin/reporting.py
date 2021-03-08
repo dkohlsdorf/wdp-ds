@@ -1,8 +1,4 @@
-#
-# TODO: Visualize reconstructions
-# TODO: Visualize filters
-# TODO: Export Cluster WavFiles for train and test
-#
+# On Mouseover: start stop annotation
 
 import matplotlib.pyplot as plt
 import pandas as pd
@@ -22,6 +18,7 @@ COLORS = list(
 def overlapping_regions(regions, use_cluster, anno):
     start = regions["start"]
     stop  = regions["stop"]
+    dense = regions["density"] 
     n     = len(start)
     if use_cluster:
         annotation = regions['cluster']
@@ -34,9 +31,10 @@ def overlapping_regions(regions, use_cluster, anno):
         if stop[i - 1] < start[i] or annotation[i - 1] != annotation[i]:            
             js = {
                 "start"      : str(start[start_region]),
-                "stop"       : str(start[i - 1]),
+                "stop"       : str(stop[i - 1]),
                 "annotation" : str(annotation[i-1]),
-                "color"      : COLORS[anno[annotation[i - 1]]]
+                "color"      : COLORS[anno[annotation[i - 1]]],
+                "density"    : str(dense[i])
             }
             regions.append(js)
             start_region = i
@@ -49,9 +47,9 @@ def savefig(wav, out, lo, hi, win, step):
     imageio.imwrite(out, 1.0 - s.T)
 
 
-def js_paint(sid, regions, use_cluster, anno):
+def js_paint(sid, regions, use_cluster, anno, ips):
     js = overlapping_regions(regions, use_cluster, anno)
-    return "paint(\"{}\", {});\n".format(sid, js)
+    return "paint(\"{}\", {}, {});\n".format(sid, js, ips)
 
 
 def html_paint(sid, folder, audio):
@@ -65,7 +63,7 @@ def html_paint(sid, folder, audio):
     """.format(sid, filename, sid)
 
 
-def template(sids, folder, audios, regions_csv, clusters):
+def template(sids, folder, audios, regions_csv, ips, clusters):
     regions = []
     anno = {}
     cur = 0
@@ -84,7 +82,7 @@ def template(sids, folder, audios, regions_csv, clusters):
     html = []
     
     for i in range(0, len(sids)):
-        js.append(js_paint(sids[i], regions[i], clusters, anno))
+        js.append(js_paint(sids[i], regions[i], clusters, anno, ips[i]))
         html.append(html_paint(sids[i], folder, audios[i]))
     js   = "\n".join(js)
     html = "\n".join(html)

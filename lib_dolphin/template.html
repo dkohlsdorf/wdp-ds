@@ -1,23 +1,30 @@
 <html>
   <head>
     <script type="text/javascript">
-      function paint(id, regions) {
+      function paint(id, regions, ips) {
 	  var img = document.getElementById(id  + "_img");
 	  var cnvs = document.getElementById(id + "_canvas");
+	  var th = document.getElementById("threshold").value / 100.0;	  	  
+	  var value = document.getElementById("th_val")
+	  value.innerHTML = "" + th;
   
 	  cnvs.style.position = "absolute";
 	  cnvs.style.left     = img.offsetLeft + "px";
 	  cnvs.style.top      = img.offsetTop + "px";
 	  cnvs.width          = img.width;
 	  cnvs.height         = img.height;
-	  var ctx = cnvs.getContext("2d");
-	  
-	  var i;
+	  var ctx = cnvs.getContext("2d");	 
+
+	  ctx.fillStyle = 'red'
+	  var i;	 
+	  for (i = 0; i < ips.length; i++) {
+	      ctx.fillRect(ips[i].t - 1, ips[i].f - 1, 3, 3);
+	  }
 	  for (i = 0; i < regions.length; i++) {
+	      if(regions[i].density > th) {	      
+		  var start = regions[i].start / 128;
+		  var stop  = regions[i].stop  / 128;
 	      
-	      var start = regions[i].start / 128;
-	      var stop  = regions[i].stop  / 128;
-	      if (stop - start > 5) {
 		  ctx.font="8px arial,serif";
 		  ctx.fillStyle = "red";
 		  ctx.textAlign = "center";
@@ -33,6 +40,10 @@
     </script>
   </head>
   <body onload='init()'>
+    <div class="slidecontainer">
+      <input type="range" min="0" max="100" value="50" class="slider" id="threshold" onchange="init()">
+    </div>
+    <div id="th_val"></div>
     HTML_HERE
   </body>
 </html>

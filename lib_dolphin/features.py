@@ -47,6 +47,29 @@ def auto_encoder(in_shape, latent_dim, conv_params):
     x   = enc(inp) 
     x   = dec(x) 
     model = Model(inputs = [inp], outputs = [x])
-    model.compile(optimizer = RMSprop(), loss='mse')
     return model, enc, dec
 
+
+def conv_ae(in_shape):
+    i = Input((36, 128, 1))
+    x = Conv2D(128, (8, 8), activation='relu', padding='same')(i)
+    x = MaxPool2D((1, 4))(x)
+    x = Conv2D(64, (8, 8), activation='relu', padding='same')(x)
+    x = MaxPool2D((1, 4))(x)
+    x = Conv2D(32, (8, 8), activation='relu', padding='same')(x)
+    x = MaxPool2D((1, 4))(x)
+    x = Conv2D(16, (8, 8), activation='relu', padding='same')(x)
+    x = MaxPool2D((1, 2))(x)
+    e = Flatten()(x)
+    x = UpSampling2D((1, 2))(x)
+    x = Conv2DTranspose(16, (8, 8), activation='relu', padding='same')(x)
+    x = UpSampling2D((1, 4))(x)
+    x = Conv2DTranspose(32, (8, 8), activation='relu', padding='same')(x)
+    x = UpSampling2D((1, 4))(x)
+    x = Conv2DTranspose(64, (8, 8), activation='relu', padding='same')(x)
+    x = UpSampling2D((1, 4))(x)
+    x = Conv2DTranspose(1, (1, 1), activation='linear', padding='same')(x)
+
+    model = Model(i, x)
+    enc   = Model(i, e)
+    return model, enc

@@ -8,6 +8,8 @@ from scipy.io.wavfile import read, write
 
 def raw(path):
     x = read(path)[1]
+    if len(x.shape) > 1:
+        return x[:, 0]
     return x
 
 

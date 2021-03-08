@@ -1,3 +1,4 @@
+import json
 import numpy as np
 import pickle as pkl
 import nmslib 
@@ -11,6 +12,7 @@ from lib_dolphin.reporting import *
 from lib_dolphin.eval import *
 from collections import namedtuple
 
+from scipy.io.wavfile import read, write
 from sklearn.cluster import * 
 
 
@@ -24,7 +26,7 @@ LABELS = set([
 
 FFT_STEP     = 128
 FFT_WIN      = 512
-FFT_HI       = 160
+FFT_HI       = 180
 FFT_LO       = 20
 
 D            = FFT_WIN // 2 - FFT_LO - (FFT_WIN // 2 - FFT_HI)
@@ -32,17 +34,17 @@ RAW_AUDIO    = 5120
 T            = int((RAW_AUDIO - FFT_WIN) / FFT_STEP)
 
 
-CONV_PARAM   = (8, 32, 128)
+CONV_PARAM   = (4, 32, 128)
 WINDOW_PARAM = (T, D, 1)
-LATENT       = 512
+LATENT       = 64
 BATCH        = 25
 EPOCHS       = 25
 
 N_DIST       = 10000
-PERC_TH      = 25
+PERC_TH      = 50
 
 IP_RADIUS    = 6
-IP_DB_TH     = 3.0
+IP_DB_TH     = 1.5
 
 KNN          = 25
 PROC_BATCH   = 1000    
@@ -80,6 +82,7 @@ def train(label_file, wav_file, noise_file, out_folder="output", labels = LABELS
     y_test  = np.stack(y_test).reshape(len(y_test), T, D, 1)
             
     ae, enc, dec = auto_encoder(WINDOW_PARAM, LATENT, CONV_PARAM)
+    #ae, enc = conv_ae(WINDOW_PARAM)
     enc.summary()
     ae.compile(optimizer='adam', loss='mse', metrics=['mse'])
     hist = ae.fit(x=x_train, y=y_train, validation_data=(x_test, y_test), batch_size=BATCH, epochs=EPOCHS, shuffle=True)
@@ -127,7 +130,7 @@ def label(x):
     return max_class, p    
     
     
-Model = namedtuple("Model", "clusters labels label_dict index encoder th")
+Model = namedtuple("Model", "clusters labels label_dict index encoder")
 
 
 def process_batch(batch, batch_off, model, reverse):
@@ -144,8 +147,7 @@ def process_batch(batch, batch_off, model, reverse):
         lab         = reverse[labi]
         start = batch_off[xid] 
         stop  = batch_off[xid] + RAW_AUDIO
-        if d[-1] < model.th:
-            yield [lab, cluster, start, stop, 1.0 / d[-1]]
+        yield [lab, cluster, start, stop, 1.0 / d[-1]]
 
     
 def apply_model(file, model):   
@@ -155,6 +157,7 @@ def apply_model(file, model):
     
     offsets = []
     patches = []
+    ip      = []
     for t, f in interest_points(s, IP_RADIUS, IP_DB_TH):
         start_t = t - r
         offset  = start_t * FFT_STEP
@@ -163,6 +166,7 @@ def apply_model(file, model):
                 offsets.append(offset)
                 spec  = s[t - r : t + r]
                 patches.append(spec)
+                ip.append({"t": t, "f": f + FFT_LO})
                 
     offsets = [o for o,p in zip(offsets, patches) if p.shape == (T, D)]
     patches = np.stack([p for p in patches if p.shape == (T, D)])
@@ -182,20 +186,21 @@ def apply_model(file, model):
             batch_off = []    
     for annotation in process_batch(batch, batch_off, model, reverse):
         anno.append(annotation)            
-    return anno
+    return anno, ip
 
                   
-def apply_model_files(files, out_folder="output"):
+def apply_model_files(files, out_folder="output", ignore_th=True):
     index = nmslib.init(method ='hnsw', space='l2')
     nmslib.loadIndex(index, '{}/index'.format(out_folder))
     
-    th, c, labels, label_dict = pkl.load(open("{}/labels.pkl".format(out_folder), "rb"))
+    _, c, labels, label_dict = pkl.load(open("{}/labels.pkl".format(out_folder), "rb"))
     enc = load_model('{}/encoder.h5'.format(out_folder))   
-    model = Model(c, labels, label_dict, index, enc, th)
-
+    model = Model(c, labels, label_dict, index, enc)
+        
     csv = []
+    ips = []
     for file in files:
-        annotations = apply_model(file, model)
+        annotations, ip = apply_model(file, model)
         name = "{}/{}".format(out_folder, file.split("/")[-1].replace('.wav', '.csv'))        
         print("Processing {} to {}".format(file, name))
         df = pd.DataFrame({
@@ -207,10 +212,37 @@ def apply_model_files(files, out_folder="output"):
         })
         df.to_csv(name, index=False)
         csv.append(name)
-        print("Threshold: {}".format(th))
-    return csv
+        ips.append(ip)
+    return csv, ips
 
 
+def slice_intersting(audio_file, out, processing_window = 44100):
+    x = raw(audio_file)
+    n = len(x)
+    regions = []
+    for i in range(processing_window, n, processing_window // 2):        
+        s        = spectrogram(x[i - processing_window:i], lo=FFT_LO, hi=FFT_HI, win=FFT_WIN, step=FFT_STEP)
+        n_points = len([x for x in interest_points(s, IP_RADIUS, IP_DB_TH)])
+        region   = (i-processing_window, i, n_points)
+        regions.append(region)
+    th = np.percentile([n for _, _, n in regions], 95)
+    print("Activity Threshold: {} of {} regions".format(th, len(regions)))
+    connected = []
+    last_active = 0
+    recording = False
+    for i in range(1, len(regions)):
+        if regions[i][2] >= th:
+            recording = True
+            last_active = i
+        elif regions[i][2] < th and recording:
+            connected.append([regions[last_active][0], regions[i - 1][1]])
+            recording = False
+    print("Detected Regions: {}".format(len(connected)))
+    for start, stop in connected:
+        name = "{}_{}.wav".format(audio_file.split("/")[-1].replace('.wav', ''), start)
+        write('{}/{}.wav'.format(out, name), 44100, x[start:stop].astype(np.int16)) 
+        
+    
 if __name__ == '__main__':
     print("=====================================")
     print("Simplified WDP DS Pipeline")
@@ -219,20 +251,23 @@ if __name__ == '__main__':
             labels = sys.argv[2]
             wav    = sys.argv[3]
             noise  = sys.argv[4]
-            out    = sys.argv[5]
-            
+            out    = sys.argv[5]            
             train(labels, wav, noise, out)
+    elif len(sys.argv) == 4 and sys.argv[1] == 'slice':
+            audio = sys.argv[2]
+            out   = sys.argv[3]
+            slice_intersting(audio, out)
     elif len(sys.argv) == 4 and sys.argv[1] == 'test':        
         path = sys.argv[2]
         out  = sys.argv[3]
 
         wavfiles = ["{}/{}".format(path, filename) for filename in os.listdir(path) if filename.endswith('.wav')]
-        csv      = apply_model_files(wavfiles, out)
+        csv,ips  = apply_model_files(wavfiles, out)
         ids      = ["annotations_{}".format(i) for i in range(0, len(csv))]
         with open("result_clusters.html", "w") as fp:
-            fp.write(template(ids, out, wavfiles, csv, True))
+            fp.write(template(ids, out, wavfiles, csv, ips, True))
         with open("result_type.html", "w") as fp:
-            fp.write(template(ids, out, wavfiles, csv, False))         
+            fp.write(template(ids, out, wavfiles, csv, ips, False))         
     else:
         print("""
             Usage:

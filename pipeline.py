@@ -225,7 +225,7 @@ def slice_intersting(audio_file, out, processing_window = 44100):
         n_points = len([x for x in interest_points(s, IP_RADIUS, IP_DB_TH)])
         region   = (i-processing_window, i, n_points)
         regions.append(region)
-    th = np.percentile([n for _, _, n in regions], 95)
+    th = np.percentile([n for _, _, n in regions], 50)
     print("Activity Threshold: {} of {} regions".format(th, len(regions)))
     connected = []
     last_active = 0
@@ -235,12 +235,13 @@ def slice_intersting(audio_file, out, processing_window = 44100):
             recording = True
             last_active = i
         elif regions[i][2] < th and recording:
+            print("DETECTED: {} : {}".format(last_active, i))
             connected.append([regions[last_active][0], regions[i - 1][1]])
             recording = False
     print("Detected Regions: {}".format(len(connected)))
     for start, stop in connected:
         name = "{}_{}.wav".format(audio_file.split("/")[-1].replace('.wav', ''), start)
-        write('{}/{}.wav'.format(out, name), 44100, x[start:stop].astype(np.int16)) 
+        write('{}/{}'.format(out, name), 44100, x[start:stop].astype(np.int16)) 
         
     
 if __name__ == '__main__':

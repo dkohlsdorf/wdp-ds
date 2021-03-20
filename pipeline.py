@@ -315,8 +315,9 @@ if __name__ == '__main__':
             if audio.endswith('.wav'):
                 slice_intersting(audio, out)
             else:
-                for filename in os.listdir(audio):
+                for filename in os.listdir(audio):                
                     if filename.endswith('.wav'):
+                        print("Slicing: {}".format(filename))
                         path = "{}/{}".format(audio, filename)
                         slice_intersting(path, out)
     elif len(sys.argv) == 4 and sys.argv[1] == 'test':        

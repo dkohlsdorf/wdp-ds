@@ -312,7 +312,12 @@ if __name__ == '__main__':
     elif len(sys.argv) == 4 and sys.argv[1] == 'slice':
             audio = sys.argv[2]
             out   = sys.argv[3]
-            slice_intersting(audio, out)
+            if audio.endswith('.wav'):
+                slice_intersting(audio, out)
+            else:
+                for filename in os.listdir(audio):
+                    path = "{}/{}".format(audio, filename)
+                    slice_intersting(path, out)
     elif len(sys.argv) == 4 and sys.argv[1] == 'test':        
         path = sys.argv[2]
         out  = sys.argv[3]

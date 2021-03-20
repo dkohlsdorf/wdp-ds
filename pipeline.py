@@ -34,14 +34,14 @@ RAW_AUDIO    = 5120
 T            = int((RAW_AUDIO - FFT_WIN) / FFT_STEP)
 
 
-CONV_PARAM   = (4, 32, 128)
+CONV_PARAM   = (8, 8, 128)
 WINDOW_PARAM = (T, D, 1)
 LATENT       = 64
 BATCH        = 25
 EPOCHS       = 25
 
 N_DIST       = 10000
-PERC_TH      = 50
+PERC_TH      = 5
 
 IP_RADIUS    = 6
 IP_DB_TH     = 1.5
@@ -49,11 +49,13 @@ IP_DB_TH     = 1.5
 KNN          = 25
 PROC_BATCH   = 1000    
 
+SUPERVISED = True
+
 
 def train(label_file, wav_file, noise_file, out_folder="output", labels = LABELS, perc_test=0.25):
-    _, instances, labels, label_dict = dataset_supervised(
-        label_file, wav_file, labels, lo=FFT_LO, hi=FFT_HI, win=FFT_WIN, step=FFT_STEP, raw_size=RAW_AUDIO)
-
+    windows, instances, labels, label_dict = dataset_supervised(
+        label_file, wav_file, labels, lo=FFT_LO, hi=FFT_HI, win=FFT_WIN, step=FFT_STEP, raw_size=RAW_AUDIO)    
+    
     noise = spectrogram(raw(noise_file), lo=FFT_LO, hi=FFT_HI, win=FFT_WIN, step=FFT_STEP)
     instances_inp = []
     for i in range(0, len(instances)):
@@ -70,28 +72,59 @@ def train(label_file, wav_file, noise_file, out_folder="output", labels = LABELS
     for i in range(0, len(instances)):
         if np.random.uniform() < perc_test:
             x_test.append(instances_inp[i])
-            y_test.append(instances[i])
-        else:
-            y_train.append(instances[i])
+            if SUPERVISED:
+                y_test.append(labels[i])
+            else:
+                y_test.append(instances[i])
+
+        else:            
             x_train.append(instances_inp[i])
-            
+            if SUPERVISED:
+                y_train.append(labels[i])
+            else:
+                y_train.append(instances[i])
+
     x       = np.stack(instances_inp).reshape(len(instances_inp), T, D, 1)
     x_train = np.stack(x_train).reshape(len(x_train), T, D, 1)
     x_test  = np.stack(x_test).reshape(len(x_test), T, D, 1)
-    y_train = np.stack(y_train).reshape(len(y_train), T, D, 1)
-    y_test  = np.stack(y_test).reshape(len(y_test), T, D, 1)
-            
-    ae, enc, dec = auto_encoder(WINDOW_PARAM, LATENT, CONV_PARAM)
-    #ae, enc = conv_ae(WINDOW_PARAM)
-    enc.summary()
-    ae.compile(optimizer='adam', loss='mse', metrics=['mse'])
-    hist = ae.fit(x=x_train, y=y_train, validation_data=(x_test, y_test), batch_size=BATCH, epochs=EPOCHS, shuffle=True)
 
+    
+    if SUPERVISED:
+        y_train = np.array(y_train)
+        y_test  = np.array(y_test)
+        model, enc  = classifier(WINDOW_PARAM, LATENT, 4, CONV_PARAM) 
+        model.compile(optimizer='adam', loss='sparse_categorical_crossentropy', metrics=['accuracy'])
+
+    else:
+        y_train = np.stack(y_train).reshape(len(y_train), T, D, 1)
+        y_test  = np.stack(y_test).reshape(len(y_test), T, D, 1)
+
+        model, enc, dec = auto_encoder(WINDOW_PARAM, LATENT, CONV_PARAM)
+        model.compile(optimizer='adam', loss='mse', metrics=['mse'])
+
+    hist = model.fit(x=x_train, y=y_train, validation_data=(x_test, y_test), batch_size=BATCH, epochs=EPOCHS, shuffle=True)
+    
     enc_filters(enc, CONV_PARAM[-1], "{}/filters.png".format(out_folder))
     plot_tensorflow_hist(hist, "{}/history_train.png".format(out_folder))
-    reconstruct(ae, instances, "{}/reconstruction.png".format(out_folder))
     
     x   = enc.predict(x)    
+
+    if SUPERVISED:
+        n = len(label_dict)
+        label_names = ["" for i in range(n)]
+        for l, i in label_dict.items():
+            label_names[i] = l
+        prediction_test = model.predict(x_test)
+        confusion = np.zeros((n,n))
+        for i in range(len(y_test)):
+            pred = np.argmax(prediction_test[i])
+            confusion[y_test[i], pred] += 1
+        plot_result_matrix(confusion, label_names, label_names, "confusion")
+        plt.savefig('{}/confusion_type.png'.format(out_folder))
+        plt.close()
+    else:
+        reconstruct(model, instances, "{}/reconstruction.png".format(out_folder))
+    
     distances = []
     for i in range(N_DIST):
         idx  = np.random.randint(len(x))
@@ -104,11 +137,17 @@ def train(label_file, wav_file, noise_file, out_folder="output", labels = LABELS
     
     agg = AgglomerativeClustering(n_clusters=None, distance_threshold=th, affinity='euclidean', linkage='complete')
     c   = agg.fit_predict(x)
+
+    export_audio(c, labels, windows, label_dict, out_folder)
     
     index = nmslib.init(method='hnsw', space='l2')
     index.addDataPointBatch(x)
     index.createIndex({'post': 2}, print_progress=True)
-    
+
+    if SUPERVISED:
+        model.save('{}/supervised.h5'.format(out_folder))
+    else:
+        model.save('{}/ae.h5'.format(out_folder))
     enc.save('{}/encoder.h5'.format(out_folder))
     pkl.dump((th, c, labels, label_dict), open("{}/labels.pkl".format(out_folder), "wb"))
     nmslib.saveIndex(index, '{}/index'.format(out_folder))
@@ -130,24 +169,30 @@ def label(x):
     return max_class, p    
     
     
-Model = namedtuple("Model", "clusters labels label_dict index encoder")
+Model = namedtuple("Model", "clusters labels label_dict index encoder classifier")
 
 
 def process_batch(batch, batch_off, model, reverse):
     batch = np.stack(batch)
     x     = model.encoder.predict(batch)
+    if SUPERVISED:
+        y = model.classifier.predict(batch)
     for xid in range(0, len(x)):
         ids, d = model.index.knnQuery(x[xid], k = KNN)
     
         clusters    = [model.clusters[xi] for xi in ids]
         labels      = [model.labels[xi] for xi in ids]
-
+        
         cluster, pc = label(clusters)
         labi, pl    = label(labels) 
         lab         = reverse[labi]
         start = batch_off[xid] 
         stop  = batch_off[xid] + RAW_AUDIO
-        yield [lab, cluster, start, stop, 1.0 / d[-1]]
+        if SUPERVISED:
+            lab_y = reverse[np.argmax(y[xid])]
+        else:
+            lab_y = None
+        yield [lab_y, lab, cluster, start, stop, 1.0 / d[-1]]
 
     
 def apply_model(file, model):   
@@ -194,8 +239,13 @@ def apply_model_files(files, out_folder="output", ignore_th=True):
     nmslib.loadIndex(index, '{}/index'.format(out_folder))
     
     _, c, labels, label_dict = pkl.load(open("{}/labels.pkl".format(out_folder), "rb"))
-    enc = load_model('{}/encoder.h5'.format(out_folder))   
-    model = Model(c, labels, label_dict, index, enc)
+    enc = load_model('{}/encoder.h5'.format(out_folder))
+    if SUPERVISED:
+        classifier = load_model('{}/supervised.h5'.format(out_folder))
+    else:
+        classifier = None
+        
+    model = Model(c, labels, label_dict, index, enc, classifier)
         
     csv = []
     ips = []
@@ -204,11 +254,12 @@ def apply_model_files(files, out_folder="output", ignore_th=True):
         name = "{}/{}".format(out_folder, file.split("/")[-1].replace('.wav', '.csv'))        
         print("Processing {} to {}".format(file, name))
         df = pd.DataFrame({
-            'labels':  [label   for label, _, _, _, _   in annotations],
-            'cluster': [cluster for _, cluster, _, _, _ in annotations],
-            'start':   [start   for _, _, start, _, _   in annotations],
-            'stop':    [stop    for _, _, _, stop, _    in annotations],
-            'density': [dense   for _, _, _, _, dense   in annotations]
+            'supervised': [label   for label, _, _, _, _, _   in annotations],
+            'labels':     [label   for _, label, _, _, _, _   in annotations],
+            'cluster':    [cluster for _, _, cluster, _, _, _ in annotations],
+            'start':      [start   for _, _, _, start, _, _   in annotations],
+            'stop':       [stop    for _, _, _, _, stop, _    in annotations],
+            'density':    [dense   for _, _, _, _, _, dense   in annotations]
         })
         df.to_csv(name, index=False)
         csv.append(name)
@@ -225,13 +276,13 @@ def slice_intersting(audio_file, out, processing_window = 44100):
         n_points = len([x for x in interest_points(s, IP_RADIUS, IP_DB_TH)])
         region   = (i-processing_window, i, n_points)
         regions.append(region)
-    th = np.percentile([n for _, _, n in regions], 50)
+    th = np.percentile([n for _, _, n in regions], 95)
     print("Activity Threshold: {} of {} regions".format(th, len(regions)))
     connected = []
     last_active = 0
     recording = False
     for i in range(1, len(regions)):
-        if regions[i][2] >= th:
+        if regions[i][2] >= th and not recording:
             recording = True
             last_active = i
         elif regions[i][2] < th and recording:
@@ -272,7 +323,8 @@ if __name__ == '__main__':
     else:
         print("""
             Usage:
-                + train: python pipeline.py train LABEL_FILE AUDIO_FILE NOISE_FILE OUT_FOLDER
-                + test:  python pipeline.py test FOLDER OUT
+                + train:  python pipeline.py train LABEL_FILE AUDIO_FILE NOISE_FILE OUT_FOLDER
+                + test:   python pipeline.py test FOLDER OUT
+                + slice:  python pipeline.py slice AUDIO_FILE OUT_FOLDER
         """)
-    print("=====================================")
+    print("\n=====================================")

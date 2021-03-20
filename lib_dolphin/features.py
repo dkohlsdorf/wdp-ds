@@ -17,9 +17,9 @@ def encoder(in_shape, latent_dim, conv_params):
     n_filters = conv_params[2]
     dft_dim = in_shape[1]
     inp = Input(in_shape)
-    loc = Conv2D(n_filters, strides = (1, 1), kernel_size=kernel_size, activation='relu', padding='same')(inp) # Shape (Time, DFT, Filters)
-    loc = MaxPool2D(pool_size=(1, dft_dim))(loc) # Pool in time (Time, DFT, Filters) -> (Time, 1, Filters)
-    loc = Reshape((in_shape[0], n_filters))(loc) # Reshape for temporal model (Time, 1, Filters)  -> (Time, Filters)
+    loc = Conv2D(n_filters, strides = (1, 1), kernel_size=kernel_size, activation='relu', padding='same')(inp) 
+    loc = MaxPool2D(pool_size=(1, dft_dim))(loc) 
+    loc = Reshape((in_shape[0], n_filters))(loc) 
     x   = Bidirectional(LSTM(latent_dim, return_sequences=True))(loc)
     x   = LSTM(latent_dim)(x)            
     return Model(inputs =[inp], outputs=[x])
@@ -40,6 +40,16 @@ def decoder(length, latent_dim, output_dim, conv_params):
     return Model(inputs = [inp], outputs = [x])
 
 
+def classifier(in_shape, latent_dim, out_dim, conv_params):
+    enc = encoder(in_shape, latent_dim, conv_params)
+    inp = Input(in_shape)
+    x   = enc(inp)
+    x   = Dropout(0.5)(x) 
+    x   = Dense(out_dim, activation='softmax')(x) 
+    model = Model(inputs = [inp], outputs = [x])
+    return model, enc
+
+    
 def auto_encoder(in_shape, latent_dim, conv_params):
     enc = encoder(in_shape, latent_dim, conv_params)
     dec = decoder(in_shape[0], latent_dim, in_shape[1], conv_params)
@@ -49,27 +59,3 @@ def auto_encoder(in_shape, latent_dim, conv_params):
     model = Model(inputs = [inp], outputs = [x])
     return model, enc, dec
 
-
-def conv_ae(in_shape):
-    i = Input((36, 128, 1))
-    x = Conv2D(128, (8, 8), activation='relu', padding='same')(i)
-    x = MaxPool2D((1, 4))(x)
-    x = Conv2D(64, (8, 8), activation='relu', padding='same')(x)
-    x = MaxPool2D((1, 4))(x)
-    x = Conv2D(32, (8, 8), activation='relu', padding='same')(x)
-    x = MaxPool2D((1, 4))(x)
-    x = Conv2D(16, (8, 8), activation='relu', padding='same')(x)
-    x = MaxPool2D((1, 2))(x)
-    e = Flatten()(x)
-    x = UpSampling2D((1, 2))(x)
-    x = Conv2DTranspose(16, (8, 8), activation='relu', padding='same')(x)
-    x = UpSampling2D((1, 4))(x)
-    x = Conv2DTranspose(32, (8, 8), activation='relu', padding='same')(x)
-    x = UpSampling2D((1, 4))(x)
-    x = Conv2DTranspose(64, (8, 8), activation='relu', padding='same')(x)
-    x = UpSampling2D((1, 4))(x)
-    x = Conv2DTranspose(1, (1, 1), activation='linear', padding='same')(x)
-
-    model = Model(i, x)
-    enc   = Model(i, e)
-    return model, enc

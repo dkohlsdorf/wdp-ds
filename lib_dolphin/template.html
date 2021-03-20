@@ -21,7 +21,7 @@
 	      ctx.fillRect(ips[i].t - 1, ips[i].f - 1, 3, 3);
 	  }
 	  for (i = 0; i < regions.length; i++) {
-	      if(regions[i].density > th) {	      
+	      if(regions[i].prob > th) {	      
 		  var start = regions[i].start / 128;
 		  var stop  = regions[i].stop  / 128;
 	      

@@ -189,10 +189,13 @@ def process_batch(batch, batch_off, model, reverse):
         start = batch_off[xid] 
         stop  = batch_off[xid] + RAW_AUDIO
         if SUPERVISED:
-            lab_y = reverse[np.argmax(y[xid])]
+            argi  = np.argmax(y[xid])
+            prob  = y[xid, argi]
+            lab_y = reverse[argi]
         else:
             lab_y = None
-        yield [lab_y, lab, cluster, start, stop, 1.0 / d[-1]]
+            prob  = None
+        yield [lab_y, lab, cluster, start, stop, prob, 1.0 / d[-1]]
 
     
 def apply_model(file, model):   
@@ -254,12 +257,13 @@ def apply_model_files(files, out_folder="output", ignore_th=True):
         name = "{}/{}".format(out_folder, file.split("/")[-1].replace('.wav', '.csv'))        
         print("Processing {} to {}".format(file, name))
         df = pd.DataFrame({
-            'supervised': [label   for label, _, _, _, _, _   in annotations],
-            'labels':     [label   for _, label, _, _, _, _   in annotations],
-            'cluster':    [cluster for _, _, cluster, _, _, _ in annotations],
-            'start':      [start   for _, _, _, start, _, _   in annotations],
-            'stop':       [stop    for _, _, _, _, stop, _    in annotations],
-            'density':    [dense   for _, _, _, _, _, dense   in annotations]
+            'labels':     [label   for label, _, _, _, _, _, _   in annotations],
+            'knn':        [label   for _, label, _, _, _, _, _   in annotations],
+            'cluster':    [cluster for _, _, cluster, _, _, _, _ in annotations],
+            'start':      [start   for _, _, _, start, _, _, _   in annotations],
+            'stop':       [stop    for _, _, _, _, stop, _, _    in annotations],
+            'prob':       [prob    for _, _, _, _, _, prob, _    in annotations],
+            'density':    [dens    for _, _, _, _, _, _, dens    in annotations]
         })
         df.to_csv(name, index=False)
         csv.append(name)

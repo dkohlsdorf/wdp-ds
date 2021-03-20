@@ -18,7 +18,7 @@ COLORS = list(
 def overlapping_regions(regions, use_cluster, anno):
     start = regions["start"]
     stop  = regions["stop"]
-    dense = regions["density"] 
+    prob  = regions["prob"] 
     n     = len(start)
     if use_cluster:
         annotation = regions['cluster']
@@ -34,7 +34,7 @@ def overlapping_regions(regions, use_cluster, anno):
                 "stop"       : str(stop[i - 1]),
                 "annotation" : str(annotation[i-1]),
                 "color"      : COLORS[anno[annotation[i - 1]]],
-                "density"    : str(dense[i])
+                "prob"       : str(prob[i])
             }
             regions.append(js)
             start_region = i

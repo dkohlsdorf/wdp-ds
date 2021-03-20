@@ -11,12 +11,12 @@ The models from [IJCNN20](https://arxiv.org/abs/2005.07623) are [here](https://g
 
 ## Contents
 
-+ 1) `ml_pipeline`: Training and Evaluation of Machine Learning Models
-+ 2) `config`: Config files to run pipeline
++ 1) `lib_dolphin`: Training and Evaluation of Machine Learning Models
++ 2) `pipeline.py`: Run this to build a model
 
 ## Dependencies
 + sklearn
 + tensorflow 2.0
 + numpy / scipy
-+ pydub
-+ librosa
++ nmslib
++ numba

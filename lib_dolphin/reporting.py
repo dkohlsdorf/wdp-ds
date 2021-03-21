@@ -38,6 +38,15 @@ def overlapping_regions(regions, use_cluster, anno):
             }
             regions.append(js)
             start_region = i
+    if start_region != n - 1:
+        js = {
+            "start"      : str(start[start_region]),
+            "stop"       : str(stop[n - 1]),
+            "annotation" : str(annotation[n - 1]),
+            "color"      : COLORS[anno[annotation[n - 1]]],
+            "prob"       : str(prob[i])
+        }
+        regions.append(js)        
     return json.dumps(regions)
 
 
@@ -57,10 +66,11 @@ def html_paint(sid, folder, audio):
     savefig(audio, filename, 0, 256, 512, 128)
     return """
     <hr/>
+    <h2> {} </h2>
     <img id="{}_img" src="{}"/>
     <canvas id="{}_canvas"></canvas>   
     <br/>
-    """.format(sid, filename, sid)
+    """.format(filename, sid, filename, sid)
 
 
 def template(sids, folder, audios, regions_csv, ips, clusters):

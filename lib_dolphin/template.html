@@ -1,10 +1,14 @@
 <html>
   <head>
     <script type="text/javascript">
+      function prob(region) {
+	  return region.prob;	  
+      }
+      
       function paint(id, regions, ips) {
 	  var img = document.getElementById(id  + "_img");
 	  var cnvs = document.getElementById(id + "_canvas");
-	  var th = document.getElementById("threshold").value / 100.0;	  	  
+	  var th = document.getElementById("threshold").value / 101.0;	  	  
 	  var value = document.getElementById("th_val")
 	  value.innerHTML = "" + th;
   
@@ -14,14 +18,20 @@
 	  cnvs.width          = img.width;
 	  cnvs.height         = img.height;
 	  var ctx = cnvs.getContext("2d");	 
-
+	  
 	  ctx.fillStyle = 'red'
 	  var i;	 
 	  for (i = 0; i < ips.length; i++) {
 	      ctx.fillRect(ips[i].t - 1, ips[i].f - 1, 3, 3);
 	  }
+
+	  var n_th  = Math.floor(regions.length * th);
+	  var probs = regions.map(prob);
+	  probs.sort();
+	  var thr = probs[n_th];
+	  
 	  for (i = 0; i < regions.length; i++) {
-	      if(regions[i].prob > th) {	      
+	      if(regions[i].prob >= thr || th == 0.0) {	      
 		  var start = regions[i].start / 128;
 		  var stop  = regions[i].stop  / 128;
 	      
@@ -34,6 +44,7 @@
 	      }
 	  }	 
       }
+
       function init() {
 	  JS_HERE
       }

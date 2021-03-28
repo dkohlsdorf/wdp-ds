@@ -315,7 +315,7 @@ def sequenced(folder, outfilename, by_type=True, rle=True):
             
         strg = []
         for symbol in seq:
-            if rle and (len(strg) == 0 or strg[-1] != symbol):
+            if not rle or (len(strg) == 0 or strg[-1] != symbol):
                 strg.append(symbol)
         strings.append(",".join(strg))
         offsets.append(sequence.offset)
@@ -365,7 +365,10 @@ if __name__ == '__main__':
         outfile = sys.argv[3]
         by_type = sys.argv[4] == 'type'
         rle = sys.argv[5] == 'rle'
+        print("Params: {} {}".format(by_type, rle))
         sequenced(path, outfile, by_type, rle)
+        for ngram in ngram_stream(outfile, 3):
+            print(" ".join(ngram))
     else:
         print("""
             Usage:

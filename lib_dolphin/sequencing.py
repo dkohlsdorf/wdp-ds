@@ -29,3 +29,15 @@ def extract_sequences(files):
         sequence = Sequence(symbols, shotid, offset)
         sequences.append(sequence)
     return sequences
+
+
+def ngram_stream(file, n):
+    df = pd.read_csv(file)
+    for _, row in df.iterrows():
+        ngram = []
+        for symbol in row['string'].split(','):
+            ngram.append(symbol)
+            if len(ngram) > n:
+                ngram = ngram[-n:]
+            if len(ngram) == n:
+                yield ngram

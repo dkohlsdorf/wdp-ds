@@ -10,6 +10,7 @@ from lib_dolphin.features import *
 from lib_dolphin.interest_points import *
 from lib_dolphin.reporting import *
 from lib_dolphin.eval import *
+from lib_dolphin.sequencing import *
 from collections import namedtuple
 
 from scipy.io.wavfile import read, write
@@ -298,6 +299,40 @@ def slice_intersting(audio_file, out, processing_window = 44100):
         name = "{}_{}.wav".format(audio_file.split("/")[-1].replace('.wav', ''), start)
         write('{}/{}'.format(out, name), 44100, x[start:stop].astype(np.int16)) 
         
+
+def grammar_induction(folder, outfilename, by_type=True, rle=True):
+    files = [(f, "{}/{}".format(folder, f)) for f in os.listdir(folder) if f.endswith('.csv')]
+    sequences = extract_sequences(files)
+    
+    mapping   = {}
+    cur       = 0 
+    strings   = []
+    offsets   = []
+    filenames = []
+    for sequence in sequences:
+        if by_type:
+            seq = [symbol.type for symbol in sequence.symbols]
+        else:
+            seq = [symbol.id for symbol in sequence.symbols]
+        string = ""
+        for symbol in seq:
+            if symbol not in mapping:
+                mapping[symbol] = cur
+                cur += 1
+            char = chr(97 + mapping[symbol])    
+            if rle and (len(string) == 0 or string[-1] != char):
+                string += char
+        strings.append(string)
+        offsets.append(sequence.offset)
+        filenames.append(sequence.file)
+    df = pd.DataFrame({
+        'string': strings,
+        'filename': filenames,
+        'offset': offsets
+    })
+    df.to_csv(outfilename)
+    print(mapping, len(mapping))
+
     
 if __name__ == '__main__':
     print("=====================================")
@@ -330,12 +365,19 @@ if __name__ == '__main__':
         with open("result_clusters.html", "w") as fp:
             fp.write(template(ids, out, wavfiles, csv, ips, True))
         with open("result_type.html", "w") as fp:
-            fp.write(template(ids, out, wavfiles, csv, ips, False))         
+            fp.write(template(ids, out, wavfiles, csv, ips, False))
+    elif len(sys.argv) == 6 and sys.argv[1] == 'induce':
+        path = sys.argv[2]
+        outfile = sys.argv[3]
+        by_type = sys.argv[4] == 'type'
+        rle = sys.argv[5] == 'rle'
+        grammar_induction(path, outfile, by_type, rle)
     else:
         print("""
             Usage:
                 + train:  python pipeline.py train LABEL_FILE AUDIO_FILE NOISE_FILE OUT_FOLDER
                 + test:   python pipeline.py test FOLDER OUT
+                + induce: python pipeline.py induce FOLDER OUT_FILE [type|cluster] [rle|full]
                 + slice:  python pipeline.py slice AUDIO_FILE OUT_FOLDER
         """)
     print("\n=====================================")

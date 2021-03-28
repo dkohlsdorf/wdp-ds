@@ -40,4 +40,4 @@ def ngram_stream(file, n):
             if len(ngram) > n:
                 ngram = ngram[-n:]
             if len(ngram) == n:
-                yield ngram
+                yield row['filename'], row['offset'], ngram

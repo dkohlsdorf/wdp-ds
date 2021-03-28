@@ -20,3 +20,4 @@ The models from [IJCNN20](https://arxiv.org/abs/2005.07623) are [here](https://g
 + numpy / scipy
 + nmslib
 + numba
++ scikit-sequitur

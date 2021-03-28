@@ -300,12 +300,10 @@ def slice_intersting(audio_file, out, processing_window = 44100):
         write('{}/{}'.format(out, name), 44100, x[start:stop].astype(np.int16)) 
         
 
-def grammar_induction(folder, outfilename, by_type=True, rle=True):
+def sequenced(folder, outfilename, by_type=True, rle=True):
     files = [(f, "{}/{}".format(folder, f)) for f in os.listdir(folder) if f.endswith('.csv')]
     sequences = extract_sequences(files)
-    
-    mapping   = {}
-    cur       = 0 
+
     strings   = []
     offsets   = []
     filenames = []
@@ -314,15 +312,12 @@ def grammar_induction(folder, outfilename, by_type=True, rle=True):
             seq = [symbol.type for symbol in sequence.symbols]
         else:
             seq = [symbol.id for symbol in sequence.symbols]
-        string = ""
+            
+        strg = []
         for symbol in seq:
-            if symbol not in mapping:
-                mapping[symbol] = cur
-                cur += 1
-            char = chr(97 + mapping[symbol])    
-            if rle and (len(string) == 0 or string[-1] != char):
-                string += char
-        strings.append(string)
+            if rle and (len(strg) == 0 or strg[-1] != symbol):
+                strg.append(symbol)
+        strings.append(",".join(strg))
         offsets.append(sequence.offset)
         filenames.append(sequence.file)
     df = pd.DataFrame({
@@ -330,8 +325,7 @@ def grammar_induction(folder, outfilename, by_type=True, rle=True):
         'filename': filenames,
         'offset': offsets
     })
-    df.to_csv(outfilename)
-    print(mapping, len(mapping))
+    df.to_csv(outfilename, index=False)
 
     
 if __name__ == '__main__':
@@ -371,7 +365,7 @@ if __name__ == '__main__':
         outfile = sys.argv[3]
         by_type = sys.argv[4] == 'type'
         rle = sys.argv[5] == 'rle'
-        grammar_induction(path, outfile, by_type, rle)
+        sequenced(path, outfile, by_type, rle)
     else:
         print("""
             Usage:

@@ -42,10 +42,10 @@ BATCH        = 25
 EPOCHS       = 25
 
 N_DIST       = 10000
-PERC_TH      = 5
+PERC_TH      = 5      # TODO Push Up Threshold
 
 IP_RADIUS    = 6
-IP_DB_TH     = 1.5
+IP_DB_TH     = 1.0
 
 KNN          = 25
 PROC_BATCH   = 1000    
@@ -218,7 +218,10 @@ def apply_model(file, model):
                 ip.append({"t": t, "f": f + FFT_LO})
                 
     offsets = [o for o,p in zip(offsets, patches) if p.shape == (T, D)]
-    patches = np.stack([p for p in patches if p.shape == (T, D)])
+    patches = [p for p in patches if p.shape == (T, D)]
+    if len(patches) == 0:
+        return None
+    patches = np.stack(patches)
     patches = patches.reshape((len(patches), T, D, 1))
 
     reverse   = dict([(v, k) for k, v in model.label_dict.items()])
@@ -254,21 +257,23 @@ def apply_model_files(files, out_folder="output", ignore_th=True):
     csv = []
     ips = []
     for file in files:
-        annotations, ip = apply_model(file, model)
-        name = "{}/{}".format(out_folder, file.split("/")[-1].replace('.wav', '.csv'))        
-        print("Processing {} to {}".format(file, name))
-        df = pd.DataFrame({
-            'labels':     [label   for label, _, _, _, _, _, _   in annotations],
-            'knn':        [label   for _, label, _, _, _, _, _   in annotations],
-            'cluster':    [cluster for _, _, cluster, _, _, _, _ in annotations],
-            'start':      [start   for _, _, _, start, _, _, _   in annotations],
-            'stop':       [stop    for _, _, _, _, stop, _, _    in annotations],
-            'prob':       [prob    for _, _, _, _, _, prob, _    in annotations],
-            'density':    [dens    for _, _, _, _, _, _, dens    in annotations]
-        })
-        df.to_csv(name, index=False)
-        csv.append(name)
-        ips.append(ip)
+        res = apply_model(file, model)
+        if res is not None:
+            annotations, ip = res
+            name = "{}/{}".format(out_folder, file.split("/")[-1].replace('.wav', '.csv'))        
+            print("Processing {} to {}".format(file, name))
+            df = pd.DataFrame({
+                'labels':     [label   for label, _, _, _, _, _, _   in annotations],
+                'knn':        [label   for _, label, _, _, _, _, _   in annotations],
+                'cluster':    [cluster for _, _, cluster, _, _, _, _ in annotations],
+                'start':      [start   for _, _, _, start, _, _, _   in annotations],
+                'stop':       [stop    for _, _, _, _, stop, _, _    in annotations],
+                'prob':       [prob    for _, _, _, _, _, prob, _    in annotations],
+                'density':    [dens    for _, _, _, _, _, _, dens    in annotations]
+            })
+            df.to_csv(name, index=False)
+            csv.append(name)
+            ips.append(ip)
     return csv, ips
 
 
@@ -353,7 +358,7 @@ if __name__ == '__main__':
         path = sys.argv[2]
         out  = sys.argv[3]
 
-        wavfiles = ["{}/{}".format(path, filename) for filename in os.listdir(path) if filename.endswith('.wav')]
+        wavfiles = ["{}/{}".format(path, filename) for filename in os.listdir(path) if filename.endswith('.wav')]    
         csv,ips  = apply_model_files(wavfiles, out)
         ids      = ["annotations_{}".format(i) for i in range(0, len(csv))]
         with open("result_clusters.html", "w") as fp:

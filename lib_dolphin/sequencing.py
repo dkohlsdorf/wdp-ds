@@ -41,3 +41,6 @@ def ngram_stream(file, n):
                 ngram = ngram[-n:]
             if len(ngram) == n:
                 yield row['filename'], row['offset'], ngram
+
+
+# TODO abl form thesis                

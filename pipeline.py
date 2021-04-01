@@ -28,7 +28,7 @@ LABELS = set([
 FFT_STEP     = 128
 FFT_WIN      = 512
 FFT_HI       = 180
-FFT_LO       = 20
+FFT_LO       = 60
 
 D            = FFT_WIN // 2 - FFT_LO - (FFT_WIN // 2 - FFT_HI)
 RAW_AUDIO    = 5120
@@ -45,7 +45,7 @@ N_DIST       = 10000
 PERC_TH      = 5      # TODO Push Up Threshold
 
 IP_RADIUS    = 6
-IP_DB_TH     = 1.0
+IP_DB_TH     = 3.5
 
 KNN          = 25
 PROC_BATCH   = 1000    
@@ -200,8 +200,8 @@ def process_batch(batch, batch_off, model, reverse):
 
     
 def apply_model(file, model):   
-    x = raw(file)
-    s = spectrogram(x, lo=FFT_LO, hi=FFT_HI, win=FFT_WIN, step=FFT_STEP)
+    x  = raw(file)
+    s  = spectrogram(x, lo=FFT_LO, hi=FFT_HI, win=FFT_WIN, step=FFT_STEP)
     r = T // 2
     
     offsets = []

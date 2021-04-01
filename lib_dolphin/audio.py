@@ -13,14 +13,17 @@ def raw(path):
     return x
 
 
-def spectrogram(audio, lo = 20, hi = 200, win = 512, step=128):
+def spectrogram(audio, lo = 20, hi = 200, win = 512, step=128, normalize=True):
     spectrogram = []
     hanning = np.hanning(win)
     for i in range(win, len(audio), step):
         dft = np.abs(fft(audio[i - win: i] * hanning))
-        mu  = np.mean(dft)
-        std = np.std(dft) + 1.0
-        spectrogram.append((dft - mu) / std)        
+        if normalize:
+            mu  = np.mean(dft)
+            std = np.std(dft) + 1.0
+            spectrogram.append((dft - mu) / std)
+        else:
+            spectrogram.append(dft)        
     spectrogram = np.array(spectrogram)[:, win//2:][:, lo:hi]
     return spectrogram
 

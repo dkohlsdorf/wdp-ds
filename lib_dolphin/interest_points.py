@@ -12,7 +12,9 @@ def is_interest_point(spectrogram, t, f, radius, threshold):
     max_time          = np.max(spectrogram[t - radius : t + radius, f])
     max_freq          = np.max(spectrogram[t, f - radius : f + radius])
     noise             = (1.0 / (2.0 * radius)) * min(neighborhood_time, neighborhood_freq)
-    return spectrogram[t,f] > max(max_time, max_freq) or spectrogram[t,f] > noise + threshold
+    local_max         = spectrogram[t,f] >= max(max_time, max_freq) 
+    high_energy       = spectrogram[t,f] >= noise + threshold
+    return local_max or high_energy 
 
 
 @jit(nopython=True)

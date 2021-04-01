@@ -371,12 +371,15 @@ if __name__ == '__main__':
         by_type = sys.argv[4] == 'type'
         rle = sys.argv[5] == 'rle'
         print("Params: {} {}".format(by_type, rle))
-        sequenced(path, outfile, by_type, rle)
-        for filename, offset, ngram in ngram_stream(outfile, 3):
-            ngram_key = " ".join(ngram)
-            id_key    = "{}_{}".format(filename, offset)
-            print(id_key, ngram_key)
+
+        #sequenced(path, outfile, by_type, rle)
+        #for filename, offset, ngram in ngram_stream(outfile, 3):
+        #    ngram_key = " ".join(ngram)
+        #    id_key    = "{}_{}".format(filename, offset)
+        #    print(id_key, ngram_key)
+
         rules_abl(outfile)
+        
     else:
         print("""
             Usage:

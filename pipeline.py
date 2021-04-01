@@ -365,7 +365,7 @@ if __name__ == '__main__':
             fp.write(template(ids, out, wavfiles, csv, ips, True))
         with open("result_type.html", "w") as fp:
             fp.write(template(ids, out, wavfiles, csv, ips, False))
-    elif len(sys.argv) == 6 and sys.argv[1] == 'induce':
+    elif len(sys.argv) == 6 and sys.argv[1] == 'sequenced':
         path = sys.argv[2]
         outfile = sys.argv[3]
         by_type = sys.argv[4] == 'type'
@@ -376,12 +376,13 @@ if __name__ == '__main__':
             ngram_key = " ".join(ngram)
             id_key    = "{}_{}".format(filename, offset)
             print(id_key, ngram_key)
+        rules_abl(outfile)
     else:
         print("""
             Usage:
-                + train:  python pipeline.py train LABEL_FILE AUDIO_FILE NOISE_FILE OUT_FOLDER
-                + test:   python pipeline.py test FOLDER OUT
-                + induce: python pipeline.py induce FOLDER OUT_FILE [type|cluster] [rle|full]
-                + slice:  python pipeline.py slice AUDIO_FILE OUT_FOLDER
+                + train:     python pipeline.py train LABEL_FILE AUDIO_FILE NOISE_FILE OUT_FOLDER
+                + test:      python pipeline.py test FOLDER OUT
+                + sequenced: python pipeline.py sequenced FOLDER OUT_FILE [type|cluster] [rle|full]
+                + slice:     python pipeline.py slice AUDIO_FILE OUT_FOLDER
         """)
     print("\n=====================================")

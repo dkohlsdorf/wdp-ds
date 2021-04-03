@@ -42,7 +42,7 @@ BATCH        = 25
 EPOCHS       = 25
 
 N_DIST       = 10000
-PERC_TH      = 5      # TODO Push Up Threshold
+PERC_TH      = 5      
 
 IP_RADIUS    = 6
 IP_DB_TH     = 3.5
@@ -377,8 +377,9 @@ if __name__ == '__main__':
         #    ngram_key = " ".join(ngram)
         #    id_key    = "{}_{}".format(filename, offset)
         #    print(id_key, ngram_key)
-
-        rules_abl(outfile)
+        
+        #for dist, matches, rules in rules_abl_stream(outfile):
+        #    print(dist, matches, rules)
         
     else:
         print("""

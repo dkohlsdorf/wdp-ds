@@ -48,15 +48,18 @@ def ngram_stream(file, n):
                 yield row['filename'], row['offset'], ngram
 
 
-def rules_abl(file):
+def rules_abl_stream(file):
     df = pd.read_csv(file)
     sequences = []
     for _, row in df.iterrows():
         sequences.append(np.array(row['string'].split(',')))
-    score, path = align(sequences[10], sequences[10])
-    print("SCORE: {}".format(score))
-    for op, a, b, i, j in path:
-        print("{}: {} {} {} {}".format(op, a, b, i, j))
+    n = len(sequences)
+    for i in range(0, n):
+        for j in range(i + 1, n):
+            distance, path = align(sequences[i], sequences[j])
+            r = RegexpNode.from_alignment(path)
+            n_matches = len([op for op, _, _ in path if op == MATCH])            
+            yield distance, n_matches, r
 
 
 @jit(nopython=True)
@@ -121,7 +124,7 @@ def align(x, y):
         if op == MATCH and x[i - 1] != y[j - 1]:
             op = SUBSTITUTE
 
-        path.append([op, x[i - 1], y[j - 1], i, j])
+        path.append([op, x[i - 1], y[j - 1]])
 
         if op == DELETE:
             i -= 1
@@ -131,10 +134,101 @@ def align(x, y):
             i -= 1
             j -= 1
     while i > 0:
-        path.append([DELETE, x[i - 1], y[j], i, j])
+        path.append([DELETE, x[i - 1], y[j]])
         i -= 1
     while j > 0:
-        path.append([INSERT, x[i], y[j - 1], i ,j])
+        path.append([INSERT, x[i], y[j - 1]])
         j -= 1
     path.reverse()
     return dp[n, m], path
+
+
+AND_SYMBOL    = -1
+OR_SYMBOL     = -2
+DONT_CARE     = -3
+REPEAT        = -4
+
+
+class RegexpNode:
+    
+    def __init__(self, symbol, children = []):
+        self.symbol = symbol
+        self.children = children
+
+    @property
+    def is_leaf(self):
+        return len(self.children) == 0
+    
+    @property
+    def repeat_any(self):
+        if self.symbol == REPEAT:
+            if len(self.children) == 1:
+                return self.children[0].is_leaf and self.children[0].symbol == DONT_CARE
+        return False
+        
+    @classmethod
+    def from_alignment(cls, alignment, last = None):
+        REPEAT_ANY = cls(REPEAT, [cls(DONT_CARE)])
+        
+        op, x, y = alignment[0]
+        if op == MATCH:
+            symbol = cls(x)
+        elif op == SUBSTITUTE:
+            symbol = cls(OR_SYMBOL, [cls(x), cls(y)])
+        elif op == INSERT or op == DELETE:
+            symbol = cls(REPEAT, [cls(DONT_CARE)])
+        if len(alignment) == 1:
+            print(symbol, last)
+            if symbol.repeat_any and last.repeat_any:
+                return None
+            else:
+                return symbol
+        else:            
+            if last is not None and symbol.repeat_any and last.repeat_any:
+                next_symbol = RegexpNode.from_alignment(alignment[1:], last)
+                return next_symbol
+            next_symbol = RegexpNode.from_alignment(alignment[1:], symbol)
+            if next_symbol is None:
+                return symbol
+            return cls(AND_SYMBOL, [symbol, next_symbol])
+        
+
+    def __str__(self):
+        if self.is_leaf:
+            if self.symbol == DONT_CARE:
+                return "."
+            return str(self.symbol)
+        elif self.symbol == AND_SYMBOL:
+            return str(self.children[0]) + str(self.children[1])
+        elif self.symbol == OR_SYMBOL:
+            return "(" + str(self.children[0]) + "|" + str(self.children[1]) + ")"
+        elif self.symbol == REPEAT:
+            return "(" + str(self.children[0]) + ")" + "+"
+
+
+def match(string, regexp, depth = 0):
+    if regexp.is_leaf and regexp.symbol != DONT_CARE:
+        return len(string) == 1 and regexp.symbol == string[0]
+    elif regexp.symbol == DONT_CARE:
+        return len(string) == 1
+    elif regexp.symbol == AND_SYMBOL:
+        assert len(regexp.children) == 2
+        result = False
+        for i in range(0, len(string) + 1):
+            result = result or match(string[0:i], regexp.children[0], depth + 1) and match(string[i: len(string)], regexp.children[1], depth + 1)
+        return result
+    elif regexp.symbol == OR_SYMBOL:
+        assert len(regexp.children) == 2
+        result = match(string, regexp.children[0], depth + 1) or match(string, regexp.children[1], depth + 1)
+        return result
+    elif regexp.symbol == REPEAT:
+        if len(string) > 0:
+            matches = -1
+            for i in range(0, len(string) + 1):
+                if match(string[0: i], regexp.children[0], depth + 1):
+                    matches = i
+            if matches < 0:
+                print("Jo")
+                return False
+            return match(string[matches: len(string)], regexp, depth + 1)
+        return True

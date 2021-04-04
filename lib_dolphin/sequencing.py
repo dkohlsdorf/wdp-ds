@@ -7,9 +7,19 @@ from numba import jit
 from collections import namedtuple
 
 
-Symbol   = namedtuple('Symbol', 'id type')
-Sequence = namedtuple('Sequence', 'symbols file offset')
+Symbol     = namedtuple('Symbol', 'id type')
+Sequence   = namedtuple('Sequence', 'symbols file offset')
 
+class RuleMatch(namedtuple('RuleMatch', 'filename offset rule')):
+
+    @property
+    def position_id(self):
+        return "filename:{}_offset:{}".format(self.filename, self.offset)
+
+    @property
+    def rule_id(self):
+        return str(self.rule)
+    
 
 def extract_id(filename):
     fn = filename.replace(' ', '_')
@@ -45,21 +55,33 @@ def ngram_stream(file, n):
             if len(ngram) > n:
                 ngram = ngram[-n:]
             if len(ngram) == n:
-                yield row['filename'], row['offset'], ngram
+                rule_match = RuleMatch(row['filename'], row['offset'], ngram)
+                yield rule_match
 
 
-def rules_abl_stream(file):
+def rules_abl_stream(file, min_matches = 5):
     df = pd.read_csv(file)
     sequences = []
     for _, row in df.iterrows():
         sequences.append(np.array(row['string'].split(',')))
     n = len(sequences)
+    rules = []
+    closed = set([])
     for i in range(0, n):
         for j in range(i + 1, n):
             distance, path = align(sequences[i], sequences[j])
             r = RegexpNode.from_alignment(path)
-            n_matches = len([op for op, _, _ in path if op == MATCH])            
-            yield distance, n_matches, r
+            n_matches = len([op for op, _, _ in path if op == MATCH])
+            if n_matches >= min_matches and str(r) not in closed:
+                rules.append(r)
+                closed.add(str(r))
+    print("#Rules = {}".format(len(rules)))
+    for _, row in df.iterrows():
+        for rule in rules:
+            strg = row['string'].split(',')
+            if match(strg, rule):
+                rule_match = RuleMatch(row['filename'], row['offset'], rule)
+                yield rule_match
 
 
 @jit(nopython=True)
@@ -178,7 +200,6 @@ class RegexpNode:
         elif op == INSERT or op == DELETE:
             symbol = cls(REPEAT, [cls(DONT_CARE)])
         if len(alignment) == 1:
-            print(symbol, last)
             if symbol.repeat_any and last.repeat_any:
                 return None
             else:
@@ -197,13 +218,13 @@ class RegexpNode:
         if self.is_leaf:
             if self.symbol == DONT_CARE:
                 return "."
-            return str(self.symbol)
+            return str(self.symbol) + " "
         elif self.symbol == AND_SYMBOL:
             return str(self.children[0]) + str(self.children[1])
         elif self.symbol == OR_SYMBOL:
             return "(" + str(self.children[0]) + "|" + str(self.children[1]) + ")"
         elif self.symbol == REPEAT:
-            return "(" + str(self.children[0]) + ")" + "+"
+            return "(" + str(self.children[0]) + ")" + "+ "
 
 
 def match(string, regexp, depth = 0):
@@ -228,7 +249,6 @@ def match(string, regexp, depth = 0):
                 if match(string[0: i], regexp.children[0], depth + 1):
                     matches = i
             if matches < 0:
-                print("Jo")
                 return False
             return match(string[matches: len(string)], regexp, depth + 1)
         return True

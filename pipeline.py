@@ -50,7 +50,10 @@ IP_DB_TH     = 3.5
 KNN          = 25
 PROC_BATCH   = 1000    
 
-SUPERVISED = True
+SUPERVISED   = True
+
+MIN_NGRAM    = 1
+MAX_NGRAM    = 5
 
 
 def train(label_file, wav_file, noise_file, out_folder="output", labels = LABELS, perc_test=0.25):
@@ -332,6 +335,10 @@ def sequenced(folder, outfilename, by_type=True, rle=True):
     })
     df.to_csv(outfilename, index=False)
 
+
+def feature_extraction(outfile):
+    pass
+
     
 if __name__ == '__main__':
     print("=====================================")
@@ -365,28 +372,30 @@ if __name__ == '__main__':
             fp.write(template(ids, out, wavfiles, csv, ips, True))
         with open("result_type.html", "w") as fp:
             fp.write(template(ids, out, wavfiles, csv, ips, False))
-    elif len(sys.argv) == 6 and sys.argv[1] == 'sequenced':
-        path = sys.argv[2]
-        outfile = sys.argv[3]
-        by_type = sys.argv[4] == 'type'
-        rle = sys.argv[5] == 'rle'
+    elif len(sys.argv) == 7 and sys.argv[1] == 'sequenced':
+        path     = sys.argv[2]
+        outfile  = sys.argv[3]
+        features = sys.argv[4]
+        by_type  = sys.argv[5] == 'type'
+        rle      = sys.argv[6] == 'rle'
         print("Params: {} {}".format(by_type, rle))
 
         #sequenced(path, outfile, by_type, rle)
-        #for filename, offset, ngram in ngram_stream(outfile, 3):
-        #    ngram_key = " ".join(ngram)
-        #    id_key    = "{}_{}".format(filename, offset)
-        #    print(id_key, ngram_key)
-        
-        #for dist, matches, rules in rules_abl_stream(outfile):
-        #    print(dist, matches, rules)
-        
+        rules = []
+        for n in range(MIN_NGRAM, MAX_NGRAM):
+            for rule in ngram_stream(outfile, n):
+                rules.append(rule)
+        print("#Rules ngrams: {}".format(len(rules)))
+        for rule in rules_abl_stream(outfile):
+            rules.append(rule)
+        print("#Rules ngrams and abl: {}".format(len(rules)))
+        pkl.dump(rules, open(features, 'wb'))
     else:
         print("""
             Usage:
                 + train:     python pipeline.py train LABEL_FILE AUDIO_FILE NOISE_FILE OUT_FOLDER
                 + test:      python pipeline.py test FOLDER OUT
-                + sequenced: python pipeline.py sequenced FOLDER OUT_FILE [type|cluster] [rle|full]
+                + sequenced: python pipeline.py sequenced FOLDER OUT_FILE FEATURE_FILE [type|cluster] [rle|full]
                 + slice:     python pipeline.py slice AUDIO_FILE OUT_FOLDER
         """)
     print("\n=====================================")

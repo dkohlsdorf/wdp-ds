@@ -79,12 +79,14 @@ def rules_abl_stream(file, min_matches = 5):
                 closed.add(str(r))
     print("#Rules = {}".format(len(rules)))
     for i, row in df.iterrows():
+        n_matches = 0
         strg = row['string'].split(',')
         print("Processing: {} / {} [{}]".format(i, len(df), len(strg)))
         for j, rule in enumerate(rules):
             if j % 100 == 0:
-                print("\t\t... rule {}".format(j))
+                print("\t\t... rule {} .. natches {}".format(j, n_matches))
             if match(strg, rule):
+                n_matches += 1
                 rule_match = RuleMatch(row['filename'], row['offset'], rule)
                 yield rule_match
 
@@ -231,7 +233,7 @@ class RegexpNode:
         elif self.symbol == REPEAT:
             return "(" + str(self.children[0]) + ")" + "+ "
 
-
+# TODO convert to iterative and cythonize
 def match(string, regexp, depth = 0):
     if regexp.is_leaf and regexp.symbol != DONT_CARE:
         return len(string) == 1 and regexp.symbol == string[0]

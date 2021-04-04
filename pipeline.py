@@ -380,7 +380,7 @@ if __name__ == '__main__':
         rle      = sys.argv[6] == 'rle'
         print("Params: {} {}".format(by_type, rle))
 
-        #sequenced(path, outfile, by_type, rle)
+        sequenced(path, outfile, by_type, rle)
         rules = []
         for n in range(MIN_NGRAM, MAX_NGRAM):
             for rule in ngram_stream(outfile, n):

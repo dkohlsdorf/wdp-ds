@@ -79,9 +79,11 @@ def rules_abl_stream(file, min_matches = 5):
                 closed.add(str(r))
     print("#Rules = {}".format(len(rules)))
     for i, row in df.iterrows():
-        print("Processing: {} / {}".format(i, len(df)))
-        for rule in rules:
-            strg = row['string'].split(',')
+        strg = row['string'].split(',')
+        print("Processing: {} / {} [{}]".format(i, len(df), len(strg)))
+        for j, rule in enumerate(rules):
+            if j % 100 == 0:
+                print("\t\t... rule {}".format(j))
             if match(strg, rule):
                 rule_match = RuleMatch(row['filename'], row['offset'], rule)
                 yield rule_match
@@ -251,7 +253,7 @@ def match(string, regexp, depth = 0):
             for i in range(0, len(string) + 1):
                 if match(string[0: i], regexp.children[0], depth + 1):
                     matches = i
-            if matches < 1:
+            if matches < 0:
                 return False
             return match(string[matches: len(string)], regexp, depth + 1)
         return True

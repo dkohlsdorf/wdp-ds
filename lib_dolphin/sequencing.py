@@ -2,10 +2,12 @@ import numba
 import numpy as np
 import pandas as pd
 import os
+import sys
 
 from numba import jit
 from collections import namedtuple
 
+sys.setrecursionlimit(1500)
 
 Symbol     = namedtuple('Symbol', 'id type')
 Sequence   = namedtuple('Sequence', 'symbols file offset')
@@ -67,7 +69,7 @@ def rules_abl_stream(file, min_matches = 5):
     n = len(sequences)
     rules = []
     closed = set([])
-    for i in range(0, n):
+    for i in range(0, n):        
         for j in range(i + 1, n):
             distance, path = align(sequences[i], sequences[j])
             r = RegexpNode.from_alignment(path)
@@ -76,7 +78,8 @@ def rules_abl_stream(file, min_matches = 5):
                 rules.append(r)
                 closed.add(str(r))
     print("#Rules = {}".format(len(rules)))
-    for _, row in df.iterrows():
+    for i, row in df.iterrows():
+        print("Processing: {} / {}".format(i, len(df)))
         for rule in rules:
             strg = row['string'].split(',')
             if match(strg, rule):
@@ -248,7 +251,7 @@ def match(string, regexp, depth = 0):
             for i in range(0, len(string) + 1):
                 if match(string[0: i], regexp.children[0], depth + 1):
                     matches = i
-            if matches < 0:
+            if matches < 1:
                 return False
             return match(string[matches: len(string)], regexp, depth + 1)
         return True

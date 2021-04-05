@@ -11,7 +11,7 @@ from collections import namedtuple
 NGRAM_TYPE = 0
 
 Symbol     = namedtuple('Symbol', 'id type')
-Sequence   = namedtuple('Sequence', 'symbols file offset')
+Sequence   = namedtuple('Sequence', 'symbols starts stops file offset')
 
 class RuleMatch(namedtuple('RuleMatch', 'filename offset rule type')):
 
@@ -41,10 +41,16 @@ def extract_sequences(files):
         offset        = extract_offset(file)                
         df            = pd.read_csv(path)
         symbols = []
+        starts  = []
+        stops   = []
         for i, row in df.iterrows():
-            s = Symbol(row['cluster'], row['labels'])
+            starts = row['start']
+            stops  = row['stop']
+            s      = Symbol(row['cluster'], row['labels'])
             symbols.append(s)
-        sequence = Sequence(symbols, shotid, offset)
+            starts.append(starts)
+            stops.append(stops)            
+        sequence = Sequence(symbols, starts, stops, shotid, offset)
         sequences.append(sequence)
     return sequences
 

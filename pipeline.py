@@ -309,6 +309,7 @@ def slice_intersting(audio_file, out, processing_window = 44100):
         
 
 def sequenced(folder, outfilename, by_type=True, rle=True):
+    # TODO can we include start and stop of compression and ngrams
     files = [(f, "{}/{}".format(folder, f)) for f in os.listdir(folder) if f.endswith('.csv')]
     sequences = extract_sequences(files)
 

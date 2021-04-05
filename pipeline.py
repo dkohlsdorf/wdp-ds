@@ -335,10 +335,6 @@ def sequenced(folder, outfilename, by_type=True, rle=True):
     })
     df.to_csv(outfilename, index=False)
 
-
-def feature_extraction(outfile):
-    pass
-
     
 if __name__ == '__main__':
     print("=====================================")

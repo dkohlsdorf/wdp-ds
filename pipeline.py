@@ -386,9 +386,6 @@ if __name__ == '__main__':
             for rule in ngram_stream(outfile, n):
                 rules.append(rule)
         print("#Rules ngrams: {}".format(len(rules)))
-        for rule in rules_abl_stream(outfile):
-            rules.append(rule)
-        print("#Rules ngrams and abl: {}".format(len(rules)))
         pkl.dump(rules, open(features, 'wb'))
     else:
         print("""

@@ -385,8 +385,10 @@ if __name__ == '__main__':
         for n in range(MIN_NGRAM, MAX_NGRAM):
             for rule in ngram_stream(outfile, n):
                 rules.append(rule)
-        print("#Rules ngrams: {}".format(len(rules)))
-        pkl.dump(rules, open(features, 'wb'))
+        idf   = idf_extractor(rules, lambda x: x.position_id)
+        tfidf = tfidf_extractor(rules,  idf, lambda x: x.position_id)
+        print("#Rules ngrams: {}".format(len(idf)))
+        pkl.dump(tfidf, open(features, 'wb'))
     else:
         print("""
             Usage:

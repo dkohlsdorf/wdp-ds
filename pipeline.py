@@ -80,7 +80,6 @@ def train(label_file, wav_file, noise_file, out_folder="output", labels = LABELS
                 y_test.append(labels[i])
             else:
                 y_test.append(instances[i])
-
         else:            
             x_train.append(instances_inp[i])
             if SUPERVISED:

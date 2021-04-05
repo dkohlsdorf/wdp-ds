@@ -44,9 +44,9 @@ def extract_sequences(files):
         starts  = []
         stops   = []
         for i, row in df.iterrows():
-            starts = row['start']
-            stops  = row['stop']
-            s      = Symbol(row['cluster'], row['labels'])
+            start = row['start']
+            stop  = row['stop']
+            s     = Symbol(row['cluster'], row['labels'])
             symbols.append(s)
             starts.append(starts)
             stops.append(stops)            

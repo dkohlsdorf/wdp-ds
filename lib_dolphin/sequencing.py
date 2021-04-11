@@ -13,8 +13,8 @@ class Symbol(namedtuple('Symbol', 'id type start stop')):
     def __str__(self):
         return "{}:{}".format(self.id, self.type)
 
-INSERTION = 1
-DELETION  = 2
+INSERT    = 1
+DELETE    = 2
 MATCH_ID  = 3
 MATCH_T   = 4
 SUBS      = 5
@@ -92,7 +92,7 @@ class Sequence(namedtuple('Sequence', 'symbols file offset')):
                 elif types_a[i - 1] == types_b[j - 1]:
                     op = MATCH_T
                 else:
-                    op = MATCH
+                    op = SUBS
             path.append([op, x[i - 1], y[j - 1]])
 
             if op == DELETE:

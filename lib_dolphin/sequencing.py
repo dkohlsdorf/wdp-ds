@@ -1,4 +1,3 @@
-import numba
 import numpy as np
 import pandas as pd
 import os
@@ -8,41 +7,64 @@ import math
 from numba import jit
 from collections import namedtuple
 
-NGRAM_TYPE = 0
 
+Symbol = namedtuple('Symbol', 'id type start stop') 
 
-class Symbol(namedtuple('Symbol', 'id type start stop')):
+@jit(nopython=True)        
+def max3(a, b, c):    
+    x = a
+    if b > x:
+        x = b
+    if c > x:
+        x = c
+    return x
+        
+@jit(nopython=True)
+def similarity(symbol_a, type_a, symbol_b, type_b):
+    if symbol_a == symbol_b:
+        return 1.0
+    elif type_a == type_b:
+        return 0.5
+    else:
+        return -1.0
 
-    def eq(self, other, by_type):
-        if by_type:
-            return self.type == other.type
-        else:
-            return self.id == other.id
+@jit(nopython=True)
+def needleman_wunsch(symbols_a, symbols_b, types_a, types_b, gap = -1):        
+    N = len(symbols_a)
+    M = len(symbols_b)
+    dp = np.zeros((N + 1, M + 1))
+    dp[0,0] = 0.0
+    dp[1:, 0] = -np.arange(1, N + 1)
+    dp[0, 1:] = -np.arange(1, M + 1)
+    for i in range(1, N + 1):
+        for j in range(1, M + 1):
+            dp[i, j] = max3(
+                dp[i - 1, j - 1] + similarity(symbols_a[i - 1], types_a[i - 1], symbols_b[j - 1], types_b[j - 1]),
+                dp[i - 1, j] + gap, 
+                dp[i, j - 1] + gap
+            )
+    return dp[N, M]
 
-    def merge(self, other):
-        return Symbol(self.id, self.type, self.start, other.stop)
-
-    def string(self, by_type):
-        if by_type:
-            return "{}:{}:{}".format(self.type, self.start, self.stop)
-        else:
-            return "{}:{}:{}".format(self.id, self.start, self.stop)
-
-
-Sequence = namedtuple('Sequence', 'symbols file offset')
-
-
-class RuleMatch(namedtuple('RuleMatch', 'filename offset rule type start stop')):
-
-    @property
-    def position_id(self):
-        return "filename:{}_offset:{}".format(self.filename, self.offset)
-
-    @property
-    def rule_id(self):
-        return str(self.rule)
+        
+class Sequence(namedtuple('Sequence', 'symbols file offset')):
     
-
+    @property
+    def rle(self):
+        compressed = []
+        for symbol in self.symbols:
+            if len(compressed) == 0 or symbol.id != compressed[-1].id or symbol.type != compressed[-1].type:
+                compressed.append(symbol)
+        return compressed
+    
+    def similarity(self, other, gap = -1):     
+        a = self.rle
+        b = other.rle
+        return needleman_wunsch(np.array([symbol.id for symbol in a]),
+                                np.array([symbol.id for symbol in b]),
+                                np.array([symbol.type for symbol in a]),
+                                np.array([symbol.type for symbol in b]))
+        
+        
 def extract_id(filename):
     fn = filename.replace(' ', '_')
     return fn.split('_')[0]
@@ -66,27 +88,3 @@ def extract_sequences(files):
         sequence = Sequence(symbols, shotid, offset)
         sequences.append(sequence)
     return sequences
-
-
-def ngram_stream(file, n):
-    df = pd.read_csv(file)
-    for _, row in df.iterrows():
-        ngram         = []
-        starts        = []
-        stops         = []
-        for symbol in row['string'].split(','):
-            cmp = symbol.split(":")
-            sid   = cmp[0]
-            start = cmp[1]
-            stop  = cmp[2] 
-
-            ngram.append(sid)
-            starts.append(start)
-            stops.append(stop)
-            if len(ngram) > n:
-                ngram  = ngram[-n:]
-                starts = starts[-n:]
-                stops  = stops[-n:] 
-            if len(ngram) == n:
-                rule_match = RuleMatch(row['filename'], row['offset'], ngram, NGRAM_TYPE, starts[0], stops[-1])
-                yield rule_match

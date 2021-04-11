@@ -52,9 +52,6 @@ PROC_BATCH   = 1000
 
 SUPERVISED   = True
 
-MIN_NGRAM    = 1
-MAX_NGRAM    = 5
-
 
 def train(label_file, wav_file, noise_file, out_folder="output", labels = LABELS, perc_test=0.25):
     windows, instances, labels, label_dict = dataset_supervised(
@@ -307,33 +304,9 @@ def slice_intersting(audio_file, out, processing_window = 44100):
         write('{}/{}'.format(out, name), 44100, x[start:stop].astype(np.int16)) 
         
 
-def sequenced(folder, outfilename, by_type=True, rle=True):
+def sequenced(folder):
     files = [(f, "{}/{}".format(folder, f)) for f in os.listdir(folder) if f.endswith('.csv')]
-    sequences = extract_sequences(files)
-
-    strings   = []
-    offsets   = []
-    filenames = []
-    times     = []
-    for sequence in sequences:
-        current = sequence.symbols[0]
-        strg = []        
-        for symbol in sequence.symbols[1:]:
-            if not rle or not current.eq(symbol, by_type):
-                strg.append(current)
-                current = symbol
-            else:
-                current.merge(symbol)
-        if len(strg) > 0:
-            strings.append(",".join([s.string(by_type) for s in strg]))
-            offsets.append(sequence.offset)
-            filenames.append(sequence.file)
-    df = pd.DataFrame({
-        'string': strings,
-        'filename': filenames,
-        'offset': offsets
-    })
-    df.to_csv(outfilename, index=False)
+    return extract_sequences(files)
 
     
 if __name__ == '__main__':
@@ -368,26 +341,17 @@ if __name__ == '__main__':
             fp.write(template(ids, out, wavfiles, csv, ips, True))
         with open("result_type.html", "w") as fp:
             fp.write(template(ids, out, wavfiles, csv, ips, False))
-    elif len(sys.argv) == 7 and sys.argv[1] == 'sequenced':
+    elif len(sys.argv) == 4 and sys.argv[1] == 'sequenced':
         path     = sys.argv[2]
-        outfile  = sys.argv[3]
-        features = sys.argv[4]
-        by_type  = sys.argv[5] == 'type'
-        rle      = sys.argv[6] == 'rle'
-        print("Params: {} {}".format(by_type, rle))
-
-        sequenced(path, outfile, by_type, rle)
-        rules = []
-        for n in range(MIN_NGRAM, MAX_NGRAM):
-            for rule in ngram_stream(outfile, n):
-                rules.append(rule)
-        pkl.dump(rules, open(features, 'wb'))
+        features = sys.argv[3]
+        seq = sequenced(path)
+        pkl.dump(seq, open(features, 'wb'))
     else:
         print("""
             Usage:
                 + train:     python pipeline.py train LABEL_FILE AUDIO_FILE NOISE_FILE OUT_FOLDER
                 + test:      python pipeline.py test FOLDER OUT
-                + sequenced: python pipeline.py sequenced FOLDER OUT_FILE FEATURE_FILE [type|cluster] [rle|full]
+                + sequenced: python pipeline.py sequenced FOLDER FEATURE_FILE
                 + slice:     python pipeline.py slice AUDIO_FILE OUT_FOLDER
         """)
     print("\n=====================================")

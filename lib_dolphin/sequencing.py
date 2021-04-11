@@ -10,10 +10,29 @@ from collections import namedtuple
 
 NGRAM_TYPE = 0
 
-Symbol     = namedtuple('Symbol', 'id type')
-Sequence   = namedtuple('Sequence', 'symbols starts stops file offset')
 
-class RuleMatch(namedtuple('RuleMatch', 'filename offset rule type')):
+class Symbol(namedtuple('Symbol', 'id type start stop')):
+
+    def eq(self, other, by_type):
+        if by_type:
+            return self.type == other.type
+        else:
+            return self.id == other.id
+
+    def merge(self, other):
+        return Symbol(self.id, self.type, self.start, other.stop)
+
+    def string(self, by_type):
+        if by_type:
+            return "{}:{}:{}".format(self.type, self.start, self.stop)
+        else:
+            return "{}:{}:{}".format(self.id, self.start, self.stop)
+
+
+Sequence = namedtuple('Sequence', 'symbols file offset')
+
+
+class RuleMatch(namedtuple('RuleMatch', 'filename offset rule type start stop')):
 
     @property
     def position_id(self):
@@ -41,16 +60,10 @@ def extract_sequences(files):
         offset        = extract_offset(file)                
         df            = pd.read_csv(path)
         symbols = []
-        starts  = []
-        stops   = []
         for i, row in df.iterrows():
-            start = row['start']
-            stop  = row['stop']
-            s     = Symbol(row['cluster'], row['labels'])
+            s = Symbol(row['cluster'], row['labels'], row['start'], row['stop'])
             symbols.append(s)
-            starts.append(starts)
-            stops.append(stops)            
-        sequence = Sequence(symbols, starts, stops, shotid, offset)
+        sequence = Sequence(symbols, shotid, offset)
         sequences.append(sequence)
     return sequences
 
@@ -58,46 +71,22 @@ def extract_sequences(files):
 def ngram_stream(file, n):
     df = pd.read_csv(file)
     for _, row in df.iterrows():
-        ngram = []
+        ngram         = []
+        starts        = []
+        stops         = []
         for symbol in row['string'].split(','):
-            ngram.append(symbol)
+            cmp = symbol.split(":")
+            sid   = cmp[0]
+            start = cmp[1]
+            stop  = cmp[2] 
+
+            ngram.append(sid)
+            starts.append(start)
+            stops.append(stop)
             if len(ngram) > n:
-                ngram = ngram[-n:]
+                ngram  = ngram[-n:]
+                starts = starts[-n:]
+                stops  = stops[-n:] 
             if len(ngram) == n:
-                rule_match = RuleMatch(row['filename'], row['offset'], ngram, NGRAM_TYPE)
+                rule_match = RuleMatch(row['filename'], row['offset'], ngram, NGRAM_TYPE, starts[0], stops[-1])
                 yield rule_match
-
-                
-def idf_extractor(rules, id_func):
-    documents = set([])
-    counts    = {}
-    for rule in rules:
-        if rule.rule_id not in counts:
-            counts[rule.rule_id] = set()
-        doc = id_func(rule)
-        counts[rule.rule_id].add(doc)
-        documents.add(doc)
-
-    N   = len(documents)
-    idf = {}
-    for k, v in counts.items():
-        idf[k] = math.log(N / len(v))
-    return idf
-
-
-def tfidf_extractor(rules, idf, id_func):
-    counts = {}
-    for rule in rules:
-        doc = id_func(rule)
-        if doc not in counts:
-            counts[doc] = {}
-        if rule.rule_id not in counts[doc]:
-            counts[doc][rule.rule_id] = 0
-        counts[doc][rule.rule_id] += 1
-    tfidf = {}
-    for doc, freq in counts.items():
-        scaler = sum([c for _, c in freq.items()])
-        frequencies = [(k, c / scaler * idf[k]) for k, c in freq.items()]
-        frequencies = dict(frequencies)
-        tfidf[doc]  = frequencies
-    return tfidf

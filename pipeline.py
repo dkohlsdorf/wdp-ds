@@ -308,26 +308,26 @@ def slice_intersting(audio_file, out, processing_window = 44100):
         
 
 def sequenced(folder, outfilename, by_type=True, rle=True):
-    # TODO can we include start and stop of compression and ngrams
     files = [(f, "{}/{}".format(folder, f)) for f in os.listdir(folder) if f.endswith('.csv')]
     sequences = extract_sequences(files)
 
     strings   = []
     offsets   = []
     filenames = []
+    times     = []
     for sequence in sequences:
-        if by_type:
-            seq = [symbol.type for symbol in sequence.symbols]
-        else:
-            seq = [symbol.id for symbol in sequence.symbols]
-            
-        strg = []
-        for symbol in seq:
-            if not rle or (len(strg) == 0 or strg[-1] != symbol):
-                strg.append(symbol)
-        strings.append(",".join(strg))
-        offsets.append(sequence.offset)
-        filenames.append(sequence.file)
+        current = sequence.symbols[0]
+        strg = []        
+        for symbol in sequence.symbols[1:]:
+            if not rle or not current.eq(symbol, by_type):
+                strg.append(current)
+                current = symbol
+            else:
+                current.merge(symbol)
+        if len(strg) > 0:
+            strings.append(",".join([s.string(by_type) for s in strg]))
+            offsets.append(sequence.offset)
+            filenames.append(sequence.file)
     df = pd.DataFrame({
         'string': strings,
         'filename': filenames,
@@ -381,10 +381,7 @@ if __name__ == '__main__':
         for n in range(MIN_NGRAM, MAX_NGRAM):
             for rule in ngram_stream(outfile, n):
                 rules.append(rule)
-        idf   = idf_extractor(rules, lambda x: x.position_id)
-        tfidf = tfidf_extractor(rules,  idf, lambda x: x.position_id)
-        print("#Rules ngrams: {}".format(len(idf)))
-        pkl.dump(tfidf, open(features, 'wb'))
+        pkl.dump(rules, open(features, 'wb'))
     else:
         print("""
             Usage:

@@ -73,7 +73,7 @@ class Sequence(namedtuple('Sequence', 'symbols file offset')):
         symbols_b = np.array([symbol.id for symbol in b])
         types_a   = np.array([symbol.type for symbol in a])
         types_b   = np.array([symbol.type for symbol in b])
-        dp = needleman_wunsch(symbols_a, symbol_b, types_a, types_b)
+        dp = needleman_wunsch(symbols_a, symbols_b, types_a, types_b)
         i = len(a)
         j = len(b)
         path = []

@@ -41,7 +41,7 @@ BATCH        = 25
 EPOCHS       = 25
 
 N_DIST       = 10000
-PERC_TH      = 25      
+PERC_TH      = 10   
 
 IP_RADIUS    = 6
 IP_DB_TH     = 3.5
@@ -270,7 +270,6 @@ def apply_model_files(files, out_folder="output", ignore_th=True):
             })
             df.to_csv(name, index=False)
             csv.append(name)
-    return csv
         
     
 if __name__ == '__main__':
@@ -287,7 +286,7 @@ if __name__ == '__main__':
         path = sys.argv[2]
         out  = sys.argv[3]
         wavfiles = ["{}/{}".format(path, filename) for filename in os.listdir(path) if filename.endswith('.wav')]    
-        csv,ips  = apply_model_files(wavfiles, out)
+        apply_model_files(wavfiles, out)
     else:
         print("""
             Usage:

@@ -8,13 +8,13 @@ from numba import jit
 from collections import namedtuple
 
 
-class Symbol(namedtuple('Symbol', 'id type start stop')):
+class Symbol(namedtuple('Symbol', 'id type start stop prob')):
     
     def __str__(self):
         return "{}:{}".format(self.id, self.type)
 
     def merge(self, other):
-        return Symbol(self.id, self.type, self.start, other.stop)
+        return Symbol(self.id, self.type, self.start, other.stop, self.prob)
         
         
 INSERT    = 1
@@ -62,11 +62,11 @@ def needleman_wunsch(symbols_a, symbols_b, types_a, types_b, gap = -1):
         
 class Sequence(namedtuple('Sequence', 'symbols file offset')):
     
-    @property
-    def rle(self):
+    def rle(self, prob_th):
+        filtered = [s for s in self.symbols if s.prob > prob_th]
         compressed = []
-        current = self.symbols[0]
-        for symbol in self.symbols[1:]:            
+        current = filtered[0]
+        for symbol in filtered[1:]:            
             if symbol.id != current.id or symbol.type != current.type:
                 compressed.append(current)
                 current = symbol
@@ -74,14 +74,14 @@ class Sequence(namedtuple('Sequence', 'symbols file offset')):
                 current = current.merge(symbol)
         return compressed
     
-    def ngrams(self, n):
-        compressed = self.rle
+    def ngrams(self, n, prob_th=0.75):
+        compressed = self.rle(prob_th)
         for i in range(n, len(compressed)):
             yield compressed[i - n: i]
     
-    def similarity(self, other, gap = -1):     
-        a  = self.rle
-        b  = other.rle
+    def similarity(self, other, gap = -1, prob_th=0.75):     
+        a  = self.rle(prob_th)
+        b  = other.rle(prob_th)
         symbols_a = np.array([symbol.id for symbol in a])
         symbols_b = np.array([symbol.id for symbol in b])
         types_a   = np.array([symbol.type for symbol in a])
@@ -125,7 +125,7 @@ class Sequence(namedtuple('Sequence', 'symbols file offset')):
         return dp[len(a), len(b)], path
 
     def __str__(self):
-        return " ".join([str(symbol) for symbol in self.rle])
+        return " ".join([str(symbol) for symbol in self.rle(0)])
         
         
 def extract_id(filename):
@@ -146,7 +146,7 @@ def extract_sequences(files):
         df            = pd.read_csv(path)
         symbols = []
         for i, row in df.iterrows():
-            s = Symbol(row['cluster'], row['labels'], row['start'], row['stop'])
+            s = Symbol(row['cluster'], row['labels'], row['start'], row['stop'], row['prob'])
             symbols.append(s)
         sequence = Sequence(symbols, shotid, offset)
         sequences.append(sequence)

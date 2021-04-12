@@ -13,6 +13,10 @@ class Symbol(namedtuple('Symbol', 'id type start stop')):
     def __str__(self):
         return "{}:{}".format(self.id, self.type)
 
+    def merge(self, other):
+        return Symbol(self.id, self.type, self.start, other.stop)
+        
+        
 INSERT    = 1
 DELETE    = 2
 MATCH_ID  = 3
@@ -61,10 +65,19 @@ class Sequence(namedtuple('Sequence', 'symbols file offset')):
     @property
     def rle(self):
         compressed = []
-        for symbol in self.symbols:
-            if len(compressed) == 0 or symbol.id != compressed[-1].id or symbol.type != compressed[-1].type:
-                compressed.append(symbol)
+        current = self.symbols[0]
+        for symbol in self.symbols[1:]:            
+            if symbol.id != current.id or symbol.type != current.type:
+                compressed.append(current)
+                current = symbol
+            else:
+                current = current.merge(symbol)
         return compressed
+    
+    def ngrams(self, n):
+        compressed = self.rle
+        for i in range(n, len(compressed)):
+            yield compressed[i - n: i]
     
     def similarity(self, other, gap = -1):     
         a  = self.rle
@@ -73,7 +86,7 @@ class Sequence(namedtuple('Sequence', 'symbols file offset')):
         symbols_b = np.array([symbol.id for symbol in b])
         types_a   = np.array([symbol.type for symbol in a])
         types_b   = np.array([symbol.type for symbol in b])
-        dp = needleman_wunsch(symbols_a, symbols_b, types_a, types_b)
+        dp = needleman_wunsch(symbols_a, symbols_b, types_a, types_b, gap)
         i = len(a)
         j = len(b)
         path = []

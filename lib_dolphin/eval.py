@@ -30,7 +30,6 @@ def export_audio(c, labels, windows, label_dict, out, min_support = 25):
     for c, instances in windows_by_cluster.items():
         l = label(labels_by_cluster[c], reverse)
         audio = []
-    
         if len(instances) > min_support:
             whitelist[c] = cur
             cur += 1
@@ -41,7 +40,7 @@ def export_audio(c, labels, windows, label_dict, out, min_support = 25):
                     audio.append(0)
             audio = np.stack(audio)
             write('{}/{}_{}.wav'.format(out, l, whitelist[c]), 44100, audio.astype(np.int16)) 
-        return whitelist
+    return whitelist
     
 
 def plot_result_matrix(confusion, classes, predictions, title, cmap=plt.cm.Blues):

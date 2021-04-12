@@ -140,7 +140,7 @@ def train(label_file, wav_file, noise_file, out_folder="output", labels = LABELS
     whitelist = export_audio(c, labels, windows, label_dict, out_folder)
     print(whitelist)
     
-    x      = np.stack([x[i]   for i in range(0, len(x)) if c[i] in whitelist])
+    x      = [x[i]            for i in range(0, len(x)) if c[i] in whitelist]
     labels = [labels[i]       for i in range(0, len(x)) if c[i] in whitelist]
     c      = [whitelist[c[i]] for i in range(0, len(x)) if c[i] in whitelist]
     

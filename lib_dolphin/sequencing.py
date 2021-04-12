@@ -63,7 +63,9 @@ def needleman_wunsch(symbols_a, symbols_b, types_a, types_b, gap = -1):
 class Sequence(namedtuple('Sequence', 'symbols file offset')):
     
     def rle(self, prob_th):
-        filtered = [s for s in self.symbols if s.prob > prob_th]
+        filtered = [s for s in self.symbols if s.prob > prob_th]        
+        if len(filtered) == 0:
+            return []
         compressed = []
         current = filtered[0]
         for symbol in filtered[1:]:            
@@ -76,12 +78,15 @@ class Sequence(namedtuple('Sequence', 'symbols file offset')):
     
     def ngrams(self, n, prob_th=0.75):
         compressed = self.rle(prob_th)
-        for i in range(n, len(compressed)):
-            yield compressed[i - n: i]
+        if len(compressed) >= n:
+            for i in range(n, len(compressed)):
+                yield compressed[i - n: i]
     
     def similarity(self, other, gap = -1, prob_th=0.75):     
         a  = self.rle(prob_th)
         b  = other.rle(prob_th)
+        if len(a) == 0 or len(b) == 0:
+            return float('-inf'), []
         symbols_a = np.array([symbol.id for symbol in a])
         symbols_b = np.array([symbol.id for symbol in b])
         types_a   = np.array([symbol.type for symbol in a])

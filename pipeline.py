@@ -8,9 +8,8 @@ import os
 from lib_dolphin.audio import *
 from lib_dolphin.features import *
 from lib_dolphin.interest_points import *
-from lib_dolphin.reporting import *
 from lib_dolphin.eval import *
-from lib_dolphin.sequencing import *
+
 from collections import namedtuple
 
 from scipy.io.wavfile import read, write
@@ -42,7 +41,7 @@ BATCH        = 25
 EPOCHS       = 25
 
 N_DIST       = 10000
-PERC_TH      = 5      
+PERC_TH      = 25      
 
 IP_RADIUS    = 6
 IP_DB_TH     = 3.5
@@ -254,7 +253,6 @@ def apply_model_files(files, out_folder="output", ignore_th=True):
     model = Model(c, labels, label_dict, index, enc, classifier)
         
     csv = []
-    ips = []
     for file in files:
         res = apply_model(file, model)
         if res is not None:
@@ -272,42 +270,8 @@ def apply_model_files(files, out_folder="output", ignore_th=True):
             })
             df.to_csv(name, index=False)
             csv.append(name)
-            ips.append(ip)
-    return csv, ips
-
-
-def slice_intersting(audio_file, out, processing_window = 44100):
-    x = raw(audio_file)
-    n = len(x)
-    regions = []
-    for i in range(processing_window, n, processing_window // 2):        
-        s        = spectrogram(x[i - processing_window:i], lo=FFT_LO, hi=FFT_HI, win=FFT_WIN, step=FFT_STEP)
-        n_points = len([x for x in interest_points(s, IP_RADIUS, IP_DB_TH)])
-        region   = (i-processing_window, i, n_points)
-        regions.append(region)
-    th = np.percentile([n for _, _, n in regions], 95)
-    print("Activity Threshold: {} of {} regions".format(th, len(regions)))
-    connected = []
-    last_active = 0
-    recording = False
-    for i in range(1, len(regions)):
-        if regions[i][2] >= th and not recording:
-            recording = True
-            last_active = i
-        elif regions[i][2] < th and recording:
-            print("DETECTED: {} : {}".format(last_active, i))
-            connected.append([regions[last_active][0], regions[i - 1][1]])
-            recording = False
-    print("Detected Regions: {}".format(len(connected)))
-    for start, stop in connected:
-        name = "{}_{}.wav".format(audio_file.split("/")[-1].replace('.wav', ''), start)
-        write('{}/{}'.format(out, name), 44100, x[start:stop].astype(np.int16)) 
+    return csv
         
-
-def sequenced(folder):
-    files = [(f, "{}/{}".format(folder, f)) for f in os.listdir(folder) if f.endswith('.csv')]
-    return extract_sequences(files)
-
     
 if __name__ == '__main__':
     print("=====================================")
@@ -319,39 +283,15 @@ if __name__ == '__main__':
             noise  = sys.argv[4]
             out    = sys.argv[5]            
             train(labels, wav, noise, out)
-    elif len(sys.argv) == 4 and sys.argv[1] == 'slice':
-            audio = sys.argv[2]
-            out   = sys.argv[3]
-            if audio.endswith('.wav'):
-                slice_intersting(audio, out)
-            else:
-                for filename in os.listdir(audio):                
-                    if filename.endswith('.wav'):
-                        print("Slicing: {}".format(filename))
-                        path = "{}/{}".format(audio, filename)
-                        slice_intersting(path, out)
     elif len(sys.argv) == 4 and sys.argv[1] == 'test':        
         path = sys.argv[2]
         out  = sys.argv[3]
-
         wavfiles = ["{}/{}".format(path, filename) for filename in os.listdir(path) if filename.endswith('.wav')]    
         csv,ips  = apply_model_files(wavfiles, out)
-        ids      = ["annotations_{}".format(i) for i in range(0, len(csv))]
-        with open("result_clusters.html", "w") as fp:
-            fp.write(template(ids, out, wavfiles, csv, ips, True))
-        with open("result_type.html", "w") as fp:
-            fp.write(template(ids, out, wavfiles, csv, ips, False))
-    elif len(sys.argv) == 4 and sys.argv[1] == 'sequenced':
-        path     = sys.argv[2]
-        features = sys.argv[3]
-        seq = sequenced(path)
-        pkl.dump(seq, open(features, 'wb'))
     else:
         print("""
             Usage:
                 + train:     python pipeline.py train LABEL_FILE AUDIO_FILE NOISE_FILE OUT_FOLDER
                 + test:      python pipeline.py test FOLDER OUT
-                + sequenced: python pipeline.py sequenced FOLDER FEATURE_FILE
-                + slice:     python pipeline.py slice AUDIO_FILE OUT_FOLDER
         """)
     print("\n=====================================")

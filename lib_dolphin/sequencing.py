@@ -93,7 +93,7 @@ class Sequence(namedtuple('Sequence', 'symbols file offset')):
                     op = MATCH_T
                 else:
                     op = SUBS
-            path.append([op, symbols_a[i - 1], symbols_b[j - 1], types_a[i - 1], types_b[j - 1]])
+            path.append([op, symbols_a[i - 1], symbols_b[j - 1], types_a[i - 1], types_b[j - 1], i - 1, j - 1])
 
             if op == DELETE:
                 i -= 1
@@ -103,10 +103,10 @@ class Sequence(namedtuple('Sequence', 'symbols file offset')):
                 i -= 1
                 j -= 1            
         while i > 0:
-            path.append([DELETE, symbols_a[i - 1], symbols_b[j], types_a[i - 1], types_b[j]])
+            path.append([DELETE, symbols_a[i - 1], symbols_b[j], types_a[i - 1], types_b[j], i - 1, j])
             i -= 1
         while j > 0:
-            path.append([INSERT, symbols_a[i], symbols_b[j - 1], types_a[i], types_b[j - 1]])
+            path.append([INSERT, symbols_a[i], symbols_b[j - 1], types_a[i], types_b[j - 1], i, j - 1])
             j -= 1
         path.reverse()
         return dp[len(a), len(b)], path

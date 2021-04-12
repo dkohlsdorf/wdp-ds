@@ -41,7 +41,7 @@ BATCH        = 25
 EPOCHS       = 25
 
 N_DIST       = 10000
-PERC_TH      = 10   
+PERC_TH      = 5   
 
 IP_RADIUS    = 6
 IP_DB_TH     = 3.5
@@ -136,8 +136,13 @@ def train(label_file, wav_file, noise_file, out_folder="output", labels = LABELS
     
     agg = AgglomerativeClustering(n_clusters=None, distance_threshold=th, affinity='euclidean', linkage='complete')
     c   = agg.fit_predict(x)
-
-    export_audio(c, labels, windows, label_dict, out_folder)
+    
+    whitelist = export_audio(c, labels, windows, label_dict, out_folder)
+    print(whitelist)
+    
+    x      = np.stack([x[i]   for i in range(0, len(x)) if c[i] in whitelist])
+    labels = [labels[i]       for i in range(0, len(x)) if c[i] in whitelist]
+    c      = [whitelist[c[i]] for i in range(0, len(x)) if c[i] in whitelist]
     
     index = nmslib.init(method='hnsw', space='l2')
     index.addDataPointBatch(x)
@@ -148,7 +153,7 @@ def train(label_file, wav_file, noise_file, out_folder="output", labels = LABELS
     else:
         model.save('{}/ae.h5'.format(out_folder))
     enc.save('{}/encoder.h5'.format(out_folder))
-    pkl.dump((th, c, labels, label_dict), open("{}/labels.pkl".format(out_folder), "wb"))
+    pkl.dump((th, c, labels, label_dict, whitelist), open("{}/labels.pkl".format(out_folder), "wb"))
     nmslib.saveIndex(index, '{}/index'.format(out_folder))
     
 

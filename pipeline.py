@@ -9,6 +9,7 @@ from lib_dolphin.audio import *
 from lib_dolphin.features import *
 from lib_dolphin.interest_points import *
 from lib_dolphin.eval import *
+from lib_dolphin.sequencing import *
 
 from collections import namedtuple
 
@@ -23,6 +24,8 @@ LABELS = set([
     'WSTL_UP'
 ])
 
+TH_DETECT = 0.95
+GAP       = -1.0
 
 FFT_STEP     = 128
 FFT_WIN      = 512
@@ -41,7 +44,7 @@ BATCH        = 25
 EPOCHS       = 25
 
 N_DIST       = 10000
-PERC_TH      = 5   
+PERC_TH      = 10   
 
 IP_RADIUS    = 6
 IP_DB_TH     = 3.5
@@ -139,11 +142,14 @@ def train(label_file, wav_file, noise_file, out_folder="output", labels = LABELS
     
     whitelist = export_audio(c, labels, windows, label_dict, out_folder)
     print(whitelist)
-    
-    x      = np.stack([x[i]   for i in range(0, len(x)) if c[i] in whitelist])
-    labels = [labels[i]       for i in range(0, len(x)) if c[i] in whitelist]
-    c      = [whitelist[c[i]] for i in range(0, len(x)) if c[i] in whitelist]
-    
+
+    print("Shape: {}, Labels: {}, C:{} ".format(x.shape, len(labels), len(c)))
+    n      = len(x)
+    x      = np.stack([x[i]   for i in range(0, n) if c[i] in whitelist])
+    labels = [labels[i]       for i in range(0, n) if c[i] in whitelist]
+    c      = [whitelist[c[i]] for i in range(0, n) if c[i] in whitelist]
+    print("Shape: {}, Labels: {}, C:{} ".format(x.shape, len(labels), len(c)))
+
     index = nmslib.init(method='hnsw', space='l2')
     index.addDataPointBatch(x)
     index.createIndex({'post': 2}, print_progress=True)
@@ -153,7 +159,7 @@ def train(label_file, wav_file, noise_file, out_folder="output", labels = LABELS
     else:
         model.save('{}/ae.h5'.format(out_folder))
     enc.save('{}/encoder.h5'.format(out_folder))
-    pkl.dump((th, c, labels, label_dict, whitelist), open("{}/labels.pkl".format(out_folder), "wb"))
+    pkl.dump((th, c, labels, label_dict), open("{}/labels.pkl".format(out_folder), "wb"))
     nmslib.saveIndex(index, '{}/index'.format(out_folder))
     
 
@@ -275,7 +281,55 @@ def apply_model_files(files, out_folder="output", ignore_th=True):
             })
             df.to_csv(name, index=False)
             csv.append(name)
-        
+
+            
+def string(r):
+        return " ".join(["{}{}".format(s.type[0], s.id) for s in r])
+
+    
+def aligned(input_path, path_out):
+    all_regions = []
+    for file in os.listdir(input_path):
+        if file.endswith('.csv'):
+            path  = "{}/{}".format(input_path, file)
+            audio = path.replace('.csv', '.wav')
+            df    = pd.read_csv(path)    
+            for r in regions(df, TH_DETECT): 
+                all_regions.append((audio, r))
+    print("#Regions: {}".format(len(all_regions)))
+
+    sequences = [region[1] for region in all_regions]
+    distance  = distances(sequences, GAP)
+    th        = np.percentile(distance, 5)
+    print("Threshold: {}".format(th))
+    distance_plots(distance, path_out)
+
+    clustering = AgglomerativeClustering(n_clusters=None, affinity='precomputed', linkage='average', distance_threshold=th).fit_predict(distance)
+
+    counts = {}
+    for c in clustering:
+        if c not in counts:
+            counts[c] = 0
+        counts[c] += 1   
+
+    n_regions = 0
+    clustered = {}
+    names  = {}
+    cur    = 0
+    for i, c in enumerate(clustering):
+        if c not in names:
+            if counts[c] > 1:
+                names[c] = cur
+                cur += 1
+        if c not in clustered: 
+            clustered[c] = []        
+        clustered[c].append([all_regions[i][0], all_regions[i][1][0].start, all_regions[i][1][-1].stop, string(all_regions[i][1])])
+        n_regions += 1
+
+    print("#Clusters: {}".format(len(names)))
+    decoded_plots(clustered, names, counts, path_out)
+    sequence_cluster_export(clustered, names, counts, path_out)
+    
     
 if __name__ == '__main__':
     print("=====================================")
@@ -292,10 +346,15 @@ if __name__ == '__main__':
         out  = sys.argv[3]
         wavfiles = ["{}/{}".format(path, filename) for filename in os.listdir(path) if filename.endswith('.wav')]    
         apply_model_files(wavfiles, out)
+    elif len(sys.argv) == 4 and sys.argv[1] == 'aligned':        
+        path = sys.argv[2]
+        out  = sys.argv[3]
+        aligned(path, out)
     else:
         print("""
             Usage:
                 + train:     python pipeline.py train LABEL_FILE AUDIO_FILE NOISE_FILE OUT_FOLDER
                 + test:      python pipeline.py test FOLDER OUT
+                + aligned:   python pipeline.py aligned FOLDER OUT
         """)
     print("\n=====================================")

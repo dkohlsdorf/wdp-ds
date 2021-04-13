@@ -1,6 +1,15 @@
 import numpy as np
 import matplotlib.pyplot as plt
+
+import pandas as pd
+import os
+
+from collections import namedtuple
+
+from lib_dolphin.audio import *
+
 from scipy.io.wavfile import read, write    
+from matplotlib.patches import Rectangle
 
 
 def label(x, label_dict):
@@ -119,3 +128,90 @@ def enc_filters(enc, n_filters, output):
         plt.imshow(weight.T, cmap='gray')
     plt.savefig(output)
     plt.clf()
+
+
+def decoded_plots(clustered, names, counts, path):
+    colors = []
+    for line in open('lib_dolphin/color.txt'):
+        cmp = line.split('\t')
+        colors.append(cmp[1].strip())
+
+    by_file = {}
+    for c, examples in clustered.items():
+        for file, start, stop, _ in examples:
+            if file not in by_file:
+                by_file[file] = []
+            by_file[file].append([c, start, stop])
+
+    for file, annotations in by_file.items():
+        print(file)
+        x = raw(file)
+        s = spectrogram(x, lo=0, hi=256)
+        plt.figure(figsize=(len(s) / 100, 25))
+        plt.imshow(1.0 - s.T, cmap='gray')
+        last = 0
+        for i, (c, start, stop) in enumerate(annotations):
+            color = colors[c]    
+            start_spec = start / 128 
+            stop_spec  = stop / 128    
+            if counts[c] > 1:
+                c = names[c]
+                plt.gca().add_patch(Rectangle((start_spec, 0), (stop_spec - start_spec), 256, color=color, edgecolor='r', alpha=0.5))
+                plt.gca().annotate('{}'.format(c), xy=(start_spec + (stop_spec - start_spec) / 2, 25))
+            else:
+                plt.gca().annotate('===', xy=(start_spec, 25))
+                plt.gca().add_patch(Rectangle((start_spec, 0), (stop_spec - start_spec), 256, edgecolor='r', fill = None))
+
+        img = '{}/{}'.format(path, file.split('/')[-1].replace('.wav', '.png'))
+        plt.savefig(img)
+        plt.close()
+        
+        
+def distance_plots(distance, path):
+    plt.imshow(distance)
+    plt.savefig('{}/needleman.png'.format(path))
+    plt.close()
+
+    plt.figure(figsize=(10, 5))
+    plt.hist(distance.flatten(), bins=100)
+    plt.savefig('{}/histogram.png'.format(path))
+    plt.close()
+
+    
+def sequence_cluster_export(clustered, names, counts, path):
+    clusters = []
+    files    = []
+    starts   = []
+    stops    = []
+    strings  = []
+    for c, regions in clustered.items():
+        if counts[c] > 1:
+            c = names[c]
+            audio = []
+            for file, start, stop, s in regions[0:25]:
+                cmp = file.replace('.wav', '').split('/')[-1].split(" ")
+                if len(cmp[1]) > 0:
+                    enc = int(cmp[0])
+                    sec = int(cmp[1])
+
+                    clusters.append(c)
+                    files.append(enc)
+                    starts.append(start / 44100 + sec)
+                    stops.append(stop   / 44100 + sec)
+                    strings.append(s)
+                    x = raw(file)[start:stop]
+
+                    for sample in x:
+                        audio.append(sample)
+                    for _ in range(0, 1000):
+                        audio.append(0)
+            audio = np.stack(audio)
+            write('{}/cluster_{}.wav'.format(path, c), 44100, audio.astype(np.int16)) 
+    df = pd.DataFrame({
+        "file": files,
+        "start": starts,
+        "stop": stops,
+        "cluster": clusters,
+        "categories": strings
+    })
+    df.to_csv('{}/sequnces.csv'.format(path))

@@ -327,7 +327,7 @@ def aligned(input_path, path_out):
         n_regions += 1
 
     print("#Clusters: {}".format(len(names)))
-    decoded_plots(clustered, names, counts, path_out)
+    decoded_plots(clustered, names, counts, path_out, IP_DB_TH, IP_RADIUS)
     sequence_cluster_export(clustered, names, counts, path_out)
     
     

@@ -14,8 +14,10 @@ class Symbol(namedtuple('Symbol', 'id type start stop prob')):
     
     def l2_merge(self, other):
         clicks  = other.type[0] == 'E' and self.type[0] == 'B' or other.type[0] == 'B' and self.type[0] == 'E'
-        whistle = other.type[0] == 'W' and self.type[0] == 'W'
-        return self.stop > other.start and (clicks or whistle)
+        whistle = other.type[0] == 'W' and self.type[0] == 'W'    
+        types   = other.type == self.type 
+        overlap = self.stop > other.start
+        return overlap and (clicks or whistle or types)
 
     def merge(self, other):
         return Symbol(self.id, self.type, self.start, other.stop, self.prob)

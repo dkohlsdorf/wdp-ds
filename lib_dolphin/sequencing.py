@@ -7,7 +7,7 @@ from collections import namedtuple
 FFT_STEP    = 128
 RAW_AUDIO   = 5120
 FIND_REJECT = 5 * FFT_STEP
-LEN_REJECT  = RAW_AUDIO * 2
+LEN_REJECT  = RAW_AUDIO + FIND_REJECT
 
 
 class Symbol(namedtuple('Symbol', 'id type start stop prob')):

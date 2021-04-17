@@ -317,7 +317,7 @@ def aligned(input_path, path_out):
 
     sequences = [region[1] for region in all_regions]
     distance  = distances(sequences, GAP)
-    th        = np.percentile(distance, 5)
+    th        = np.percentile(distance, 25)
     print("Threshold: {}".format(th))
     distance_plots(distance, path_out)
 

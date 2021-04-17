@@ -36,7 +36,6 @@ D            = FFT_WIN // 2 - FFT_LO - (FFT_WIN // 2 - FFT_HI)
 RAW_AUDIO    = 5120
 T            = int((RAW_AUDIO - FFT_WIN) / FFT_STEP)
 
-
 CONV_PARAM   = (8, 8, 128)
 WINDOW_PARAM = (T, D, 1)
 LATENT       = 64

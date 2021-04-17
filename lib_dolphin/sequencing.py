@@ -4,6 +4,12 @@ import numpy as np
 from collections import namedtuple
 
 
+FFT_STEP    = 128
+RAW_AUDIO   = 5120
+FIND_REJECT = 5 * FFT_STEP
+LEN_REJECT  = RAW_AUDIO * 2
+
+
 class Symbol(namedtuple('Symbol', 'id type start stop prob')):
     
     def __str__(self):
@@ -16,7 +22,7 @@ class Symbol(namedtuple('Symbol', 'id type start stop prob')):
         clicks  = other.type[0] == 'E' and self.type[0] == 'B' or other.type[0] == 'B' and self.type[0] == 'E'
         whistle = other.type[0] == 'W' and self.type[0] == 'W'    
         types   = other.type == self.type 
-        overlap = self.stop > other.start
+        overlap = (self.stop + FIND_REJECT) > other.start
         return overlap and (clicks or whistle or types)
 
     def merge(self, other):
@@ -42,13 +48,15 @@ def regions(df, th):
     regions = []
     current = []
     for symbol in compressed:
-        if len(current) == 0 or current[-1].l2_merge(symbol):
+        if len(current) == 0 or current[-1].l2_merge(symbol):            
             current.append(symbol)
         else:
-            regions.append(current)
+            if current[-1].stop - current[0].start > LEN_REJECT:
+                regions.append(current)
             current = []
     if len(current) > 0:
-        regions.append(current)
+        if current[-1].stop - current[0].start > LEN_REJECT:
+            regions.append(current)
     return regions
 
 
@@ -91,7 +99,7 @@ def needleman_wunsch(symbols_a, symbols_b, types_a, types_b, gap):
                 dp[i - 1, j] + gap, 
                 dp[i, j - 1] + gap
             )
-    return dp
+    return dp / (N + M)
 
 
 def score(a, b, gap):

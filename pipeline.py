@@ -59,12 +59,30 @@ def train(label_file, wav_file, noise_file, out_folder="output", labels = LABELS
     windows, instances, labels, label_dict = dataset_supervised(
         label_file, wav_file, labels, lo=FFT_LO, hi=FFT_HI, win=FFT_WIN, step=FFT_STEP, raw_size=RAW_AUDIO)    
     
+    noise_label  = np.max([i for _, i in label_dict.items()]) + 1
+    label_dict['NOISE'] = noise_label
+    label_counts = {}
+    for i in labels:
+        if i in label_counts:
+            label_counts[i] += 1
+        else:
+            label_counts[i] =1
+    max_count = np.max([c for _, c in label_counts.items()])
+    print("Count: {}".format(max_count))
+    print("Labels: {}".format(label_dict))
     noise = spectrogram(raw(noise_file), lo=FFT_LO, hi=FFT_HI, win=FFT_WIN, step=FFT_STEP)
     instances_inp = []
     for i in range(0, len(instances)):
         stop  = np.random.randint(36, len(noise))
         start = stop - 36
         instances_inp.append((instances[i] + noise[start:stop, :]) / 2.0)
+
+    for i in range(0, max_count):
+        stop  = np.random.randint(36, len(noise))
+        start = stop - 36        
+        instances_inp.append(noise[start:stop, :])
+        labels.append(noise_label)
+        
     visualize_dataset(instances, "{}/dataset.png".format(out_folder))
     visualize_dataset(instances_inp, "{}/dataset_noisy.png".format(out_folder))
 
@@ -94,9 +112,8 @@ def train(label_file, wav_file, noise_file, out_folder="output", labels = LABELS
     if SUPERVISED:
         y_train = np.array(y_train)
         y_test  = np.array(y_test)
-        model, enc  = classifier(WINDOW_PARAM, LATENT, 4, CONV_PARAM) 
+        model, enc  = classifier(WINDOW_PARAM, LATENT, 5, CONV_PARAM) 
         model.compile(optimizer='adam', loss='sparse_categorical_crossentropy', metrics=['accuracy'])
-
     else:
         y_train = np.stack(y_train).reshape(len(y_train), T, D, 1)
         y_test  = np.stack(y_test).reshape(len(y_test), T, D, 1)

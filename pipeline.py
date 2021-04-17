@@ -24,7 +24,7 @@ LABELS = set([
     'WSTL_UP'
 ])
 
-TH_DETECT = 0.95
+TH_DETECT =  0.0
 GAP       = -1.0
 
 FFT_STEP     = 128
@@ -77,12 +77,14 @@ def train(label_file, wav_file, noise_file, out_folder="output", labels = LABELS
         start = stop - 36
         instances_inp.append((instances[i] + noise[start:stop, :]) / 2.0)
 
+    n_noise = 0
     for i in range(0, max_count):
         stop  = np.random.randint(36, len(noise))
         start = stop - 36        
         instances_inp.append(noise[start:stop, :])
         labels.append(noise_label)
-        
+        n_noise += 1
+    print("Added: {} ".format(n_noise ))
     visualize_dataset(instances, "{}/dataset.png".format(out_folder))
     visualize_dataset(instances_inp, "{}/dataset_noisy.png".format(out_folder))
 
@@ -90,24 +92,23 @@ def train(label_file, wav_file, noise_file, out_folder="output", labels = LABELS
     y_test  = []
     x_train = []
     x_test  = []
-    for i in range(0, len(instances)):
+    for i in range(0, len(instances_inp)):
         if np.random.uniform() < perc_test:
             x_test.append(instances_inp[i])
             if SUPERVISED:
                 y_test.append(labels[i])
             else:
-                y_test.append(instances[i])
+                y_test.append(instances_inp[i])
         else:            
             x_train.append(instances_inp[i])
             if SUPERVISED:
                 y_train.append(labels[i])
             else:
-                y_train.append(instances[i])
+                y_train.append(instances_inp[i])
 
-    x       = np.stack(instances_inp).reshape(len(instances_inp), T, D, 1)
+    x       = np.stack(instances_inp)[0:len(instances)].reshape(len(instances), T, D, 1)
     x_train = np.stack(x_train).reshape(len(x_train), T, D, 1)
     x_test  = np.stack(x_test).reshape(len(x_test), T, D, 1)
-
     
     if SUPERVISED:
         y_train = np.array(y_train)
@@ -157,7 +158,7 @@ def train(label_file, wav_file, noise_file, out_folder="output", labels = LABELS
     agg = AgglomerativeClustering(n_clusters=None, distance_threshold=th, affinity='euclidean', linkage='complete')
     c   = agg.fit_predict(x)
     
-    whitelist = export_audio(c, labels, windows, label_dict, out_folder)
+    whitelist = export_audio(c, labels[0:len(instances)], windows, label_dict, out_folder)
     print(whitelist)
 
     print("Shape: {}, Labels: {}, C:{} ".format(x.shape, len(labels), len(c)))

@@ -22,8 +22,8 @@ class Symbol(namedtuple('Symbol', 'id type start stop prob')):
 def regions(df, th):
     filtered = []
     for i, row in df.iterrows():
-        if row['prob'] > th:
-            filtered.append(Symbol(row['cluster'], row['knn'], row['start'], row['stop'], row['prob']))
+        if row['prob'] > th and row['labels'] != 'NOISE':
+            filtered.append(Symbol(row['cluster'], row['labels'], row['start'], row['stop'], row['prob']))
     if len(filtered) == 0:
         return []
     compressed = []

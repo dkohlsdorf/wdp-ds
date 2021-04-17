@@ -13,7 +13,9 @@ class Symbol(namedtuple('Symbol', 'id type start stop prob')):
         return self.id == other.id and self.type == other.type and self.stop > other.start
     
     def l2_merge(self, other):
-        return self.stop > other.start
+        clicks  = other.type[0] == 'E' and self.type[0] == 'B' or other.type[0] == 'B' and self.type[0] == 'E'
+        whistle = other.type[0] == 'W' and self.type[0] == 'W'
+        return self.stop > other.start and (clicks or whistle)
 
     def merge(self, other):
         return Symbol(self.id, self.type, self.start, other.stop, self.prob)

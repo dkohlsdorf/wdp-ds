@@ -347,7 +347,35 @@ def aligned(input_path, path_out):
     decoded_plots(clustered, names, counts, path_out, IP_DB_TH, IP_RADIUS)
     sequence_cluster_export(clustered, names, counts, path_out)
     
-    
+
+def slice_intersting(audio_file, out, processing_window = 44100):
+    x = raw(audio_file)
+    n = len(x)
+    regions = []
+    for i in range(processing_window, n, processing_window // 2):        
+        s        = spectrogram(x[i - processing_window:i], lo=FFT_LO, hi=FFT_HI, win=FFT_WIN, step=FFT_STEP)
+        n_points = len([x for x in interest_points(s, IP_RADIUS, IP_DB_TH)])
+        region   = (i-processing_window, i, n_points)
+        regions.append(region)
+    th = np.percentile([n for _, _, n in regions], 95)
+    print("Activity Threshold: {} of {} regions".format(th, len(regions)))
+    connected = []
+    last_active = 0
+    recording = False
+    for i in range(1, len(regions)):
+        if regions[i][2] >= th and not recording:
+            recording = True
+            last_active = i
+        elif regions[i][2] < th and recording:
+            print("DETECTED: {} : {}".format(last_active, i))
+            connected.append([regions[last_active][0], regions[i - 1][1]])
+            recording = False
+    print("Detected Regions: {}".format(len(connected)))
+    for start, stop in connected:
+        name = "{}_{}.wav".format(audio_file.split("/")[-1].replace('.wav', ''), start)
+        write('{}/{}'.format(out, name), 44100, x[start:stop].astype(np.int16)) 
+
+        
 if __name__ == '__main__':
     print("=====================================")
     print("Simplified WDP DS Pipeline")
@@ -367,11 +395,20 @@ if __name__ == '__main__':
         path = sys.argv[2]
         out  = sys.argv[3]
         aligned(path, out)
+    elif len(sys.argv) == 4 and sys.argv[1] == 'slice':
+            audio = sys.argv[2]
+            out   = sys.argv[3]
+            for filename in os.listdir(audio):                
+                if filename.endswith('.wav'):
+                    print("Slicing: {}".format(filename))
+                    path = "{}/{}".format(audio, filename)
+                    slice_intersting(path, out)
     else:
         print("""
             Usage:
                 + train:     python pipeline.py train LABEL_FILE AUDIO_FILE NOISE_FILE OUT_FOLDER
                 + test:      python pipeline.py test FOLDER OUT
                 + aligned:   python pipeline.py aligned FOLDER OUT
+                + slice:     python pipeline.py slice AUDIO_FILE OUT_FOLDER
         """)
     print("\n=====================================")

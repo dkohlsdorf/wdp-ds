@@ -7,11 +7,15 @@ from scipy.io.wavfile import read, write
 
 
 def raw(path):
-    x = read(path)[1]
-    if len(x.shape) > 1:
-        return x[:, 0]
-    return x
-
+    try:
+        x = read(path)[1]
+        if len(x.shape) > 1:
+            return x[:, 0]
+        return x
+    except:
+        print("Could not read file: {}".format(path))
+        return np.zeros(0)
+    
 
 def spectrogram(audio, lo = 20, hi = 200, win = 512, step=128, normalize=True):
     spectrogram = []

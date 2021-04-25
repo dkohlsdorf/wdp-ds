@@ -52,6 +52,7 @@ KNN          = 25
 PROC_BATCH   = 1000    
 
 SUPERVISED   = True
+PLOT_POINTS  = False
 
 
 def train(label_file, wav_file, noise_file, out_folder="output", labels = LABELS, perc_test=0.25):
@@ -317,7 +318,7 @@ def aligned(input_path, path_out):
 
     sequences = [region[1] for region in all_regions]
     distance  = distances(sequences, GAP)
-    th        = np.percentile(distance, 10)
+    th        = np.percentile(distance, 5)
     print("Threshold: {}".format(th))
     distance_plots(distance, path_out)
 
@@ -344,7 +345,7 @@ def aligned(input_path, path_out):
         n_regions += 1
 
     print("#Clusters: {}".format(len(names)))
-    decoded_plots(clustered, names, counts, path_out, IP_DB_TH, IP_RADIUS)
+    decoded_plots(clustered, names, counts, path_out, IP_DB_TH, IP_RADIUS, PLOT_POINTS)
     sequence_cluster_export(clustered, names, counts, path_out)
     
 

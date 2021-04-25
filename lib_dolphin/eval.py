@@ -1,3 +1,4 @@
+import re
 import numpy as np
 import matplotlib.pyplot as plt
 
@@ -183,7 +184,7 @@ def distance_plots(distance, path):
     plt.close()
 
     
-def sequence_cluster_export(clustered, names, counts, path):
+def sequence_cluster_export(clustered, names, counts, path, sep='_'):
     clusters = []
     files    = []
     starts   = []
@@ -194,8 +195,10 @@ def sequence_cluster_export(clustered, names, counts, path):
             c = names[c]
             audio = []
             for file, start, stop, s in regions[0:25]:
-                cmp = file.replace('.wav', '').split('/')[-1].split(" ")
-                if len(cmp[1]) > 0:
+                cmp = file.replace('.wav', '').split('/')[-1].split(sep)
+                if len(cmp) > 0 and len(cmp[1]) > 0:
+                    cmp[0] = re.sub("[^0-9]", "", cmp[0])
+                    cmp[1] = re.sub("[^0-9]", "", cmp[1])
                     enc = int(cmp[0])
                     sec = int(cmp[1])
 

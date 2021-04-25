@@ -46,13 +46,13 @@ N_DIST       = 10000
 PERC_TH      = 10   
 
 IP_RADIUS    = 6
-IP_DB_TH     = 3.5
+IP_DB_TH     = 5.0
 
 KNN          = 25
 PROC_BATCH   = 1000    
 
 SUPERVISED   = True
-PLOT_POINTS  = False
+PLOT_POINTS  = True
 
 
 def train(label_file, wav_file, noise_file, out_folder="output", labels = LABELS, perc_test=0.25):
@@ -262,9 +262,10 @@ def apply_model(file, model):
             for annotation in process_batch(batch, batch_off, model, reverse):
                 anno.append(annotation)
             batch = []
-            batch_off = []    
-    for annotation in process_batch(batch, batch_off, model, reverse):
-        anno.append(annotation)            
+            batch_off = []
+    if len(batch) > 0:
+        for annotation in process_batch(batch, batch_off, model, reverse):
+            anno.append(annotation)            
     return anno, ip
 
                   
@@ -349,7 +350,7 @@ def aligned(input_path, path_out):
     sequence_cluster_export(clustered, names, counts, path_out)
     
 
-def slice_intersting(audio_file, out, processing_window = 44100):
+def slice_intersting(audio_file, out, processing_window = 10 * 44100):
     x = raw(audio_file)
     n = len(x)
     regions = []

@@ -46,13 +46,13 @@ N_DIST       = 10000
 PERC_TH      = 10   
 
 IP_RADIUS    = 6
-IP_DB_TH     = 5.0
+IP_DB_TH     = 3.5
 
 KNN          = 25
 PROC_BATCH   = 1000    
 
 SUPERVISED   = True
-PLOT_POINTS  = True
+PLOT_POINTS  = False
 
 
 def train(label_file, wav_file, noise_file, out_folder="output", labels = LABELS, perc_test=0.25):
@@ -306,20 +306,21 @@ def string(r):
         return " ".join(["{}{}".format(s.type[0], s.id) for s in r])
 
     
-def aligned(input_path, path_out):
+def aligned(input_path, path_out, min_len = 4):
     all_regions = []
     for file in os.listdir(input_path):
         if file.endswith('.csv'):
             path  = "{}/{}".format(input_path, file)
             audio = path.replace('.csv', '.wav')
             df    = pd.read_csv(path)    
-            for r in regions(df, TH_DETECT): 
-                all_regions.append((audio, r))
+            for r in regions(df, TH_DETECT):
+                if len(r) > min_len:
+                    all_regions.append((audio, r))
     print("#Regions: {}".format(len(all_regions)))
 
     sequences = [region[1] for region in all_regions]
     distance  = distances(sequences, GAP)
-    th        = np.percentile(distance, 5)
+    th        = np.percentile(distance, 1)
     print("Threshold: {}".format(th))
     distance_plots(distance, path_out)
 

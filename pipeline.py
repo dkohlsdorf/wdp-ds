@@ -46,7 +46,7 @@ N_DIST       = 10000
 PERC_TH      = 10   
 
 IP_RADIUS    = 6
-IP_DB_TH     = 3.5
+IP_DB_TH     = 1.0
 
 KNN          = 25
 PROC_BATCH   = 1000    
@@ -269,7 +269,7 @@ def apply_model(file, model):
     return anno, ip
 
                   
-def apply_model_files(files, out_folder="output", ignore_th=True):
+def apply_model_files(files, out_folder="output"):
     index = nmslib.init(method ='hnsw', space='l2')
     nmslib.loadIndex(index, '{}/index'.format(out_folder))
     
@@ -306,7 +306,7 @@ def string(r):
         return " ".join(["{}{}".format(s.type[0], s.id) for s in r])
 
     
-def aligned(input_path, path_out, min_len = 4):
+def aligned(input_path, path_out, min_len = 0):
     all_regions = []
     for file in os.listdir(input_path):
         if file.endswith('.csv'):
@@ -320,7 +320,7 @@ def aligned(input_path, path_out, min_len = 4):
 
     sequences = [region[1] for region in all_regions]
     distance  = distances(sequences, GAP)
-    th        = np.percentile(distance, 1)
+    th        = np.percentile(distance, 5)
     print("Threshold: {}".format(th))
     distance_plots(distance, path_out)
 

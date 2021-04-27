@@ -68,7 +68,23 @@ def max3(a, b, c):
     if c > x:
         x = c
     return x
-        
+
+
+@jit(nopython=True)        
+def imax(a, b):    
+    x = a
+    if b > x:
+        x = b
+    return x
+
+
+@jit(nopython=True)        
+def imin(a, b):    
+    x = a
+    if b < x:
+        x = b
+    return x
+
 
 @jit(nopython=True)
 def similarity(symbol_a, type_a, symbol_b, type_b):
@@ -88,18 +104,20 @@ def similarity(symbol_a, type_a, symbol_b, type_b):
 def needleman_wunsch(symbols_a, symbols_b, types_a, types_b, gap):   
     N = len(symbols_a)    
     M = len(symbols_b)
-    dp = np.zeros((N + 1, M + 1))
+
+    w = imax(N, M) // 10
+    w = imax(w, abs(N - M)) + 2
+    
+    dp = np.ones((N + 1, M + 1)) * -imax(N, M)
     dp[0,0] = 0.0    
-    dp[1:, 0] = -np.arange(1, N + 1)
-    dp[0, 1:] = -np.arange(1, M + 1)
     for i in range(1, N + 1):    
-        for j in range(1, M + 1):
+        for j in range(imax(1, i - w), imin(M + 1, i + w)):
             dp[i, j] = max3(
                 dp[i - 1, j - 1] + similarity(symbols_a[i - 1], types_a[i - 1], symbols_b[j - 1], types_b[j - 1]),
                 dp[i - 1, j] + gap, 
                 dp[i, j - 1] + gap
             )
-    return dp / (N + M)
+    return dp
 
 
 def score(a, b, gap):

@@ -132,7 +132,7 @@ def enc_filters(enc, n_filters, output):
     plt.clf()
 
 
-def decoded_plots(clustered, names, counts, path, ip_th, ip_r, show_ip=False):
+def decoded_plots(clustered, names, counts, path, ip_th, ip_r, show_ip=False, min_annotations=15):
     colors = []
     for line in open('lib_dolphin/color.txt'):
         cmp = line.split('\t')
@@ -146,31 +146,32 @@ def decoded_plots(clustered, names, counts, path, ip_th, ip_r, show_ip=False):
             by_file[file].append([c, start, stop])
 
     for file, annotations in by_file.items():
-        print(file)
-        x  = raw(file)
-        s  = spectrogram(x, lo=0, hi=256)
+        if len(annotations) > min_annotations:
+            print(file)
+            x  = raw(file)
+            s  = spectrogram(x, lo=0, hi=256)
 
-        plt.figure(figsize=(len(s) / 100, 25))
-        plt.imshow(1.0 - s.T, cmap='gray')
-        if show_ip:
-            ip = [p for p in interest_points(s, ip_r, ip_th)]
-            plt.scatter([t for t, _ in ip], [f for _, f in ip], color='red')
-        last = 0
-        for i, (c, start, stop) in enumerate(annotations):
-            color = colors[c]    
-            start_spec = start / 128 
-            stop_spec  = stop / 128                
-            if counts[c] > 1:
-                c = names[c]
-                plt.gca().add_patch(Rectangle((start_spec, 0), (stop_spec - start_spec), 256, color=color, edgecolor='r', alpha=0.5))
-                plt.gca().annotate('{}'.format(c), xy=(start_spec + (stop_spec - start_spec) / 2, 25))
-            else:
-                plt.gca().annotate('===', xy=(start_spec, 25))
-                plt.gca().add_patch(Rectangle((start_spec, 0), (stop_spec - start_spec), 256, edgecolor='r', fill = None))
+            plt.figure(figsize=(len(s) / 100, 25))
+            plt.imshow(1.0 - s.T, cmap='gray')
+            if show_ip:
+                ip = [p for p in interest_points(s, ip_r, ip_th)]
+                plt.scatter([t for t, _ in ip], [f for _, f in ip], color='red')
+            last = 0
+            for i, (c, start, stop) in enumerate(annotations):
+                color = colors[c]    
+                start_spec = start / 128 
+                stop_spec  = stop / 128                
+                if counts[c] > 1:
+                    c = names[c]
+                    plt.gca().add_patch(Rectangle((start_spec, 0), (stop_spec - start_spec), 256, color=color, edgecolor='r', alpha=0.5))
+                    plt.gca().annotate('{}'.format(c), xy=(start_spec + (stop_spec - start_spec) / 2, 25))
+                else:
+                    plt.gca().annotate('===', xy=(start_spec, 25))
+                    plt.gca().add_patch(Rectangle((start_spec, 0), (stop_spec - start_spec), 256, edgecolor='r', fill = None))
 
-        img = '{}/{}'.format(path, file.split('/')[-1].replace('.wav', '.png'))
-        plt.savefig(img)
-        plt.close()
+            img = '{}/{}'.format(path, file.split('/')[-1].replace('.wav', '.png'))
+            plt.savefig(img)
+            plt.close()
         
         
 def distance_plots(distance, path):

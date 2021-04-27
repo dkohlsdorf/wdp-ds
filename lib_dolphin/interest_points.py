@@ -21,10 +21,10 @@ def is_interest_point(spectrogram, t, f, radius, threshold, use_th=True):
 
     
 @jit(nopython=True)
-def interest_points(spectrogram, radius, threshold):
+def interest_points(spectrogram, radius, threshold, use_th=True):
     T, F = spectrogram.shape
     for t in range(radius, T - radius):
         for f in range(radius, F - radius):
-            if is_interest_point(spectrogram, t, f, radius, threshold):
+            if is_interest_point(spectrogram, t, f, radius, threshold, use_th):
                 yield t, f
                

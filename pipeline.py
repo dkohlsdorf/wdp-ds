@@ -53,7 +53,7 @@ PROC_BATCH   = 1000
 
 SUPERVISED   = True
 PLOT_POINTS  = False
-MIN_COUNT    = 20
+MIN_COUNT    = 5
 
 
 def train(label_file, wav_file, noise_file, out_folder="output", labels = LABELS, perc_test=0.25):
@@ -308,24 +308,29 @@ def string(r):
 
     
 def aligned(input_path, path_out, min_len = 0):
-    all_regions = []
-    for file in os.listdir(input_path):
-        if file.endswith('.csv'):
-            path  = "{}/{}".format(input_path, file)
-            audio = path.replace('.csv', '.wav')
-            df    = pd.read_csv(path)    
-            for r in regions(df, TH_DETECT):
-                if len(r) > min_len:
-                    all_regions.append((audio, r))
-    print("#Regions: {}".format(len(all_regions)))
-
-    sequences = [region[1] for region in all_regions]
-    distance  = distances(sequences, GAP)
-    th        = np.percentile(distance, 5)
+    savefile = "{}/aligned_prep.pkl".format(path_out)
+    if os.path.exists(savefile):
+        all_regions, distance = pkl.load(open(savefile, 'rb'))
+        sequences = [region[1] for region in all_regions]
+    else:
+        all_regions = []
+        for file in os.listdir(input_path):
+            if file.endswith('.csv'):
+                path  = "{}/{}".format(input_path, file)
+                audio = path.replace('.csv', '.wav')
+                df    = pd.read_csv(path)    
+                for r in regions(df, TH_DETECT):
+                    if len(r) > min_len:
+                        all_regions.append((audio, r))
+        print("#Regions: {}".format(len(all_regions)))
+        sequences = [region[1] for region in all_regions]
+        distance  = distances(sequences, GAP)
+        pkl.dump((all_regions, distance), open(savefile, 'wb'))
+    th = np.percentile(distance, 10)
     print("Threshold: {}".format(th))
     distance_plots(distance, path_out)
 
-    clustering = AgglomerativeClustering(n_clusters=None, affinity='precomputed', linkage='complete', distance_threshold=th).fit_predict(distance)
+    clustering = AgglomerativeClustering(n_clusters=None, affinity='precomputed', linkage='average', distance_threshold=th).fit_predict(distance)
 
     counts = {}
     for c in clustering:

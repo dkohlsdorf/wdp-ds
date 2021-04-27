@@ -43,7 +43,7 @@ BATCH        = 25
 EPOCHS       = 25
 
 N_DIST       = 10000
-PERC_TH      = 10   
+PERC_TH      = 25 
 
 IP_RADIUS    = 6
 IP_DB_TH     = 1.0

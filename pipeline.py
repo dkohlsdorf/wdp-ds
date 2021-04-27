@@ -325,7 +325,7 @@ def aligned(input_path, path_out, min_len = 0):
     print("Threshold: {}".format(th))
     distance_plots(distance, path_out)
 
-    clustering = AgglomerativeClustering(n_clusters=None, affinity='precomputed', linkage='average', distance_threshold=th).fit_predict(distance)
+    clustering = AgglomerativeClustering(n_clusters=None, affinity='precomputed', linkage='complete', distance_threshold=th).fit_predict(distance)
 
     counts = {}
     for c in clustering:
@@ -348,7 +348,7 @@ def aligned(input_path, path_out, min_len = 0):
         n_regions += 1
 
     print("#Clusters: {}".format(len(names)))
-    decoded_plots(clustered, names, counts, path_out, IP_DB_TH, IP_RADIUS, PLOT_POINTS, MIN_COUNT)
+    decoded_plots(clustered, names, counts, path_out, IP_DB_TH, IP_RADIUS, MIN_COUNT, PLOT_POINTS)
     sequence_cluster_export(clustered, names, counts, path_out, MIN_COUNT)
     
 

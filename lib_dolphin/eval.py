@@ -132,7 +132,7 @@ def enc_filters(enc, n_filters, output):
     plt.clf()
 
 
-def decoded_plots(clustered, names, counts, path, ip_th, ip_r, show_ip=False, min_annotations=15):
+def decoded_plots(clustered, names, counts, path, ip_th, ip_r, min_count, show_ip=False, min_annotations=15):
     colors = []
     for line in open('lib_dolphin/color.txt'):
         cmp = line.split('\t')
@@ -161,7 +161,7 @@ def decoded_plots(clustered, names, counts, path, ip_th, ip_r, show_ip=False, mi
                 color = colors[c]    
                 start_spec = start / 128 
                 stop_spec  = stop / 128                
-                if counts[c] > 1:
+                if counts[c] > min_count:
                     c = names[c]
                     plt.gca().add_patch(Rectangle((start_spec, 0), (stop_spec - start_spec), 256, color=color, edgecolor='r', alpha=0.5))
                     plt.gca().annotate('{}'.format(c), xy=(start_spec + (stop_spec - start_spec) / 2, 25))
@@ -185,14 +185,14 @@ def distance_plots(distance, path):
     plt.close()
 
     
-def sequence_cluster_export(clustered, names, counts, path, sep='_'):
+def sequence_cluster_export(clustered, names, counts, path, min_counts, sep='_'):
     clusters = []
     files    = []
     starts   = []
     stops    = []
     strings  = []
     for c, regions in clustered.items():
-        if counts[c] > 1:
+        if counts[c] > min_counts:
             c = names[c]
             audio = []
             for file, start, stop, s in regions[0:25]:

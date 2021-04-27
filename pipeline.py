@@ -53,6 +53,7 @@ PROC_BATCH   = 1000
 
 SUPERVISED   = True
 PLOT_POINTS  = False
+MIN_COUNT    = 20
 
 
 def train(label_file, wav_file, noise_file, out_folder="output", labels = LABELS, perc_test=0.25):
@@ -338,7 +339,7 @@ def aligned(input_path, path_out, min_len = 0):
     cur    = 0
     for i, c in enumerate(clustering):
         if c not in names:
-            if counts[c] > 1:
+            if counts[c] > MIN_COUNT:
                 names[c] = cur
                 cur += 1
         if c not in clustered: 
@@ -347,8 +348,8 @@ def aligned(input_path, path_out, min_len = 0):
         n_regions += 1
 
     print("#Clusters: {}".format(len(names)))
-    decoded_plots(clustered, names, counts, path_out, IP_DB_TH, IP_RADIUS, PLOT_POINTS)
-    sequence_cluster_export(clustered, names, counts, path_out)
+    decoded_plots(clustered, names, counts, path_out, IP_DB_TH, IP_RADIUS, PLOT_POINTS, MIN_COUNT)
+    sequence_cluster_export(clustered, names, counts, path_out, MIN_COUNT)
     
 
 def slice_intersting(audio_file, out, processing_window = 10 * 44100):

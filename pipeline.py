@@ -54,6 +54,7 @@ PROC_BATCH   = 1000
 SUPERVISED   = True
 PLOT_POINTS  = False
 MIN_COUNT    = 1
+TH_NW_PERC   = 50
 
 
 def train(label_file, wav_file, noise_file, out_folder="output", labels = LABELS, perc_test=0.25):
@@ -326,7 +327,7 @@ def aligned(input_path, path_out, min_len = 0):
         sequences = [region[1] for region in all_regions]
         distance  = distances(sequences, GAP)
         pkl.dump((all_regions, distance), open(savefile, 'wb'))
-    th = np.percentile(distance, 50)
+    th = np.percentile(distance, TH_NW_PERC)
     print("Threshold: {}".format(th))
     distance_plots(distance, path_out)
 

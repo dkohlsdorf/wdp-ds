@@ -93,11 +93,11 @@ def similarity(symbol_a, type_a, symbol_b, type_b):
     elif type_a == type_b:
         return -1.0
     elif type_a[0] == 'E' and type_b[0] == 'B' or type_a[0] == 'B' and type_b[0] == 'E':
-        return -2.0
+        return -1.0
     elif type_a[0] == 'W' and type_b[0] == 'W':
-        return -2.0
+        return -1.0
     else:
-        return -2.0
+        return -1.0
 
     
 @jit(nopython=True)

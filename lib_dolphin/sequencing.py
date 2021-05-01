@@ -123,15 +123,14 @@ def score(a, b, gap):
     symbols_b = np.array([s.id for s in b])
     types_a   = np.array([s.type for s in a])
     types_b   = np.array([s.type for s in b])
-    
     dp        = needleman_wunsch(symbols_a, symbols_b, types_a, types_b, gap)
     return dp[len(symbols_a),len(symbols_b)]
 
 
-def distances(sequences, gap):
+def distances(sequences, gap, only_positive=True):
     n = len(sequences)
     similarity = np.zeros((n, n))
-    
+    distances  = np.ones((n, n))
     for i in range(0, n):
         if i % 50 == 0:
             print("Processing: {}".format(i))
@@ -139,9 +138,17 @@ def distances(sequences, gap):
             a = sequences[i]
             b = sequences[j]
             s = score(a, b, gap)
-            similarity[i][j] = s
-            similarity[j][i] = s
-    minsim   = np.min(similarity) 
-    maxsim   = np.max(similarity) 
-    distance = 1.0 - (similarity - minsim) / (maxsim - minsim)
-    return distance
+            similarity[i, j] = s
+            
+    scores = similarity.flatten()
+    if only_positive:
+        scores = scores[scores > 0.0]
+    minsim = np.min(scores) 
+    maxsim = np.max(scores)
+
+    for i in range(0, n):
+        for j in range(i + 1, n):
+            if similarity[i][j] > 0:                
+                distances[i, j] -= (similarity[i, j] - minsim) / (maxsim - minsim)
+                distances[i, j] = distances[j, i] 
+    return distances

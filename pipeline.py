@@ -24,8 +24,8 @@ LABELS = set([
     'WSTL_UP'
 ])
 
-TH_DETECT =  0.0
-GAP       = -1.0
+TH_DETECT =   0.0
+GAP       = -0.25
 
 FFT_STEP     = 128
 FFT_WIN      = 512
@@ -308,8 +308,8 @@ def string(r):
         return " ".join(["{}{}".format(s.type[0], s.id) for s in r])
 
     
-def aligned(input_path, path_out, min_len = 0):
-    savefile = "{}/aligned_prep.pkl".format(path_out)
+def aligned(input_path, path_out, min_len = 0, use_pam = True):    
+    savefile = "{}/aligned_prep.pkl".format(path_out)    
     if os.path.exists(savefile):
         all_regions, distance = pkl.load(open(savefile, 'rb'))
         sequences = [region[1] for region in all_regions]
@@ -325,7 +325,12 @@ def aligned(input_path, path_out, min_len = 0):
                         all_regions.append((audio, r))
         print("#Regions: {}".format(len(all_regions)))
         sequences = [region[1] for region in all_regions]
-        distance  = distances(sequences, GAP)
+        if use_pam:
+            _, c, _, _, x = pkl.load(open("{}/labels.pkl".format(path_out), 'rb'))
+            inter_class   = pam(c, x)
+            distance      = distances(sequences, GAP, inter_class)
+        else:
+            distance  = distances(sequences, GAP)
         pkl.dump((all_regions, distance), open(savefile, 'wb'))
     th = np.percentile(distance, TH_NW_PERC)
     print("Threshold: {}".format(th))

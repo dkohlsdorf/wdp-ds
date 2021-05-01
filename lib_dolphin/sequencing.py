@@ -61,6 +61,25 @@ def regions(df, th):
 
 
 @jit(nopython=True)        
+def pam(c, x):
+    n  = len(c) 
+    nc = max(set(c)) + 1
+    inter_class = np.zeros((nc, nc))
+    counts = np.zeros((nc, nc)) 
+    for i in range(0, nc):
+        for j in range(i, nc):
+            for a in range(0, n):
+                for b in range(a + 1, n):
+                    if c[a] == i and c[b] == j:
+                        counts[i, j]      += 1
+                        inter_class[i, j] += np.sqrt(np.sum(np.square(x[a] - x[b])))
+                        inter_class[j, i] = inter_class[i, j]
+                        counts[j, i]      = counts[i, j]
+    inter_class /= counts 
+    return inter_class
+
+
+@jit(nopython=True)        
 def max3(a, b, c):    
     x = a
     if b > x:
@@ -101,7 +120,7 @@ def similarity(symbol_a, type_a, symbol_b, type_b):
 
     
 @jit(nopython=True)
-def needleman_wunsch(symbols_a, symbols_b, types_a, types_b, gap, normalize = True, w = 4):   
+def needleman_wunsch(symbols_a, symbols_b, types_a, types_b, gap, pam, normalize = True, w = 4):   
     N = len(symbols_a)    
     M = len(symbols_b)
     w = imax(w, abs(N - M)) + 2
@@ -110,8 +129,12 @@ def needleman_wunsch(symbols_a, symbols_b, types_a, types_b, gap, normalize = Tr
     dp[0,0] = 0.0    
     for i in range(1, N + 1):    
         for j in range(imax(1, i - w), imin(M + 1, i + w)):
+            if pam is None:
+                sim = similarity(symbols_a[i - 1], types_a[i - 1], symbols_b[j - 1], types_b[j - 1])
+            else:
+                sim = pam[symbols_a[i - 1], symbols_b[j - 1]]
             dp[i, j] = max3(
-                dp[i - 1, j - 1] + similarity(symbols_a[i - 1], types_a[i - 1], symbols_b[j - 1], types_b[j - 1]),
+                dp[i - 1, j - 1] + sim,
                 dp[i - 1, j] + gap, 
                 dp[i, j - 1] + gap
             )
@@ -121,16 +144,16 @@ def needleman_wunsch(symbols_a, symbols_b, types_a, types_b, gap, normalize = Tr
         return dp
 
 
-def score(a, b, gap):
+def score(a, b, gap, pam):
     symbols_a = np.array([s.id for s in a])
     symbols_b = np.array([s.id for s in b])
     types_a   = np.array([s.type for s in a])
     types_b   = np.array([s.type for s in b])
-    dp        = needleman_wunsch(symbols_a, symbols_b, types_a, types_b, gap)
+    dp        = needleman_wunsch(symbols_a, symbols_b, types_a, types_b, gap, pam)
     return dp[len(symbols_a),len(symbols_b)]
 
 
-def distances(sequences, gap, only_positive=True):
+def distances(sequences, gap, pam = None, only_positive=True):
     n = len(sequences)
     similarity = np.zeros((n, n))
     distances  = np.ones((n, n))
@@ -140,7 +163,7 @@ def distances(sequences, gap, only_positive=True):
         for j in range(i + 1, n):
             a = sequences[i]
             b = sequences[j]
-            s = score(a, b, gap)
+            s = score(a, b, gap, pam)
             similarity[i, j] = s
             
     scores = similarity.flatten()

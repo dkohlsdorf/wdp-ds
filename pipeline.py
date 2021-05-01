@@ -179,7 +179,7 @@ def train(label_file, wav_file, noise_file, out_folder="output", labels = LABELS
     else:
         model.save('{}/ae.h5'.format(out_folder))
     enc.save('{}/encoder.h5'.format(out_folder))
-    pkl.dump((th, c, labels, label_dict), open("{}/labels.pkl".format(out_folder), "wb"))
+    pkl.dump((th, c, labels, label_dict, x), open("{}/labels.pkl".format(out_folder), "wb"))
     nmslib.saveIndex(index, '{}/index'.format(out_folder))
     
 

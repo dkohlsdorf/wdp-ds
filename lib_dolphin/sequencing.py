@@ -89,23 +89,21 @@ def imin(a, b):
 @jit(nopython=True)
 def similarity(symbol_a, type_a, symbol_b, type_b):
     if symbol_a == symbol_b:
-        return 1.0
+        return 2.0
     elif type_a == type_b:
-        return -1.0
+        return 1.0
     elif type_a[0] == 'E' and type_b[0] == 'B' or type_a[0] == 'B' and type_b[0] == 'E':
         return -1.0
     elif type_a[0] == 'W' and type_b[0] == 'W':
         return -1.0
     else:
-        return -1.0
+        return -2.0
 
     
 @jit(nopython=True)
-def needleman_wunsch(symbols_a, symbols_b, types_a, types_b, gap):   
+def needleman_wunsch(symbols_a, symbols_b, types_a, types_b, gap, w = 4):   
     N = len(symbols_a)    
     M = len(symbols_b)
-
-    w = imax(N, M) // 10
     w = imax(w, abs(N - M)) + 2
     
     dp = np.ones((N + 1, M + 1)) * -imax(N, M)

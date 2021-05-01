@@ -54,7 +54,7 @@ PROC_BATCH   = 1000
 SUPERVISED   = True
 PLOT_POINTS  = False
 MIN_COUNT    = 1
-TH_NW_PERC   = 50
+TH_NW_PERC   = 75
 
 
 def train(label_file, wav_file, noise_file, out_folder="output", labels = LABELS, perc_test=0.25):

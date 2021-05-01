@@ -71,11 +71,16 @@ def pam(c, x):
             for a in range(0, n):
                 for b in range(a + 1, n):
                     if c[a] == i and c[b] == j:
-                        counts[i, j]      += 1
-                        inter_class[i, j] += np.sqrt(np.sum(np.square(x[a] - x[b])))
+                        dist = np.sqrt(np.sum(np.square(x[a] - x[b])))
+                        if i != j:
+                            inter_class[i, j] -= dist
+                        else:
+                            inter_class[i, j] += 1.0 / dist
                         inter_class[j, i] = inter_class[i, j]
+                        counts[i, j]      += 1
                         counts[j, i]      = counts[i, j]
-    inter_class /= counts 
+    
+    inter_class /= counts     
     return inter_class
 
 
@@ -177,4 +182,4 @@ def distances(sequences, gap, pam = None, only_positive=True):
             if similarity[i, j] > 0:                
                 distances[i, j] -= (similarity[i, j] - minsim) / (maxsim - minsim)
                 distances[j, i] = distances[i, j] 
-    return distances, scores
+    return distances

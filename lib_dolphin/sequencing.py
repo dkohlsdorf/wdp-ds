@@ -148,7 +148,7 @@ def distances(sequences, gap, only_positive=True):
 
     for i in range(0, n):
         for j in range(i + 1, n):
-            if similarity[i][j] > 0:                
+            if similarity[i, j] > 0:                
                 distances[i, j] -= (similarity[i, j] - minsim) / (maxsim - minsim)
-                distances[i, j] = distances[j, i] 
+                distances[j, i] = distances[i, j] 
     return distances

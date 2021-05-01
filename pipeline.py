@@ -275,7 +275,7 @@ def apply_model_files(files, out_folder="output"):
     index = nmslib.init(method ='hnsw', space='l2')
     nmslib.loadIndex(index, '{}/index'.format(out_folder))
     
-    _, c, labels, label_dict = pkl.load(open("{}/labels.pkl".format(out_folder), "rb"))
+    _, c, labels, label_dict, _ = pkl.load(open("{}/labels.pkl".format(out_folder), "rb"))
     enc = load_model('{}/encoder.h5'.format(out_folder))
     if SUPERVISED:
         classifier = load_model('{}/supervised.h5'.format(out_folder))

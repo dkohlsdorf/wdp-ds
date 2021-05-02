@@ -8,8 +8,8 @@ and communicate the results with domain experts.
 
 ## IJCNN
 
-The models from [IJCNN20](https://arxiv.org/abs/2005.07623) are [here](https://github.com/dkohlsdorf/wdp-ds/tree/v4.0/).
-
++ The models from [IJCNN20](https://arxiv.org/abs/2005.07623) are [here](https://github.com/dkohlsdorf/wdp-ds/tree/v4.0/).
++ The version with DTW + HMMs is [here](https://github.com/dkohlsdorf/wdp-ds/tree/denise_semi_happy)
 
 ## Contents
 

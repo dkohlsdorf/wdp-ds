@@ -102,7 +102,7 @@ def imax(a, b):
     return x
 
 
-@jit(nopython=True)        
+ @jit(nopython=True)        
 def imin(a, b):    
     x = a
     if b < x:

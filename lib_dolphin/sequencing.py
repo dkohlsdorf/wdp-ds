@@ -3,7 +3,7 @@ from numba import jit
 import numpy as np
 from collections import namedtuple
 
-
+MAX_BAND    = 1000
 FFT_STEP    = 128
 RAW_AUDIO   = 5120
 FIND_REJECT = 5 * FFT_STEP
@@ -125,7 +125,7 @@ def similarity(symbol_a, type_a, symbol_b, type_b):
 
     
 @jit(nopython=True)
-def needleman_wunsch(symbols_a, symbols_b, types_a, types_b, gap, pam, normalize = False, w = 4):   
+def needleman_wunsch(symbols_a, symbols_b, types_a, types_b, gap, pam, normalize = False, w = MAX_BAND):   
     N = len(symbols_a)    
     M = len(symbols_b)    
     w = imax(w, abs(N - M)) + 2

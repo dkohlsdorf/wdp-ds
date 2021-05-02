@@ -24,8 +24,8 @@ LABELS = set([
     'WSTL_UP'
 ])
 
-TH_DETECT =   0.0
-GAP       = -0.25
+TH_DETECT =  0.0
+GAP       = -1.0
 
 FFT_STEP     = 128
 FFT_WIN      = 512
@@ -54,7 +54,7 @@ PROC_BATCH   = 1000
 SUPERVISED   = True
 PLOT_POINTS  = False
 MIN_COUNT    = 1
-TH_NW_PERC   = 50
+TH_NW_PERC   = 25
 
 
 def train(label_file, wav_file, noise_file, out_folder="output", labels = LABELS, perc_test=0.25):
@@ -328,7 +328,11 @@ def aligned(input_path, path_out, min_len = 0, use_pam = True):
         if use_pam:
             _, c, _, _, x = pkl.load(open("{}/labels.pkl".format(path_out), 'rb'))
             inter_class   = pam(c, x)
-            distance      = distances(sequences, GAP, inter_class)
+            print("PAM: 5 {} :: 50 {} :: 95 {} :: max {}".format(np.percentile(inter_class, 5), np.percentile(inter_class, 50), np.percentile(inter_class, 95), np.max(inter_class)))
+            plt.imshow(inter_class)
+            plt.savefig('{}/pam.png'.format(path_out))
+            plt.close()
+            distance = distances(sequences, GAP, inter_class, False)
         else:
             distance  = distances(sequences, GAP)
         pkl.dump((all_regions, distance), open(savefile, 'wb'))

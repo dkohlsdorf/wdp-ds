@@ -125,9 +125,9 @@ def similarity(symbol_a, type_a, symbol_b, type_b):
 
     
 @jit(nopython=True)
-def needleman_wunsch(symbols_a, symbols_b, types_a, types_b, gap, pam, normalize = True, w = 4):   
+def needleman_wunsch(symbols_a, symbols_b, types_a, types_b, gap, pam, normalize = False, w = 4):   
     N = len(symbols_a)    
-    M = len(symbols_b)
+    M = len(symbols_b)    
     w = imax(w, abs(N - M)) + 2
     
     dp = np.ones((N + 1, M + 1)) * -imax(N, M)
@@ -179,7 +179,7 @@ def distances(sequences, gap, pam = None, only_positive=True):
     print("Min / Max: {} / {}".format(minsim, maxsim))
     for i in range(0, n):
         for j in range(i + 1, n):
-            if similarity[i, j] > 0:                
+            if similarity[i, j] > 0 or not only_positive:
                 distances[i, j] -= (similarity[i, j] - minsim) / (maxsim - minsim)
                 distances[j, i] = distances[i, j] 
     return distances

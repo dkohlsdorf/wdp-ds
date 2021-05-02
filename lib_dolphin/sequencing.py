@@ -3,7 +3,7 @@ from numba import jit
 import numpy as np
 from collections import namedtuple
 
-
+MAX_BAND    = 1000
 FFT_STEP    = 128
 RAW_AUDIO   = 5120
 FIND_REJECT = 5 * FFT_STEP
@@ -61,6 +61,30 @@ def regions(df, th):
 
 
 @jit(nopython=True)        
+def pam(c, x):
+    n  = len(c) 
+    nc = max(set(c)) + 1
+    inter_class = np.zeros((nc, nc))
+    counts = np.zeros((nc, nc)) 
+    for i in range(0, nc):
+        for j in range(i, nc):
+            for a in range(0, n):
+                for b in range(a + 1, n):
+                    if c[a] == i and c[b] == j:
+                        dist = np.sqrt(np.sum(np.square(x[a] - x[b])))
+                        if i != j:
+                            inter_class[i, j] -= dist
+                        else:
+                            inter_class[i, j] += 1.0 / dist
+                        inter_class[j, i] = inter_class[i, j]
+                        counts[i, j]      += 1
+                        counts[j, i]      = counts[i, j]
+    
+    inter_class /= counts     
+    return inter_class
+
+
+@jit(nopython=True)        
 def max3(a, b, c):    
     x = a
     if b > x:
@@ -68,14 +92,30 @@ def max3(a, b, c):
     if c > x:
         x = c
     return x
-        
+
+
+@jit(nopython=True)        
+def imax(a, b):    
+    x = a
+    if b > x:
+        x = b
+    return x
+
+
+@jit(nopython=True)        
+def imin(a, b):    
+    x = a
+    if b < x:
+        x = b
+    return x
+
 
 @jit(nopython=True)
 def similarity(symbol_a, type_a, symbol_b, type_b):
     if symbol_a == symbol_b:
-        return 1.0
+        return 2.0
     elif type_a == type_b:
-        return 0.0
+        return 1.0
     elif type_a[0] == 'E' and type_b[0] == 'B' or type_a[0] == 'B' and type_b[0] == 'E':
         return -1.0
     elif type_a[0] == 'W' and type_b[0] == 'W':
@@ -85,47 +125,61 @@ def similarity(symbol_a, type_a, symbol_b, type_b):
 
     
 @jit(nopython=True)
-def needleman_wunsch(symbols_a, symbols_b, types_a, types_b, gap):   
+def needleman_wunsch(symbols_a, symbols_b, types_a, types_b, gap, pam, normalize = False, w = MAX_BAND):   
     N = len(symbols_a)    
-    M = len(symbols_b)
-    dp = np.zeros((N + 1, M + 1))
+    M = len(symbols_b)    
+    w = imax(w, abs(N - M)) + 2
+    
+    dp = np.ones((N + 1, M + 1)) * -imax(N, M)
     dp[0,0] = 0.0    
-    dp[1:, 0] = -np.arange(1, N + 1)
-    dp[0, 1:] = -np.arange(1, M + 1)
     for i in range(1, N + 1):    
-        for j in range(1, M + 1):
+        for j in range(imax(1, i - w), imin(M + 1, i + w)):
+            if pam is None:
+                sim = similarity(symbols_a[i - 1], types_a[i - 1], symbols_b[j - 1], types_b[j - 1])
+            else:
+                sim = pam[symbols_a[i - 1], symbols_b[j - 1]]
             dp[i, j] = max3(
-                dp[i - 1, j - 1] + similarity(symbols_a[i - 1], types_a[i - 1], symbols_b[j - 1], types_b[j - 1]),
+                dp[i - 1, j - 1] + sim,
                 dp[i - 1, j] + gap, 
                 dp[i, j - 1] + gap
             )
-    return dp / (N + M)
+    if normalize:
+        return dp / (N + M)
+    else:
+        return dp
 
 
-def score(a, b, gap):
+def score(a, b, gap, pam):
     symbols_a = np.array([s.id for s in a])
     symbols_b = np.array([s.id for s in b])
     types_a   = np.array([s.type for s in a])
     types_b   = np.array([s.type for s in b])
-    
-    dp        = needleman_wunsch(symbols_a, symbols_b, types_a, types_b, gap)
+    dp        = needleman_wunsch(symbols_a, symbols_b, types_a, types_b, gap, pam)
     return dp[len(symbols_a),len(symbols_b)]
 
 
-def distances(sequences, gap):
+def distances(sequences, gap, pam = None, only_positive=True):
     n = len(sequences)
     similarity = np.zeros((n, n))
-    
+    distances  = np.ones((n, n))
     for i in range(0, n):
         if i % 50 == 0:
             print("Processing: {}".format(i))
         for j in range(i + 1, n):
             a = sequences[i]
             b = sequences[j]
-            s = score(a, b, gap)
-            similarity[i][j] = s
-            similarity[j][i] = s
-    minsim   = np.min(similarity) 
-    maxsim   = np.max(similarity) 
-    distance = 1.0 - (similarity - minsim) / (maxsim - minsim)
-    return distance
+            s = score(a, b, gap, pam)
+            similarity[i, j] = s
+            
+    scores = similarity.flatten()
+    if only_positive:
+        scores = scores[scores > 0.0]
+    minsim = np.min(scores) 
+    maxsim = np.max(scores)
+    print("Min / Max: {} / {}".format(minsim, maxsim))
+    for i in range(0, n):
+        for j in range(i + 1, n):
+            if similarity[i, j] > 0 or not only_positive:
+                distances[i, j] -= (similarity[i, j] - minsim) / (maxsim - minsim)
+                distances[j, i] = distances[i, j] 
+    return distances

@@ -1,3 +1,4 @@
+import re
 import numpy as np
 import matplotlib.pyplot as plt
 
@@ -131,7 +132,7 @@ def enc_filters(enc, n_filters, output):
     plt.clf()
 
 
-def decoded_plots(clustered, names, counts, path, ip_th, ip_r, show_ip=False):
+def decoded_plots(clustered, names, counts, path, ip_th, ip_r, min_count, show_ip=False, min_annotations=15):
     colors = []
     for line in open('lib_dolphin/color.txt'):
         cmp = line.split('\t')
@@ -145,31 +146,32 @@ def decoded_plots(clustered, names, counts, path, ip_th, ip_r, show_ip=False):
             by_file[file].append([c, start, stop])
 
     for file, annotations in by_file.items():
-        print(file)
-        x  = raw(file)
-        s  = spectrogram(x, lo=0, hi=256)
+        if len(annotations) > min_annotations:
+            print(file)
+            x  = raw(file)
+            s  = spectrogram(x, lo=0, hi=256)
 
-        plt.figure(figsize=(len(s) / 100, 25))
-        plt.imshow(1.0 - s.T, cmap='gray')
-        if show_ip:
-            ip = [p for p in interest_points(s, ip_r, ip_th)]
-            plt.scatter([t for t, _ in ip], [f for _, f in ip], color='red')
-        last = 0
-        for i, (c, start, stop) in enumerate(annotations):
-            color = colors[c]    
-            start_spec = start / 128 
-            stop_spec  = stop / 128                
-            if counts[c] > 1:
-                c = names[c]
-                plt.gca().add_patch(Rectangle((start_spec, 0), (stop_spec - start_spec), 256, color=color, edgecolor='r', alpha=0.5))
-                plt.gca().annotate('{}'.format(c), xy=(start_spec + (stop_spec - start_spec) / 2, 25))
-            else:
-                plt.gca().annotate('===', xy=(start_spec, 25))
-                plt.gca().add_patch(Rectangle((start_spec, 0), (stop_spec - start_spec), 256, edgecolor='r', fill = None))
+            plt.figure(figsize=(len(s) / 100, 25))
+            plt.imshow(1.0 - s.T, cmap='gray')
+            if show_ip:
+                ip = [p for p in interest_points(s, ip_r, ip_th)]
+                plt.scatter([t for t, _ in ip], [f for _, f in ip], color='red')
+            last = 0
+            for i, (c, start, stop) in enumerate(annotations):
+                color = colors[c]    
+                start_spec = start / 128 
+                stop_spec  = stop / 128                
+                if counts[c] > min_count:
+                    c = names[c]
+                    plt.gca().add_patch(Rectangle((start_spec, 0), (stop_spec - start_spec), 256, color=color, edgecolor='r', alpha=0.5))
+                    plt.gca().annotate('{}'.format(c), xy=(start_spec + (stop_spec - start_spec) / 2, 25))
+                else:
+                    plt.gca().annotate('===', xy=(start_spec, 25))
+                    plt.gca().add_patch(Rectangle((start_spec, 0), (stop_spec - start_spec), 256, edgecolor='r', fill = None))
 
-        img = '{}/{}'.format(path, file.split('/')[-1].replace('.wav', '.png'))
-        plt.savefig(img)
-        plt.close()
+            img = '{}/{}'.format(path, file.split('/')[-1].replace('.wav', '.png'))
+            plt.savefig(img)
+            plt.close()
         
         
 def distance_plots(distance, path):
@@ -183,19 +185,21 @@ def distance_plots(distance, path):
     plt.close()
 
     
-def sequence_cluster_export(clustered, names, counts, path):
+def sequence_cluster_export(clustered, names, counts, path, min_counts, sep='_'):
     clusters = []
     files    = []
     starts   = []
     stops    = []
     strings  = []
     for c, regions in clustered.items():
-        if counts[c] > 1:
+        if counts[c] > min_counts:
             c = names[c]
             audio = []
             for file, start, stop, s in regions[0:25]:
-                cmp = file.replace('.wav', '').split('/')[-1].split(" ")
-                if len(cmp[1]) > 0:
+                cmp = file.replace('.wav', '').split('/')[-1].split(sep)
+                if len(cmp) > 0 and len(cmp[1]) > 0:
+                    cmp[0] = re.sub("[^0-9]", "", cmp[0])
+                    cmp[1] = re.sub("[^0-9]", "", cmp[1])
                     enc = int(cmp[0])
                     sec = int(cmp[1])
 

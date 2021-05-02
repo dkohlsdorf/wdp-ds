@@ -43,15 +43,18 @@ BATCH        = 25
 EPOCHS       = 25
 
 N_DIST       = 10000
-PERC_TH      = 10   
+PERC_TH      = 25 
 
 IP_RADIUS    = 6
-IP_DB_TH     = 3.5
+IP_DB_TH     = 1.0
 
 KNN          = 25
 PROC_BATCH   = 1000    
 
 SUPERVISED   = True
+PLOT_POINTS  = False
+MIN_COUNT    = 1
+TH_NW_PERC   = 90
 
 
 def train(label_file, wav_file, noise_file, out_folder="output", labels = LABELS, perc_test=0.25):
@@ -176,7 +179,7 @@ def train(label_file, wav_file, noise_file, out_folder="output", labels = LABELS
     else:
         model.save('{}/ae.h5'.format(out_folder))
     enc.save('{}/encoder.h5'.format(out_folder))
-    pkl.dump((th, c, labels, label_dict), open("{}/labels.pkl".format(out_folder), "wb"))
+    pkl.dump((th, c, labels, label_dict, x), open("{}/labels.pkl".format(out_folder), "wb"))
     nmslib.saveIndex(index, '{}/index'.format(out_folder))
     
 
@@ -261,17 +264,18 @@ def apply_model(file, model):
             for annotation in process_batch(batch, batch_off, model, reverse):
                 anno.append(annotation)
             batch = []
-            batch_off = []    
-    for annotation in process_batch(batch, batch_off, model, reverse):
-        anno.append(annotation)            
+            batch_off = []
+    if len(batch) > 0:
+        for annotation in process_batch(batch, batch_off, model, reverse):
+            anno.append(annotation)            
     return anno, ip
 
                   
-def apply_model_files(files, out_folder="output", ignore_th=True):
+def apply_model_files(files, out_folder="output"):
     index = nmslib.init(method ='hnsw', space='l2')
     nmslib.loadIndex(index, '{}/index'.format(out_folder))
     
-    _, c, labels, label_dict = pkl.load(open("{}/labels.pkl".format(out_folder), "rb"))
+    _, c, labels, label_dict, _ = pkl.load(open("{}/labels.pkl".format(out_folder), "rb"))
     enc = load_model('{}/encoder.h5'.format(out_folder))
     if SUPERVISED:
         classifier = load_model('{}/supervised.h5'.format(out_folder))
@@ -304,24 +308,39 @@ def string(r):
         return " ".join(["{}{}".format(s.type[0], s.id) for s in r])
 
     
-def aligned(input_path, path_out):
-    all_regions = []
-    for file in os.listdir(input_path):
-        if file.endswith('.csv'):
-            path  = "{}/{}".format(input_path, file)
-            audio = path.replace('.csv', '.wav')
-            df    = pd.read_csv(path)    
-            for r in regions(df, TH_DETECT): 
-                all_regions.append((audio, r))
-    print("#Regions: {}".format(len(all_regions)))
-
-    sequences = [region[1] for region in all_regions]
-    distance  = distances(sequences, GAP)
-    th        = np.percentile(distance, 10)
+def aligned(input_path, path_out, min_len = 0, use_pam = True):    
+    savefile = "{}/aligned_prep.pkl".format(path_out)    
+    if os.path.exists(savefile):
+        all_regions, distance = pkl.load(open(savefile, 'rb'))
+        sequences = [region[1] for region in all_regions]
+    else:
+        all_regions = []
+        for file in os.listdir(input_path):
+            if file.endswith('.csv'):
+                path  = "{}/{}".format(input_path, file)
+                audio = path.replace('.csv', '.wav')
+                df    = pd.read_csv(path)    
+                for r in regions(df, TH_DETECT):
+                    if len(r) > min_len:
+                        all_regions.append((audio, r))
+        print("#Regions: {}".format(len(all_regions)))
+        sequences = [region[1] for region in all_regions]
+        if use_pam:
+            _, c, _, _, x = pkl.load(open("{}/labels.pkl".format(path_out), 'rb'))
+            inter_class   = pam(c, x)
+            print("PAM: 5 {} :: 50 {} :: 95 {} :: max {}".format(np.percentile(inter_class, 5), np.percentile(inter_class, 50), np.percentile(inter_class, 95), np.max(inter_class)))
+            plt.imshow(inter_class)
+            plt.savefig('{}/pam.png'.format(path_out))
+            plt.close()
+            distance = distances(sequences, GAP, inter_class, False)
+        else:
+            distance  = distances(sequences, GAP)
+        pkl.dump((all_regions, distance), open(savefile, 'wb'))
+    th = np.percentile(distance, TH_NW_PERC)
     print("Threshold: {}".format(th))
     distance_plots(distance, path_out)
 
-    clustering = AgglomerativeClustering(n_clusters=None, affinity='precomputed', linkage='average', distance_threshold=th).fit_predict(distance)
+    clustering = AgglomerativeClustering(n_clusters=None, affinity='precomputed', linkage='complete', distance_threshold=th).fit_predict(distance)
 
     counts = {}
     for c in clustering:
@@ -335,7 +354,7 @@ def aligned(input_path, path_out):
     cur    = 0
     for i, c in enumerate(clustering):
         if c not in names:
-            if counts[c] > 1:
+            if counts[c] > MIN_COUNT:
                 names[c] = cur
                 cur += 1
         if c not in clustered: 
@@ -344,10 +363,39 @@ def aligned(input_path, path_out):
         n_regions += 1
 
     print("#Clusters: {}".format(len(names)))
-    decoded_plots(clustered, names, counts, path_out, IP_DB_TH, IP_RADIUS)
-    sequence_cluster_export(clustered, names, counts, path_out)
+    decoded_plots(clustered, names, counts, path_out, IP_DB_TH, IP_RADIUS, MIN_COUNT, PLOT_POINTS)
+    sequence_cluster_export(clustered, names, counts, path_out, MIN_COUNT)
     
-    
+
+def slice_intersting(audio_file, out, processing_window = 10 * 44100):
+    x = raw(audio_file)
+    n = len(x)
+    regions = []
+    for i in range(processing_window, n, processing_window // 2):        
+        s        = spectrogram(x[i - processing_window:i], lo=FFT_LO, hi=FFT_HI, win=FFT_WIN, step=FFT_STEP)
+        n_points = len([x for x in interest_points(s, IP_RADIUS, IP_DB_TH)])
+        region   = (i-processing_window, i, n_points)
+        regions.append(region)
+    if len(regions) > 0:
+        th = np.percentile([n for _, _, n in regions], 95)
+        print("Activity Threshold: {} of {} regions".format(th, len(regions)))
+        connected = []
+        last_active = 0
+        recording = False
+        for i in range(1, len(regions)):
+            if regions[i][2] >= th and not recording:
+                recording = True
+                last_active = i
+            elif regions[i][2] < th and recording:
+                print("DETECTED: {} : {}".format(last_active, i))
+                connected.append([regions[last_active][0], regions[i - 1][1]])
+                recording = False
+        print("Detected Regions: {}".format(len(connected)))
+        for start, stop in connected:
+            name = "{}_{}.wav".format(audio_file.split("/")[-1].replace('.wav', ''), start)
+            write('{}/{}'.format(out, name), 44100, x[start:stop].astype(np.int16)) 
+
+        
 if __name__ == '__main__':
     print("=====================================")
     print("Simplified WDP DS Pipeline")
@@ -367,11 +415,20 @@ if __name__ == '__main__':
         path = sys.argv[2]
         out  = sys.argv[3]
         aligned(path, out)
+    elif len(sys.argv) == 4 and sys.argv[1] == 'slice':
+            audio = sys.argv[2]
+            out   = sys.argv[3]
+            for filename in os.listdir(audio):                
+                if filename.endswith('.wav'):
+                    print("Slicing: {}".format(filename))
+                    path = "{}/{}".format(audio, filename)
+                    slice_intersting(path, out)
     else:
         print("""
             Usage:
                 + train:     python pipeline.py train LABEL_FILE AUDIO_FILE NOISE_FILE OUT_FOLDER
                 + test:      python pipeline.py test FOLDER OUT
                 + aligned:   python pipeline.py aligned FOLDER OUT
+                + slice:     python pipeline.py slice AUDIO_FILE OUT_FOLDER
         """)
     print("\n=====================================")

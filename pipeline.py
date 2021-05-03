@@ -24,8 +24,6 @@ LABELS = set([
     'WSTL_UP'
 ])
 
-TH_DETECT =  0.0
-GAP       = -1.0
 
 FFT_STEP     = 128
 FFT_WIN      = 512
@@ -54,7 +52,8 @@ PROC_BATCH   = 1000
 SUPERVISED   = True
 PLOT_POINTS  = False
 MIN_COUNT    = 3
-TH_NW_PERC   = 50
+TH_NW_PERC   = 75
+GAP          = -1.0
 
 
 def train(label_file, wav_file, noise_file, out_folder="output", labels = LABELS, perc_test=0.25):
@@ -196,7 +195,10 @@ def label(x):
             max_count = i
             max_class = c
     p = max_count / len(x)
-    return max_class, p    
+    assignment = []
+    for k in counts.keys():
+        assignment.append((k, counts[k] / len(x)))
+    return max_class, p, assignment
     
     
 Model = namedtuple("Model", "clusters labels label_dict index encoder classifier")
@@ -213,9 +215,9 @@ def process_batch(batch, batch_off, model, reverse):
         clusters    = [model.clusters[xi] for xi in ids]
         labels      = [model.labels[xi] for xi in ids]
         
-        cluster, pc = label(clusters)
-        labi, pl    = label(labels) 
-        lab         = reverse[labi]
+        cluster, pc, assignments = label(clusters)
+        labi, pl, _              = label(labels) 
+        lab                      = reverse[labi]
         start = batch_off[xid] 
         stop  = batch_off[xid] + RAW_AUDIO
         if SUPERVISED:
@@ -225,7 +227,7 @@ def process_batch(batch, batch_off, model, reverse):
         else:
             lab_y = None
             prob  = None
-        yield [lab_y, lab, cluster, start, stop, prob, 1.0 / d[-1]]
+        yield [lab_y, lab, cluster, start, stop, prob, assignments]
 
     
 def apply_model(file, model):   
@@ -300,15 +302,16 @@ def apply_model_files(files, out_folder="output"):
                 'prob':       [prob    for _, _, _, _, _, prob, _    in annotations],
                 'density':    [dens    for _, _, _, _, _, _, dens    in annotations]
             })
-            df.to_csv(name, index=False)
+            dec, before_smoothing = decoded(df)
+            smooth(dec, before_smoothing, df, name)
             csv.append(name)
-
+            
             
 def string(r):
         return " ".join(["{}{}".format(s.type[0], s.id) for s in r])
 
     
-def aligned(input_path, path_out, min_len = 0, use_pam = True):    
+def aligned(input_path, path_out, min_len = 0, use_pam = False):    
     savefile = "{}/aligned_prep.pkl".format(path_out)    
     if os.path.exists(savefile):
         all_regions, distance = pkl.load(open(savefile, 'rb'))
@@ -320,7 +323,7 @@ def aligned(input_path, path_out, min_len = 0, use_pam = True):
                 path  = "{}/{}".format(input_path, file)
                 audio = path.replace('.csv', '.wav')
                 df    = pd.read_csv(path)    
-                for r in regions(df, TH_DETECT):
+                for r in regions(df):
                     if len(r) > min_len:
                         all_regions.append((audio, r))
         print("#Regions: {}".format(len(all_regions)))
@@ -334,7 +337,7 @@ def aligned(input_path, path_out, min_len = 0, use_pam = True):
             plt.close()
             distance = distances(sequences, GAP, inter_class, False)
         else:
-            distance  = distances(sequences, GAP)
+            distance  = distances(sequences, GAP, None, False)
         pkl.dump((all_regions, distance), open(savefile, 'wb'))
     th = np.percentile(distance, TH_NW_PERC)
     print("Threshold: {}".format(th))

@@ -52,7 +52,7 @@ PROC_BATCH   = 1000
 SUPERVISED   = True
 PLOT_POINTS  = False
 MIN_COUNT    = 3
-TH_NW_PERC   = 50
+TH_NW_PERC   = 75
 GAP          = -1.0
 
 

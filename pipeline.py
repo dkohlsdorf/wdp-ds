@@ -337,7 +337,7 @@ def aligned(input_path, path_out, min_len = 0, use_pam = False):
             plt.close()
             distance = distances(sequences, GAP, inter_class, False)
         else:
-            distance  = distances(sequences, GAP)
+            distance  = distances(sequences, GAP, None, False)
         pkl.dump((all_regions, distance), open(savefile, 'wb'))
     th = np.percentile(distance, TH_NW_PERC)
     print("Threshold: {}".format(th))

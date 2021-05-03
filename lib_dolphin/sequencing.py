@@ -1,7 +1,12 @@
 import numpy as np
-from numba import jit
-import numpy as np
+import pandas as pd
+
 from collections import namedtuple
+from numba import jit
+
+import warnings
+warnings.filterwarnings('ignore')
+
 
 MAX_BAND    = 1000
 FFT_STEP    = 128
@@ -10,7 +15,7 @@ FIND_REJECT = 5 * FFT_STEP
 LEN_REJECT  = RAW_AUDIO + FIND_REJECT
 
 
-class Symbol(namedtuple('Symbol', 'id type start stop prob')):
+class Symbol(namedtuple('Symbol', 'id type start stop')):
     
     def __str__(self):
         return "{}:{}".format(self.id, self.type)
@@ -26,14 +31,14 @@ class Symbol(namedtuple('Symbol', 'id type start stop prob')):
         return overlap and (clicks or whistle or types)
 
     def merge(self, other):
-        return Symbol(self.id, self.type, self.start, other.stop, self.prob)
+        return Symbol(self.id, self.type, self.start, other.stop)
     
     
-def regions(df, th):
-    filtered = []
-    for i, row in df.iterrows():
-        if row['prob'] > th and row['labels'] != 'NOISE':
-            filtered.append(Symbol(row['cluster'], row['labels'], row['start'], row['stop'], row['prob']))
+def regions(df, label_col = 'smooth'):
+    filtered = []    
+    for i, row in df.iterrows():        
+        if row[label_col] >= 0:
+            filtered.append(Symbol(row[label_col], row['knn'], row['start'], row['stop']))
     if len(filtered) == 0:
         return []
     compressed = []
@@ -102,7 +107,7 @@ def imax(a, b):
     return x
 
 
- @jit(nopython=True)        
+@jit(nopython=True)        
 def imin(a, b):    
     x = a
     if b < x:
@@ -115,13 +120,13 @@ def similarity(symbol_a, type_a, symbol_b, type_b):
     if symbol_a == symbol_b:
         return 2.0
     elif type_a == type_b:
-        return 1.0
+        return -1.0
     elif type_a[0] == 'E' and type_b[0] == 'B' or type_a[0] == 'B' and type_b[0] == 'E':
-        return -1.0
-    elif type_a[0] == 'W' and type_b[0] == 'W':
-        return -1.0
-    else:
         return -2.0
+    elif type_a[0] == 'W' and type_b[0] == 'W':
+        return -2.0
+    else:
+        return -3.0
 
     
 @jit(nopython=True)
@@ -183,3 +188,109 @@ def distances(sequences, gap, pam = None, only_positive=True):
                 distances[i, j] -= (similarity[i, j] - minsim) / (maxsim - minsim)
                 distances[j, i] = distances[i, j] 
     return distances
+
+
+
+class Decodable(namedtuple('Decodeable', 'start stop density')):
+    
+    def overlap(self, other):
+        return self.stop > other.start
+
+    def merge(self, other):
+        return Decodable(self.start, other.stop, self.density + other.density)
+    
+    
+def dense(list_dict, noise_p):
+    classes = dict(list_dict)
+    if noise_p > 0:
+        classes[-1] = noise_p
+    return classes
+
+
+@jit
+def viterbi_smoothing(x, n_clusters=22, p_same=0.9):
+    N  = len(x.density)
+    dp = np.ones((N, n_clusters + 1)) * float('-inf')
+    bp = np.zeros((N, n_clusters + 1), dtype=np.int)
+    
+    start = np.argmax(dp[0])
+    for i in range(0, n_clusters + 1):
+        if i - 1 in x.density[0]:
+            dp[0, i] = np.log(x.density[0][i - 1]) 
+        bp[0, i] = start
+    for t in range(1, N): 
+        for i in range(0, n_clusters + 1):
+            arg_max = 0
+            max_val = float('-inf')
+            for j in range(0, n_clusters + 1):
+                if i == j:
+                    ll = dp[t - 1, j] + np.log(p_same)
+                else:
+                    ll = dp[t - 1, j] + np.log(1.0 - p_same)
+                if ll > max_val:
+                    max_val = ll
+                    arg_max = j
+            bp[t, i] = arg_max
+            if i - 1 in x.density[t]:
+                dp[t, i] = max_val + np.log(x.density[t][i - 1])
+            else:
+                dp[t, i] = max_val + np.log(0.0)
+    path = [np.argmax(dp[-1]) - 1]
+    t = N - 2
+    while t >= 0:
+        path.append(bp[t, path[-1]] - 1)
+        t -= 1
+    return path
+
+
+def err(x, y):
+    errors = 0
+    for i in range(0, int(min(len(x), len(y)))):
+        if x[i] != y[i]:
+            errors += 1
+    return errors + np.abs(len(x) - len(y))
+
+
+def smooth(decodables, before, df, filename):
+    paths = []
+    for d in decodables:
+        p = viterbi_smoothing(d)
+        p.reverse()
+        paths = paths + p
+    df['smooth']   = paths
+    df['unsmooth'] = before
+
+    print("{}: len(df) = {} / len(path) = {} / errors = {}".format(filename, len(paths), len(df), err(paths, before)))
+    df = df[['unsmooth', 'smooth', 'start', 'stop', 'labels', 'knn', 'cluster', 'prob' , 'density']]
+    df.to_csv(filename, index=False)
+    
+    
+def decoded(df):
+    before_smoothing = []
+    decodables = []
+    cur = None
+    n = 0    
+    for i, row in df.iterrows():
+        if row['labels'] == 'NOISE':
+            p_noise = row['prob']
+        else:
+            p_noise = 0
+        
+        labeling = list(dense(row['density'], p_noise).items())
+        labeling.sort(key=lambda x: x[1])
+        label = labeling[-1][0]
+        before_smoothing.append(label)
+        if cur == None:            
+            cur = Decodable(row['start'], row['stop'], [dense(row['density'], p_noise)])
+        else:
+            x = Decodable(row['start'], row['stop'], [dense(row['density'], p_noise)])
+            if cur.overlap(x):
+                cur = cur.merge(x)
+            else:                
+                n += len(cur.density)
+                decodables.append(cur)
+                cur = x
+        
+    n += len(cur.density)
+    decodables.append(cur)
+    return decodables, before_smoothing

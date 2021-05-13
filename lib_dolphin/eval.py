@@ -220,7 +220,7 @@ def sequence_cluster_export(clustered, names, counts, path, min_counts, sep='_')
         "file": files,
         "start": starts,
         "stop": stops,
-        "cluster": clusters,
-        "categories": strings
+        "pattern": clusters,
+        "clusters": strings
     })
-    df.to_csv('{}/sequnces.csv'.format(path))
+    df.to_csv('{}/sequences.csv'.format(path))

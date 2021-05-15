@@ -36,12 +36,12 @@ T            = int((RAW_AUDIO - FFT_WIN) / FFT_STEP)
 
 CONV_PARAM   = (8, 8, 128)
 WINDOW_PARAM = (T, D, 1)
-LATENT       = 64
+LATENT       = 128
 BATCH        = 25
 EPOCHS       = 25
 
 N_DIST       = 10000
-PERC_TH      = 25 
+PERC_TH      = 10
 
 IP_RADIUS    = 6
 IP_DB_TH     = 1.0
@@ -403,11 +403,14 @@ if __name__ == '__main__':
     print("=====================================")
     print("Simplified WDP DS Pipeline")
     print("by Daniel Kyu Hwa Kohlsdorf")
-    if len(sys.argv) == 6 and sys.argv[1] == 'train':            
+    if len(sys.argv) >= 6 and sys.argv[1] == 'train':            
             labels = sys.argv[2]
             wav    = sys.argv[3]
             noise  = sys.argv[4]
-            out    = sys.argv[5]            
+            out    = sys.argv[5]
+            if len(sys.argv) > 6:
+                PERC_TH = float(sys.argv[6])
+                print("set threshold to {}".format(PERC_TH))
             train(labels, wav, noise, out)
     elif len(sys.argv) == 4 and sys.argv[1] == 'test':        
         path = sys.argv[2]

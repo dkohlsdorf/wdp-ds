@@ -208,7 +208,7 @@ def dense(list_dict, noise_p):
 
 
 @jit
-def viterbi_smoothing(x, n_clusters=22, p_same=0.5):
+def viterbi_smoothing(x, n_clusters=52, p_same=0.5):
     N  = len(x.density)
     dp = np.ones((N, n_clusters + 1)) * float('-inf')
     bp = np.zeros((N, n_clusters + 1), dtype=np.int)

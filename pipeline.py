@@ -417,9 +417,12 @@ if __name__ == '__main__':
         out  = sys.argv[3]
         wavfiles = ["{}/{}".format(path, filename) for filename in os.listdir(path) if filename.endswith('.wav')]    
         apply_model_files(wavfiles, out)
-    elif len(sys.argv) == 4 and sys.argv[1] == 'aligned':        
+    elif len(sys.argv) >= 4 and sys.argv[1] == 'aligned':        
         path = sys.argv[2]
         out  = sys.argv[3]
+        if len(sys.argv) > 4:
+            TH_NW_PERC = float(sys.argv[4])
+            print("set threshold to {}".format(TH_NW_PERC))
         aligned(path, out)
     elif len(sys.argv) == 4 and sys.argv[1] == 'slice':
             audio = sys.argv[2]
@@ -432,9 +435,9 @@ if __name__ == '__main__':
     else:
         print("""
             Usage:
-                + train:     python pipeline.py train LABEL_FILE AUDIO_FILE NOISE_FILE OUT_FOLDER
-                + test:      python pipeline.py test FOLDER OUT
-                + aligned:   python pipeline.py aligned FOLDER OUT
+                + train:     python pipeline.py train LABEL_FILE AUDIO_FILE NOISE_FILE OUT_FOLDER [th percentage]
+                + test:      python pipeline.py test FOLDER OUT 
+                + aligned:   python pipeline.py aligned FOLDER OUT [th percentage]
                 + slice:     python pipeline.py slice AUDIO_FILE OUT_FOLDER
         """)
     print("\n=====================================")

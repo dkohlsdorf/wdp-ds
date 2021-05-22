@@ -12,13 +12,6 @@ from collections import namedtuple
 
 from scipy.io.wavfile import read, write
 
-LABELS = set([
-    'EC_FAST', 
-    'BP_MED',
-    'WSTL_DOWN',
-    'WSTL_UP'
-])
-
 
 FFT_STEP     = 128
 FFT_WIN      = 512
@@ -36,9 +29,9 @@ BATCH        = 25
 EPOCHS       = 25
 
 
-def train(label_file, wav_file, noise_file, out_folder="output", labels = LABELS, perc_test=0.25):
+def train(label_file, wav_file, noise_file, out_folder="output", perc_test=0.25):
     windows, instances, labels, label_dict = dataset_supervised(
-        label_file, wav_file, labels, lo=FFT_LO, hi=FFT_HI, win=FFT_WIN, step=FFT_STEP, raw_size=RAW_AUDIO)    
+        label_file, wav_file, lo=FFT_LO, hi=FFT_HI, win=FFT_WIN, step=FFT_STEP, raw_size=RAW_AUDIO)    
  
     noise_label  = np.max([i for _, i in label_dict.items()]) + 1
     label_dict['NOISE'] = noise_label

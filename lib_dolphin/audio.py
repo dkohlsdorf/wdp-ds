@@ -44,7 +44,7 @@ def dataset_supervised(label, wavfile, lo = 20, hi = 200, win = 512, step=128, r
     for _, row in df.iterrows():
         start = row['offset']
         stop  = start + raw_size
-        label = row[' annotation'].strip()
+        label = row['annotation'].strip()
         if label not in label_dict:
             label_dict[label] = cur_label
             cur_label += 1

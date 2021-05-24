@@ -48,7 +48,7 @@ def dtw(x, y):
                 dp[i - 1, j - 1],
                 dp[i, j - 1]
             )
-    return dp[N, M]
+    return dp[N, M] / (N * M)
 
 
 def dtw_distances(X):

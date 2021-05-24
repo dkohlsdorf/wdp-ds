@@ -30,10 +30,6 @@ LATENT       = 32
 BATCH        = 25
 EPOCHS       = 25
 
-CLUST_START = 5
-CLUST_STEP  = 5
-CLUST_STOP  = 1505
-
 
 def train(label_file, wav_file, noise_file, out_folder="output", perc_test=0.25):
     instances, labels, label_dict = dataset_supervised_windows(
@@ -133,20 +129,21 @@ def clustering(regions, wav_file, folder):
     else:
         distances = pkl.load(open(distances_file, "rb")) 
 
-    n = (CLUST_STOP - CLUST_START) // CLUST_STEP
+    n = 98
     m = len(distances)
     clusters = np.zeros((n, m), dtype=np.int16)
-    for i, k in enumerate(range(CLUST_START, CLUST_STOP, CLUST_STEP)):
+    for perc in range(1, 99):
+        i = perc - 1
         if i % 10 == 0:
-            print(" ... clustering {}".format(k))
-        clustering = AgglomerativeClustering(n_clusters=k, affinity="precomputed", linkage="average")
+            print(" ... clustering {}%".format(perc))
+        th = np.percentile(distances.flatten(), perc)
+        clustering = AgglomerativeClustering(n_clusters=None, distance_threshold=th, affinity="precomputed", linkage="average")
         clusters[i, :] = clustering.fit_predict(distances)
     pkl.dump(clusters, open(clusters_file, "wb"))
 
-
+    
 def export(csvfile, wavfile, clusters_file, k, out):
     print(" ... loading data")
-    k = int((k - CLUST_START) / CLUST_STEP)
     clusters = pkl.load(open(clusters_file, "rb"))[k, :]
     df       = pd.read_csv(csvfile)
     x        = raw(wavfile)

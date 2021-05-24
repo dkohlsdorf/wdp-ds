@@ -144,10 +144,10 @@ def clustering(regions, wav_file, folder):
     
 def export(csvfile, wavfile, clusters_file, k, out):
     print(" ... loading data")
+    k        = k - 1
     clusters = pkl.load(open(clusters_file, "rb"))[k, :]
     df       = pd.read_csv(csvfile)
     x        = raw(wavfile)
-
     print(" ... grouping clusters {}".format(np.max(clusters)))
     ranges = {}
     i = 0

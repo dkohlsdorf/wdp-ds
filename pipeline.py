@@ -166,15 +166,16 @@ def export(csvfile, wavfile, clusters_file, k, out):
     print(" ... export {} / {}".format(i, len(clusters)))
     for c, rng in ranges.items():
         print(" ... export cluster {} {}".format(c, len(rng)))
-        audio = []
-        for start, stop in rng:
-            for f in x[start:stop]:
-                audio.append(f)
-            for i in range(0, 1000):
-                audio.append(0)
-        audio = np.array(audio)
-        filename = "{}/cluster_{}.wav".format(out, c)
-        write(filename, 44100, audio.astype(np.int16)) 
+        if len(rng) > 1:
+            audio = []
+            for start, stop in rng:
+                for f in x[start:stop]:
+                    audio.append(f)
+                for i in range(0, 1000):
+                    audio.append(0)
+            audio = np.array(audio)
+            filename = "{}/cluster_{}.wav".format(out, c)
+            write(filename, 44100, audio.astype(np.int16)) 
     
 
 if __name__ == '__main__':

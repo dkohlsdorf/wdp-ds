@@ -7,11 +7,13 @@ import os
 from lib_dolphin.audio import *
 from lib_dolphin.features import *
 from lib_dolphin.eval import *
+from lib_dolphin.dtw import *
 
 from collections import namedtuple
 
 from scipy.io.wavfile import read, write
-
+from tensorflow.keras.models import load_model
+from sklearn.cluster import AgglomerativeClustering
 
 FFT_STEP     = 128
 FFT_WIN      = 512
@@ -24,13 +26,17 @@ T            = int((RAW_AUDIO - FFT_WIN) / FFT_STEP)
 
 CONV_PARAM   = (8, 8, 128)
 WINDOW_PARAM = (T, D, 1)
-LATENT       = 128
+LATENT       = 32
 BATCH        = 25
 EPOCHS       = 25
 
+CLUST_START = 5
+CLUST_STEP  = 5
+CLUST_STOP  = 1505
+
 
 def train(label_file, wav_file, noise_file, out_folder="output", perc_test=0.25):
-    windows, instances, labels, label_dict = dataset_supervised(
+    instances, labels, label_dict = dataset_supervised_windows(
         label_file, wav_file, lo=FFT_LO, hi=FFT_HI, win=FFT_WIN, step=FFT_STEP, raw_size=RAW_AUDIO)    
  
     noise_label  = np.max([i for _, i in label_dict.items()]) + 1
@@ -105,6 +111,73 @@ def train(label_file, wav_file, noise_file, out_folder="output", perc_test=0.25)
     
     model.save('{}/supervised.h5'.format(out_folder))
     enc.save('{}/encoder.h5'.format(out_folder))
+
+    
+def clustering(regions, wav_file, folder):
+    instances_file = "{}/instances.pkl".format(folder)
+    distances_file = "{}/distances.pkl".format(folder)
+    clusters_file  = "{}/clusters.pkl".format(folder)
+    
+    if not os.path.exists(instances_file):
+        enc = load_model('{}/encoder.h5'.format(folder))
+        instances = dataset_unsupervised_regions(
+            regions, wav_file, enc, lo=FFT_LO, hi=FFT_HI, win=FFT_WIN, step=FFT_STEP, T=T)   
+        print("#Instances: {}".format(len(instances)))
+        pkl.dump(instances, open(instances_file, "wb"))
+    else:
+        instances = pkl.load(open(instances_file, "rb"))
+
+    if not os.path.exists(distances_file):        
+        distances = dtw_distances(instances)
+        pkl.dump(distances, open(distances_file, "wb"))    
+    else:
+        distances = pkl.load(open(distances_file, "rb")) 
+
+    n = (CLUST_STOP - CLUST_START) // CLUST_STEP
+    m = len(distances)
+    clusters = np.zeros((n, m), dtype=np.int16)
+    for i, k in enumerate(range(CLUST_START, CLUST_STOP, CLUST_STEP)):
+        if i % 10 == 0:
+            print(" ... clustering {}".format(k))
+        clustering = AgglomerativeClustering(n_clusters=k, affinity="precomputed", linkage="average")
+        clusters[i, :] = clustering.fit_predict(distances)
+    pkl.dump(clusters, open(clusters_file, "wb"))
+
+
+def export(csvfile, wavfile, clusters_file, k, out):
+    print(" ... loading data")
+    k = int((k - CLUST_START) / CLUST_STEP)
+    clusters = pkl.load(open(clusters_file, "rb"))[k, :]
+    df       = pd.read_csv(csvfile)
+    x        = raw(wavfile)
+
+    print(" ... grouping clusters {}".format(np.max(clusters)))
+    ranges = {}
+    i = 0
+    for _, row in df.iterrows():
+        cluster = clusters[i]
+        start = row['starts']
+        stop  = row['stops']
+        l = stop - start
+        L = int((l - FFT_WIN) / FFT_STEP)
+
+        if L > T:
+            if cluster not in ranges:
+                ranges[cluster] = []
+            ranges[cluster].append((start, stop))
+            i += 1
+    print(" ... export {} / {}".format(i, len(clusters)))
+    for c, rng in ranges.items():
+        print(" ... export cluster {} {}".format(c, len(rng)))
+        audio = []
+        for start, stop in rng:
+            for f in x[start:stop]:
+                audio.append(f)
+            for i in range(0, 1000):
+                audio.append(0)
+        audio = np.array(audio)
+        filename = "{}/cluster_{}.wav".format(out, c)
+        write(filename, 44100, audio.astype(np.int16)) 
     
 
 if __name__ == '__main__':
@@ -112,14 +185,28 @@ if __name__ == '__main__':
     print("Simplified WDP DS Pipeline")
     print("by Daniel Kyu Hwa Kohlsdorf")
     if len(sys.argv) >= 6 and sys.argv[1] == 'train':            
-            labels = sys.argv[2]
-            wav    = sys.argv[3]
-            noise  = sys.argv[4]
-            out    = sys.argv[5]
-            train(labels, wav, noise, out)
+        labels = sys.argv[2]
+        wav    = sys.argv[3]
+        noise  = sys.argv[4]
+        out    = sys.argv[5]
+        train(labels, wav, noise, out)
+    elif len(sys.argv) >= 5 and sys.argv[1] == 'clustering':
+        labels = sys.argv[2]
+        wav    = sys.argv[3]
+        out    = sys.argv[4]
+        clustering(labels, wav, out)
+    elif len(sys.argv) >= 7 and sys.argv[1] == 'export':
+        labels   = sys.argv[2]
+        wav      = sys.argv[3]
+        clusters = sys.argv[4]
+        k        = int(sys.argv[5])
+        out      =  sys.argv[6]
+        export(labels, wav, clusters, k, out)
     else:
         print("""
             Usage:
-                + train:     python pipeline.py train LABEL_FILE AUDIO_FILE NOISE_FILE OUT_FOLDER
+                + train:      python pipeline.py train LABEL_FILE AUDIO_FILE NOISE_FILE OUT_FOLDER
+                + clustering: python pipeline.py clustering LABEL_FILE AUDIO_FILE OUT_FOLDER
+                + export:     python pipeline.py export LABEL_FILE AUDIO_FILE CLUSTER_FILE K OUT_FOLDER
         """)
     print("\n=====================================")

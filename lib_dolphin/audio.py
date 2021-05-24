@@ -1,5 +1,6 @@
 import numpy as np
 import pandas as pd
+from numba import jit
 
 
 from numpy.fft        import fft
@@ -32,12 +33,45 @@ def spectrogram(audio, lo = 20, hi = 200, win = 512, step=128, normalize=True):
     return spectrogram
 
 
-def dataset_supervised(label, wavfile, lo = 20, hi = 200, win = 512, step=128, raw_size=5120):
-    df    = pd.read_csv(label)
-    audio = raw(wavfile)
+@jit
+def windowing(region, window):
+    N, D = region.shape
+    windows = []
+    if N > window:
+        step = window // 2
+        for i in range(window, N, step):
+            r = region[i - window:i].reshape((window, D, 1))
+            windows.append(r)
+        return np.stack(windows)
+    else:
+        return None
+
+
+def dataset_unsupervised_regions(regions, wavfile, encoder, lo, hi, win, step, T):
+    df        = pd.read_csv(regions)
+    N         = len(df)
+    audio     = raw(wavfile) 
+    instances = []
+    for i, row in df.iterrows():
+        start = row['starts']
+        stop  = row['stops']
+        w     = audio[start:stop]
+        if len(w) > 0:
+            s = spectrogram(w, lo, hi, win, step)
+            w = windowing(s, T)
+            if w is not None:
+                if i % 100 == 0:
+                    print(" ... reading {}/{}={}".format(i, N, i / N))
+                x = encoder.predict(w)
+                instances.append(x)
+    return instances
+
+
+def dataset_supervised_windows(label, wavfile, lo, hi, win, step, raw_size):
+    df        = pd.read_csv(label)
+    audio     = raw(wavfile)
     labels    = []
     instances = []
-    windows   = []
 
     label_dict = {}
     cur_label  = 0
@@ -52,6 +86,5 @@ def dataset_supervised(label, wavfile, lo = 20, hi = 200, win = 512, step=128, r
         s = spectrogram(w, lo, hi, win, step)
         f, t = s.shape
         instances.append(s)
-        windows.append(w)
         labels.append(label_dict[label])
-    return (windows, instances, labels, label_dict)
+    return instances, labels, label_dict

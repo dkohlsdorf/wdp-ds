@@ -5,10 +5,11 @@ import matplotlib.pyplot as plt
 import pandas as pd
 import os
 
+from collections import Counter
 from collections import namedtuple
 from lib_dolphin.audio import *
 from scipy.io.wavfile import read, write    
-    
+
 
 def plot_result_matrix(confusion, classes, predictions, title, cmap=plt.cm.Blues):
     fig, ax = plt.subplots()
@@ -72,8 +73,3 @@ def enc_filters(enc, n_filters, output):
         plt.imshow(weight.T, cmap='gray')
     plt.savefig(output)
     plt.clf()
-
-
-        
-        
-    

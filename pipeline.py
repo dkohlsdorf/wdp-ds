@@ -107,7 +107,7 @@ def train(label_file, wav_file, noise_file, out_folder="output", perc_test=0.25)
     
     model.save('{}/supervised.h5'.format(out_folder))
     enc.save('{}/encoder.h5'.format(out_folder))
-    pkl.dump(label_dict, open('{}/labels.pkl'.format(out_folder)))
+    pkl.dump(label_dict, open('{}/labels.pkl'.format(out_folder), "wb"))
 
     
 def clustering(regions, wav_file, folder):

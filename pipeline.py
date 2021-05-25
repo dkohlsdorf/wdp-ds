@@ -26,7 +26,7 @@ T            = int((RAW_AUDIO - FFT_WIN) / FFT_STEP)
 
 CONV_PARAM   = (8, 8, 128)
 WINDOW_PARAM = (T, D, 1)
-LATENT       = 32
+LATENT       = 128
 BATCH        = 25
 EPOCHS       = 25
 
@@ -107,21 +107,25 @@ def train(label_file, wav_file, noise_file, out_folder="output", perc_test=0.25)
     
     model.save('{}/supervised.h5'.format(out_folder))
     enc.save('{}/encoder.h5'.format(out_folder))
+    pkl.dump(label_dict, open('{}/labels.pkl'.format(out_folder)))
 
     
 def clustering(regions, wav_file, folder):
-    instances_file = "{}/instances.pkl".format(folder)
-    distances_file = "{}/distances.pkl".format(folder)
-    clusters_file  = "{}/clusters.pkl".format(folder)
+    instances_file   = "{}/instances.pkl".format(folder)
+    predictions_file = "{}/predictions.pkl".format(folder)
+    distances_file   = "{}/distances.pkl".format(folder)
+    clusters_file    = "{}/clusters.pkl".format(folder)
     
     if not os.path.exists(instances_file):
+        cls = load_model('{}/supervised.h5'.format(folder))
         enc = load_model('{}/encoder.h5'.format(folder))
-        instances = dataset_unsupervised_regions(
-            regions, wav_file, enc, lo=FFT_LO, hi=FFT_HI, win=FFT_WIN, step=FFT_STEP, T=T)   
+        instances, predictions = dataset_unsupervised_regions(
+            regions, wav_file, enc, cls, lo=FFT_LO, hi=FFT_HI, win=FFT_WIN, step=FFT_STEP, T=T)   
         print("#Instances: {}".format(len(instances)))
         pkl.dump(instances, open(instances_file, "wb"))
+        pkl.dump(predictions, open(predictions_file, "wb"))
     else:
-        instances = pkl.load(open(instances_file, "rb"))
+        instances   = pkl.load(open(instances_file, "rb"))
 
     if not os.path.exists(distances_file):        
         distances = dtw_distances(instances)
@@ -137,7 +141,7 @@ def clustering(regions, wav_file, folder):
         if i % 10 == 0:
             print(" ... clustering {}%".format(perc))
         th = np.percentile(distances.flatten(), perc)
-        clustering = AgglomerativeClustering(n_clusters=None, distance_threshold=th, affinity="precomputed", linkage="average")
+        clustering = AgglomerativeClustering(n_clusters=None, distance_threshold=th, affinity="precomputed", linkage="complete")
         clusters[i, :] = clustering.fit_predict(distances)
     pkl.dump(clusters, open(clusters_file, "wb"))
 
@@ -164,6 +168,7 @@ def export(csvfile, wavfile, clusters_file, k, out):
             ranges[cluster].append((start, stop))
             i += 1
     print(" ... export {} / {}".format(i, len(clusters)))
+    unmerged = []
     for c, rng in ranges.items():
         print(" ... export cluster {} {}".format(c, len(rng)))
         if len(rng) > 1:
@@ -176,7 +181,16 @@ def export(csvfile, wavfile, clusters_file, k, out):
             audio = np.array(audio)
             filename = "{}/cluster_{}.wav".format(out, c)
             write(filename, 44100, audio.astype(np.int16)) 
-    
+        else:
+            start, stop = rng[0]
+            for f in x[start:stop]:
+                unmerged.append(f)
+            for i in range(0, 1000):
+                unmerged.append(0)
+        unmerged = np.array(unmerged)
+        filename = "{}/unmerged.wav".format(out)
+        write(filename, 44100, unmerged.astype(np.int16)) 
+
 
 if __name__ == '__main__':
     print("=====================================")

@@ -20,7 +20,7 @@ def label_cluster(predictions, ids, reverse):
     y['ECHO']  = x['ECHO']
     y = list(y.items())
     y.sort(key = lambda x: -x[1])
-    return y[0]
+    return y[0][0]
 
 
 def plot_result_matrix(confusion, classes, predictions, title, cmap=plt.cm.Blues):

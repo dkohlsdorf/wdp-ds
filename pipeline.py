@@ -151,7 +151,7 @@ def clustering(regions, wav_file, folder):
 def export(csvfile, wavfile, folder, k, out):
     print(" ... loading data")
     
-    labels_file      = "{}/labels.pkl".format(folder)
+    label_file       = "{}/labels.pkl".format(folder)
     ids_file         = "{}/ids.pkl".format(folder)
     predictions_file = "{}/predictions.pkl".format(folder)
     clusters_file    = "{}/clusters.pkl".format(folder)
@@ -173,13 +173,13 @@ def export(csvfile, wavfile, folder, k, out):
     
     by_cluster  = {}
     ids_cluster = {}
-    for i in ids:
+    for i, j in enumerate(ids):
         cluster = clusters[i]
-        if cluster in ids_cluster:
+        if cluster not in ids_cluster:
             ids_cluster[cluster] = []
             by_cluster[cluster]  = []
         ids_cluster[cluster].append(i)
-        by_cluster[cluster].append(ranges[i])
+        by_cluster[cluster].append(ranges[j])
             
     print(" ... export {} / {}".format(i, len(clusters)))
     unmerged = []
@@ -191,13 +191,13 @@ def export(csvfile, wavfile, folder, k, out):
             if len(rng) > 1:
                 counts.append(len(rng))
                 audio = []
-                for i, start, stop in rng:
+                for start, stop in rng:
                     for f in x[start:stop]:
                         audio.append(f)
                     for i in range(0, 1000):
                         audio.append(0)
                 audio = np.array(audio)
-                filename = "{}/cluster_{}.wav".format(out, c)
+                filename = "{}/{}_{}.wav".format(out, label, c)
                 write(filename, 44100, audio.astype(np.int16)) 
             else:
                 start, stop = rng[0]
@@ -208,11 +208,11 @@ def export(csvfile, wavfile, folder, k, out):
     unmerged = np.array(unmerged)
     filename = "{}/unmerged.wav".format(out)
     write(filename, 44100, unmerged.astype(np.int16)) 
+    counts.sort(key=lambda x: -x)
     plt.plot(np.log(np.arange(0, len(counts)) + 1), np.log(counts))
     plt.grid(True)
-    plt.legend()
     plt.savefig('{}/{}_log-log.png'.format(out, k))
-
+    plt.close()
     
 if __name__ == '__main__':
     print("=====================================")
@@ -241,6 +241,6 @@ if __name__ == '__main__':
             Usage:
                 + train:      python pipeline.py train LABEL_FILE AUDIO_FILE NOISE_FILE OUT_FOLDER
                 + clustering: python pipeline.py clustering LABEL_FILE AUDIO_FILE OUT_FOLDER
-                + export:     python pipeline.py export LABEL_FILE AUDIO_FILE CLUSTER_FILE K OUT_FOLDER
+                + export:     python pipeline.py export LABEL_FILE AUDIO_FILE FOLDER K OUT_FOLDER
         """)
     print("\n=====================================")

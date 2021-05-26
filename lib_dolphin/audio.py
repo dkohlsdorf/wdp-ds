@@ -53,6 +53,7 @@ def dataset_unsupervised_regions(regions, wavfile, encoder, supervised, lo, hi, 
     audio     = raw(wavfile) 
     instances = []
     labels    = []
+    ids       = []
     for i, row in df.iterrows():
         start = row['starts']
         stop  = row['stops']
@@ -67,7 +68,8 @@ def dataset_unsupervised_regions(regions, wavfile, encoder, supervised, lo, hi, 
                 y = supervised.predict(w)                
                 instances.append(x)
                 labels.append(y)
-    return instances, labels
+                ids.append(i)
+    return ids, instances, labels
 
 
 def dataset_supervised_windows(label, wavfile, lo, hi, win, step, raw_size):

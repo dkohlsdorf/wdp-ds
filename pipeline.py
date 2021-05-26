@@ -3,6 +3,7 @@ import numpy as np
 import pickle as pkl
 import sys
 import os
+import matplotlib.pyplot as plt
 
 from lib_dolphin.audio import *
 from lib_dolphin.features import *
@@ -112,6 +113,7 @@ def train(label_file, wav_file, noise_file, out_folder="output", perc_test=0.25)
     
 def clustering(regions, wav_file, folder):
     instances_file   = "{}/instances.pkl".format(folder)
+    ids_file         = "{}/ids.pkl".format(folder)
     predictions_file = "{}/predictions.pkl".format(folder)
     distances_file   = "{}/distances.pkl".format(folder)
     clusters_file    = "{}/clusters.pkl".format(folder)
@@ -119,14 +121,14 @@ def clustering(regions, wav_file, folder):
     if not os.path.exists(instances_file):
         cls = load_model('{}/supervised.h5'.format(folder))
         enc = load_model('{}/encoder.h5'.format(folder))
-        instances, predictions = dataset_unsupervised_regions(
+        ids, instances, predictions = dataset_unsupervised_regions(
             regions, wav_file, enc, cls, lo=FFT_LO, hi=FFT_HI, win=FFT_WIN, step=FFT_STEP, T=T)   
         print("#Instances: {}".format(len(instances)))
+        pkl.dump(ids, open(ids_file, "wb"))
         pkl.dump(instances, open(instances_file, "wb"))
         pkl.dump(predictions, open(predictions_file, "wb"))
     else:
         instances   = pkl.load(open(instances_file, "rb"))
-
     if not os.path.exists(distances_file):        
         distances = dtw_distances(instances)
         pkl.dump(distances, open(distances_file, "wb"))    
@@ -146,52 +148,72 @@ def clustering(regions, wav_file, folder):
     pkl.dump(clusters, open(clusters_file, "wb"))
 
     
-def export(csvfile, wavfile, clusters_file, k, out):
+def export(csvfile, wavfile, folder, k, out):
     print(" ... loading data")
-    k        = k - 1
-    clusters = pkl.load(open(clusters_file, "rb"))[k, :]
+    
+    labels_file      = "{}/labels.pkl".format(folder)
+    ids_file         = "{}/ids.pkl".format(folder)
+    predictions_file = "{}/predictions.pkl".format(folder)
+    clusters_file    = "{}/clusters.pkl".format(folder)
+
+    ids         = pkl.load(open(ids_file, "rb"))
+    clusters    = pkl.load(open(clusters_file, "rb"))[k, :]
+    predictions = pkl.load(open(predictions_file, "rb")) 
+    label_dict  = pkl.load(open(label_file, "rb"))
+    reverse     = dict([(v,k) for k, v in label_dict.items()])
+    
     df       = pd.read_csv(csvfile)
     x        = raw(wavfile)
     print(" ... grouping clusters {}".format(np.max(clusters)))
-    ranges = {}
-    i = 0
+    ranges = []
     for _, row in df.iterrows():
-        cluster = clusters[i]
         start = row['starts']
         stop  = row['stops']
-        l = stop - start
-        L = int((l - FFT_WIN) / FFT_STEP)
-
-        if L > T:
-            if cluster not in ranges:
-                ranges[cluster] = []
-            ranges[cluster].append((start, stop))
-            i += 1
+        ranges.append((start, stop))
+    
+    by_cluster  = {}
+    ids_cluster = {}
+    for i in ids:
+        cluster = clusters[i]
+        if cluster in ids_cluster:
+            ids_cluster[cluster] = []
+            by_cluster[cluster]  = []
+        ids_cluster[cluster].append(i)
+        by_cluster[cluster].append(ranges[i])
+            
     print(" ... export {} / {}".format(i, len(clusters)))
     unmerged = []
-    for c, rng in ranges.items():
-        print(" ... export cluster {} {}".format(c, len(rng)))
-        if len(rng) > 1:
-            audio = []
-            for start, stop in rng:
+    counts   = [] 
+    for c, rng in by_cluster.items():
+        label = label_cluster(predictions, ids_cluster[c], reverse)
+        if label != "ECHO":
+            print(" ... export cluster {} {} {}".format(c, len(rng), label))
+            if len(rng) > 1:
+                counts.append(len(rng))
+                audio = []
+                for i, start, stop in rng:
+                    for f in x[start:stop]:
+                        audio.append(f)
+                    for i in range(0, 1000):
+                        audio.append(0)
+                audio = np.array(audio)
+                filename = "{}/cluster_{}.wav".format(out, c)
+                write(filename, 44100, audio.astype(np.int16)) 
+            else:
+                start, stop = rng[0]
                 for f in x[start:stop]:
-                    audio.append(f)
+                    unmerged.append(f)
                 for i in range(0, 1000):
-                    audio.append(0)
-            audio = np.array(audio)
-            filename = "{}/cluster_{}.wav".format(out, c)
-            write(filename, 44100, audio.astype(np.int16)) 
-        else:
-            start, stop = rng[0]
-            for f in x[start:stop]:
-                unmerged.append(f)
-            for i in range(0, 1000):
-                unmerged.append(0)
-        unmerged = np.array(unmerged)
-        filename = "{}/unmerged.wav".format(out)
-        write(filename, 44100, unmerged.astype(np.int16)) 
+                    unmerged.append(0)
+    unmerged = np.array(unmerged)
+    filename = "{}/unmerged.wav".format(out)
+    write(filename, 44100, unmerged.astype(np.int16)) 
+    plt.plot(np.log(np.arange(0, len(counts)) + 1), np.log(counts))
+    plt.grid(True)
+    plt.legend()
+    plt.savefig('{}/{}_log-log.png'.format(out, k))
 
-
+    
 if __name__ == '__main__':
     print("=====================================")
     print("Simplified WDP DS Pipeline")

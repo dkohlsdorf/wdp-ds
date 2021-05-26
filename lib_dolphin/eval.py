@@ -11,6 +11,18 @@ from lib_dolphin.audio import *
 from scipy.io.wavfile import read, write    
 
 
+def label_cluster(predictions, ids, reverse):
+    x = np.sum([np.mean(predictions[i], axis=0) for i in ids], axis=0)
+    x = dict([(reverse[i], x[i]) for i in range(0, len(x))])
+    y = {}
+    y['WSTL']  = x['WSTL_UP'] + x['WSTL_DOWN']
+    y['BURST'] = x['BURST']
+    y['ECHO']  = x['ECHO']
+    y = list(y.items())
+    y.sort(key = lambda x: -x[1])
+    return y[0]
+
+
 def plot_result_matrix(confusion, classes, predictions, title, cmap=plt.cm.Blues):
     fig, ax = plt.subplots()
     im = ax.imshow(confusion, interpolation='nearest', cmap=cmap)

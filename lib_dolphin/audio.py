@@ -66,7 +66,7 @@ def dataset_unsupervised_regions(regions, wavfile, encoder, supervised, lo, hi, 
                 x = encoder.predict(w)
                 y = supervised.predict(w)                
                 instances.append(x)
-                labels.append(x)
+                labels.append(y)
     return instances, labels
 
 

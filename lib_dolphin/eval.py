@@ -5,54 +5,23 @@ import matplotlib.pyplot as plt
 import pandas as pd
 import os
 
+from collections import Counter
 from collections import namedtuple
-
 from lib_dolphin.audio import *
-from lib_dolphin.interest_points import *
-
 from scipy.io.wavfile import read, write    
-from matplotlib.patches import Rectangle
 
 
-def label(x, label_dict):
-    n_labels = len(label_dict)
-    n_labels = np.zeros(n_labels)
-    for l in x:
-        n_labels[l] += 1
-    return label_dict[np.argmax(n_labels)]
+def label_cluster(predictions, ids, reverse):
+    x = np.sum([np.mean(predictions[i], axis=0) for i in ids], axis=0)
+    x = dict([(reverse[i], x[i]) for i in range(0, len(x))])
+    y = {}
+    y['WSTL']  = x['WSTL_UP'] + x['WSTL_DOWN']
+    y['BURST'] = x['BURST']
+    y['ECHO']  = x['ECHO']
+    y = list(y.items())
+    y.sort(key = lambda x: -x[1])
+    return y[0][0]
 
-
-def export_audio(c, labels, windows, label_dict, out, min_support = 25):
-    windows_by_cluster = {}
-    labels_by_cluster = {}
-    for i, k in enumerate(c):
-        win = windows[i]
-        lab = labels[i]
-        if k not in windows_by_cluster:
-            windows_by_cluster[k] = []
-            labels_by_cluster[k] = []
-        windows_by_cluster[k].append(win)
-        labels_by_cluster[k].append(lab)
-
-    reverse = dict([(v, k) for k, v in label_dict.items()])
-    
-    whitelist = {}
-    cur = 0
-    for c, instances in windows_by_cluster.items():
-        l = label(labels_by_cluster[c], reverse)
-        audio = []
-        if len(instances) > min_support:
-            whitelist[c] = cur
-            cur += 1
-            for instance in instances:
-                for x in instance:
-                    audio.append(x)
-                for i in range(0, 1000):
-                    audio.append(0)
-            audio = np.stack(audio)
-            write('{}/{}_{}.wav'.format(out, l, whitelist[c]), 44100, audio.astype(np.int16)) 
-    return whitelist
-    
 
 def plot_result_matrix(confusion, classes, predictions, title, cmap=plt.cm.Blues):
     fig, ax = plt.subplots()
@@ -107,20 +76,6 @@ def visualize_dataset(instances, output):
     plt.clf()
 
     
-def reconstruct(ae, instances, output):    
-    plt.figure(figsize=(5, 10))
-    t = instances[0].shape[0]
-    d = instances[0].shape[1]
-    for i in range(25):
-        idx = np.random.randint(len(instances))
-        reconstruction = ae.predict(instances[idx].reshape((1, t, d, 1)))
-        reconstruction = reconstruction.reshape((t, d))
-        plt.subplot(5, 5, i + 1)
-        plt.imshow(reconstruction.T)
-    plt.savefig(output)
-    plt.clf()   
-
-
 def enc_filters(enc, n_filters, output):
     plt.figure(figsize=(10, 10))
     w = enc.weights[0].numpy()
@@ -130,97 +85,3 @@ def enc_filters(enc, n_filters, output):
         plt.imshow(weight.T, cmap='gray')
     plt.savefig(output)
     plt.clf()
-
-
-def decoded_plots(clustered, names, counts, path, ip_th, ip_r, min_count, show_ip=False, min_annotations=15):
-    colors = []
-    for line in open('lib_dolphin/color.txt'):
-        cmp = line.split('\t')
-        colors.append(cmp[1].strip())
-
-    by_file = {}
-    for c, examples in clustered.items():
-        for file, start, stop, _ in examples:
-            if file not in by_file:
-                by_file[file] = []
-            by_file[file].append([c, start, stop])
-
-    for file, annotations in by_file.items():
-        if len(annotations) > min_annotations:
-            print(file)
-            x  = raw(file)
-            s  = spectrogram(x, lo=0, hi=256)
-
-            plt.figure(figsize=(len(s) / 100, 25))
-            plt.imshow(1.0 - s.T, cmap='gray')
-            if show_ip:
-                ip = [p for p in interest_points(s, ip_r, ip_th)]
-                plt.scatter([t for t, _ in ip], [f for _, f in ip], color='red')
-            last = 0
-            for i, (c, start, stop) in enumerate(annotations):
-                color = colors[c]    
-                start_spec = start / 128 
-                stop_spec  = stop / 128                
-                if counts[c] > min_count:
-                    c = names[c]
-                    plt.gca().add_patch(Rectangle((start_spec, 0), (stop_spec - start_spec), 256, color=color, edgecolor='r', alpha=0.5))
-                    plt.gca().annotate('{}'.format(c), xy=(start_spec + (stop_spec - start_spec) / 2, 25))
-                else:
-                    plt.gca().annotate('===', xy=(start_spec, 25))
-                    plt.gca().add_patch(Rectangle((start_spec, 0), (stop_spec - start_spec), 256, edgecolor='r', fill = None))
-
-            img = '{}/{}'.format(path, file.split('/')[-1].replace('.wav', '.png'))
-            plt.savefig(img)
-            plt.close()
-        
-        
-def distance_plots(distance, path):
-    plt.imshow(distance)
-    plt.savefig('{}/needleman.png'.format(path))
-    plt.close()
-
-    plt.figure(figsize=(10, 5))
-    plt.hist(distance.flatten(), bins=100)
-    plt.savefig('{}/histogram.png'.format(path))
-    plt.close()
-
-    
-def sequence_cluster_export(clustered, names, counts, path, min_counts, sep='_'):
-    clusters = []
-    files    = []
-    starts   = []
-    stops    = []
-    strings  = []
-    for c, regions in clustered.items():
-        if counts[c] > min_counts:
-            c = names[c]
-            audio = []
-            for file, start, stop, s in regions[0:25]:
-                cmp = file.replace('.wav', '').split('/')[-1].split(sep)
-                if len(cmp) > 0 and len(cmp[1]) > 0:
-                    cmp[0] = re.sub("[^0-9]", "", cmp[0])
-                    cmp[1] = re.sub("[^0-9]", "", cmp[1])
-                    enc = int(cmp[0])
-                    sec = int(cmp[1])
-
-                    clusters.append(c)
-                    files.append(enc)
-                    starts.append(start / 44100 + sec)
-                    stops.append(stop   / 44100 + sec)
-                    strings.append(s)
-                    x = raw(file)[start:stop]
-
-                    for sample in x:
-                        audio.append(sample)
-                    for _ in range(0, 1000):
-                        audio.append(0)
-            audio = np.stack(audio)
-            write('{}/cluster_{}.wav'.format(path, c), 44100, audio.astype(np.int16)) 
-    df = pd.DataFrame({
-        "file": files,
-        "start": starts,
-        "stop": stops,
-        "pattern": clusters,
-        "clusters": strings
-    })
-    df.to_csv('{}/sequences.csv'.format(path))

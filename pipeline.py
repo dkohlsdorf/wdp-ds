@@ -214,6 +214,40 @@ def export(csvfile, wavfile, folder, k, out):
     plt.savefig('{}/{}_log-log.png'.format(out, k))
     plt.close()
     
+    
+def htk_export(folder, out_htk, out_lab):
+    instances_file   = "{}/instances.pkl".format(folder)
+    predictions_file = "{}/predictions.pkl".format(folder)
+    distances_file   = "{}/distances.pkl".format(folder)
+    clusters_file    = "{}/clusters.pkl".format(folder)
+    
+    instances   = pkl.load(open(instances_file, "rb")) 
+    clusters    = pkl.load(open(clusters_file, "rb"))[k, :]
+    predictions = pkl.load(open(predictions_file, "rb")) 
+    label_dict  = pkl.load(open(label_file, "rb"))
+    reverse     = dict([(v,k) for k, v in label_dict.items()])
+    
+    ids_cluster = {}
+    for cluster, i in enumerate(clusters):
+        if cluster not in ids_cluster:
+            ids_cluster[cluster] = []
+        ids_cluster[cluster].append(i)
+        
+    seq = []
+    cur = 0
+    with open(out_lab, 'w') as fp:
+        for c, ids in ids_cluster.items():
+            label = label_cluster(predictions, ids, reverse)
+            if label != "ECHO":
+                for i in ids:
+                    n = len(instances[i])
+                    seq.append(instances[i])
+                    fp.write("{} {} {}".format(cur, cur + n, c))
+                    cur += n
+    seq = np.vstack(seq)
+    write_htk(seq, out_htk)
+    
+                
 if __name__ == '__main__':
     print("=====================================")
     print("Simplified WDP DS Pipeline")
@@ -236,11 +270,17 @@ if __name__ == '__main__':
         k        = int(sys.argv[5])
         out      =  sys.argv[6]
         export(labels, wav, clusters, k, out)
+    elif len(sys.argv) >= 5 and sys.argv[1] == 'htk':
+        folder = sys.argv[2]
+        htk    = sys.argv[3]
+        lab    = sys.argv[4] 
+        htk_export(folder, htk, lab)
     else:
         print("""
             Usage:
                 + train:      python pipeline.py train LABEL_FILE AUDIO_FILE NOISE_FILE OUT_FOLDER
                 + clustering: python pipeline.py clustering LABEL_FILE AUDIO_FILE OUT_FOLDER
                 + export:     python pipeline.py export LABEL_FILE AUDIO_FILE FOLDER K OUT_FOLDER
+                + htk:        python pipeline.py htk FOLDER OUT_LAB OUT_HTK
         """)
     print("\n=====================================")

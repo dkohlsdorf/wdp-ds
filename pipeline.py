@@ -147,7 +147,7 @@ def clustering(regions, wav_file, folder):
         clusters[i, :] = clustering.fit_predict(distances)
     pkl.dump(clusters, open(clusters_file, "wb"))
 
-    
+
 def export(csvfile, wavfile, folder, k, out):
     print(" ... loading data")
     
@@ -215,6 +215,15 @@ def export(csvfile, wavfile, folder, k, out):
     plt.close()
     
     
+def htk_converter(file, folder, out):
+    enc      = load_model('{}/encoder.h5'.format(folder))
+    audio    = raw(file) 
+    spec     = spectrogram(audio, FFT_LO, FFT_HI, FFT_WIN, FFT_STEP)
+    windowed = windowing(spec, T)
+    x        = enc.predict(windowed)
+    write_htk(x, out)
+
+
 def htk_export(folder, out_htk, out_lab):
     instances_file   = "{}/instances.pkl".format(folder)
     predictions_file = "{}/predictions.pkl".format(folder)
@@ -248,6 +257,7 @@ def htk_export(folder, out_htk, out_lab):
     write_htk(seq, out_htk)
     print("length: {}".format(seq.shape))
                 
+
 if __name__ == '__main__':
     print("=====================================")
     print("Simplified WDP DS Pipeline")
@@ -271,17 +281,35 @@ if __name__ == '__main__':
         out      =  sys.argv[6]
         export(labels, wav, clusters, k, out)
     elif len(sys.argv) >= 6 and sys.argv[1] == 'htk':
-        k      = int(sys.argv[2])
-        folder = sys.argv[3]
-        htk    = sys.argv[4]
-        lab    = sys.argv[5] 
-        htk_export(folder, htk, lab)
+        mode   = sys.argv[2]
+        if mode == 'results':
+            k      = int(sys.argv[3])
+            folder = sys.argv[4]
+            htk    = sys.argv[5]
+            lab    = sys.argv[6] 
+            htk_export(folder, htk, lab)
+        else:
+            audio  = sys.argv[3]
+            folder = sys.argv[4]
+            htk    = sys.argv[5]
+            if audio.endswith('*.wav'):
+                path =  audio.replace('*.wav', '')
+                if len(path) == 0:
+                    path = '.'
+                for file in os.listdir(path):
+                    htk_file = "{}/{}".format(htk, file.replace('*.wav', '*.htk'))
+                    path     = "{}/{}".format(path, file)
+                    htk_converter(path, folder, htk_file)
+            else:
+                htk_file = "{}/{}".format(htk, audio.split('/')[-1].replace('*.wav', '*.htk'))
+                htk_converter(audio, folder, htk_file)
     else:
         print("""
             Usage:
                 + train:      python pipeline.py train LABEL_FILE AUDIO_FILE NOISE_FILE OUT_FOLDER
                 + clustering: python pipeline.py clustering LABEL_FILE AUDIO_FILE OUT_FOLDER
                 + export:     python pipeline.py export LABEL_FILE AUDIO_FILE FOLDER K OUT_FOLDER
-                + htk:        python pipeline.py htk K FOLDER OUT_HTK OUT_LAB
+                + htk:        python pipeline.py htk results K FOLDER OUT_HTK OUT_LAB
+                              python pipeline.py htk convert AUDIO FOLDER OUT_FOLDER 
         """)
     print("\n=====================================")

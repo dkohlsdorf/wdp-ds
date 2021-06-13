@@ -92,7 +92,3 @@ def dataset_supervised_windows(label, wavfile, lo, hi, win, step, raw_size):
         instances.append(s)
         labels.append(label_dict[label])
     return instances, labels, label_dict
-
-
-def htk_name(num):
-    return "".join([str(chr(int(i) + 97)) for i in str(num)])

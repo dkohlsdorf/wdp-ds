@@ -102,3 +102,7 @@ def mmf(label_file, proto_file, hmm_out="hmm0", hmm_list_out="monophones"):
         f.write(mmf)
     with open(hmm_list_out, "w") as f:
         f.write(monophones)        
+
+
+def htk_name(num):
+    return "".join([str(chr(int(i) + 97)) for i in str(num)])

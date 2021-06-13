@@ -247,6 +247,7 @@ def htk_export(folder, out_htk, out_lab, k, min_c = 25):
     label_dict = {}
     train = "{}_TRAIN.mlf".format(out_lab.replace(".mlf", ""))
     test  = "{}_TEST.mlf".format(out_lab.replace(".mlf", ""))
+    n_exp = 0
     with open(train, 'w') as fp_train, open(test, 'w') as fp_test:
         fp_train.write("#!MLF!#\n")
         fp_test.write("#!MLF!#\n")
@@ -255,6 +256,7 @@ def htk_export(folder, out_htk, out_lab, k, min_c = 25):
             if c not in label_dict:
                 label_dict[c] = htk_name(c)
             if label != "ECHO" and len(ids) > min_c:
+                n_exp += 1
                 fp_train.write("\"*/{}.lab\"\n".format(label_dict[c]))
                 fp_test.write("\"*/{}.lab\"\n".format(label_dict[c]))
                 seq = []
@@ -279,8 +281,9 @@ def htk_export(folder, out_htk, out_lab, k, min_c = 25):
     print("length: {}".format(seq.shape))
     for c, k in label_dict.items():
         print("{}\t{}".format(c, k))
+    print("#clusters: {}".format(n_exp))
 
-        
+
 if __name__ == '__main__':
     print("=====================================")
     print("Simplified WDP DS Pipeline")

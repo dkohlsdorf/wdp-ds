@@ -303,7 +303,7 @@ if __name__ == '__main__':
         k        = int(sys.argv[5])
         out      =  sys.argv[6]
         export(labels, wav, clusters, k, out)
-    elif len(sys.argv) >= 6 and sys.argv[1] == 'htk':
+    elif len(sys.argv) >= 5 and sys.argv[1] == 'htk':
         mode   = sys.argv[2]
         if mode == 'results':
             k      = int(sys.argv[3])
@@ -311,6 +311,18 @@ if __name__ == '__main__':
             htk    = sys.argv[5]
             lab    = sys.argv[6] 
             htk_export(folder, htk, lab, k)
+        elif mode == 'hmm_proto':
+            states = int(sys.argv[3])
+            folder = sys.argv[4]
+            hmm = left_right_hmm(states, states // 2, LATENT, name="proto")
+            with open("{}/proto".format(folder), "w") as fp:
+                fp.write(hmm)
+        elif mode == 'mmf':
+            proto  = sys.argv[3]
+            labels = sys.argv[4]
+            multi  = sys.argv[5]
+            lst    = sys.argv[6]
+            mmf(labels, proto, multi, lst)
         else:
             audio  = sys.argv[3]
             folder = sys.argv[4]
@@ -335,5 +347,7 @@ if __name__ == '__main__':
                 + export:     python pipeline.py export LABEL_FILE AUDIO_FILE FOLDER K OUT_FOLDER
                 + htk:        python pipeline.py htk results K FOLDER OUT_HTK OUT_LAB
                               python pipeline.py htk convert AUDIO FOLDER OUT_FOLDER 
+                              python pipeline.py htk hmm_proto STATES OUTPUT_FOLDER 
+                              python pipeline.py htk mmf PROTOTYPE LABELS MMF LIST
         """)
     print("\n=====================================")

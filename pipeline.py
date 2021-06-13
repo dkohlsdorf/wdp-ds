@@ -311,6 +311,18 @@ if __name__ == '__main__':
             htk    = sys.argv[5]
             lab    = sys.argv[6] 
             htk_export(folder, htk, lab, k)
+        elif mode == 'gram':
+            lab     = sys.argv[3]
+            out     = sys.argv[4]  
+            grammar = simple_grammar(lab)
+            with open(out, 'w') as fp:
+                fp.write(grammar + "\n")
+        elif mode == 'dict':
+            lab     = sys.argv[3]
+            out     = sys.argv[4]  
+            wlist   = wordlist(lab)
+            with open(out, 'w') as fp:
+                fp.write(wlist + "\n")
         elif mode == 'hmm_proto':
             states = int(sys.argv[3])
             folder = sys.argv[4]
@@ -348,5 +360,8 @@ if __name__ == '__main__':
                               python pipeline.py htk convert AUDIO FOLDER OUT_FOLDER 
                               python pipeline.py htk hmm_proto STATES OUTPUT_FOLDER 
                               python pipeline.py htk mmf PROTOTYPE LABELS MMF LIST
+                              python pipeline.py htk gram LABELS OUT
+                              python pipeline.py htk dict LABELS OUT
+
         """)
     print("\n=====================================")

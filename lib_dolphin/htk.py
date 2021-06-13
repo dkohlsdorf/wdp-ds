@@ -69,6 +69,28 @@ def left_right_hmm(max_states, min_states, dims, name="proto"):
     """.format(dims, name, max_states, "".join(states), mat(transitions))
 
 
+def simple_grammar(label_file):
+    df = pd.read_csv(label_file, sep=" ", header=None, names=["start", "stop", "lab"], skiprows=2)
+    df = df.dropna()
+    labels = list(set(df["lab"]))
+    patterns = " | ".join(labels)
+    patterns = "$patterns = {};".format(patterns)
+    grammars = "( SENT-START (<$patterns>) SENT-END )"
+    grammars = "( <$patterns> )"
+    return "\n".join([patterns, grammars])
+
+
+def wordlist(label_file):
+    df = pd.read_csv(label_file, sep=" ", header=None, names=["start", "stop", "lab"], skiprows=2)
+    df = df.dropna()
+    labels = list(set(df["lab"]))
+    labels.append("SENT-START")
+    labels.append("SENT-END")
+    labels = sorted(labels)
+    labels = ["{} {}".format(i,j) for i, j in zip(labels, labels)]
+    return "\n".join(labels)
+
+
 def mmf(label_file, proto_file, hmm_out="hmm0", hmm_list_out="monophones"):
     df = pd.read_csv(label_file, sep=" ", header=None, names=["start", "stop", "lab"], skiprows=2)
     df = df.dropna()

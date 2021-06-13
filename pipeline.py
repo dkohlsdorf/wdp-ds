@@ -4,12 +4,13 @@ import pickle as pkl
 import sys
 import os
 import matplotlib.pyplot as plt
+import random
 
 from lib_dolphin.audio import *
 from lib_dolphin.features import *
 from lib_dolphin.eval import *
 from lib_dolphin.dtw import *
-
+from lib_dolphin.htk import *
 from collections import namedtuple
 
 from scipy.io.wavfile import read, write
@@ -147,7 +148,7 @@ def clustering(regions, wav_file, folder):
         clusters[i, :] = clustering.fit_predict(distances)
     pkl.dump(clusters, open(clusters_file, "wb"))
 
-    
+
 def export(csvfile, wavfile, folder, k, out):
     print(" ... loading data")
     
@@ -214,6 +215,72 @@ def export(csvfile, wavfile, folder, k, out):
     plt.savefig('{}/{}_log-log.png'.format(out, k))
     plt.close()
     
+
+def htk_converter(file, folder, out):
+    enc      = load_model('{}/encoder.h5'.format(folder))
+    audio    = raw(file) 
+    spec     = spectrogram(audio, FFT_LO, FFT_HI, FFT_WIN, FFT_STEP)
+    windowed = windowing(spec, T)
+    x        = enc.predict(windowed)
+    write_htk(x, out)
+    
+
+def htk_export(folder, out_htk, out_lab, k):
+    instances_file   = "{}/instances.pkl".format(folder)
+    predictions_file = "{}/predictions.pkl".format(folder)
+    clusters_file    = "{}/clusters.pkl".format(folder)
+    label_file       = "{}/labels.pkl".format(folder)
+    
+    instances   = pkl.load(open(instances_file, "rb")) 
+    clusters    = pkl.load(open(clusters_file, "rb"))[k, :]
+    predictions = pkl.load(open(predictions_file, "rb")) 
+    label_dict  = pkl.load(open(label_file, "rb"))
+    reverse     = dict([(v,k) for k, v in label_dict.items()])
+    
+    ids_cluster = {}
+    for i, cluster in enumerate(clusters):
+        if cluster not in ids_cluster:
+            ids_cluster[cluster] = []
+        ids_cluster[cluster].append(i)
+        
+    cur = 0
+    label_dict = {}
+    train = "{}_TRAIN.mlf".format(out_lab.replace(".mlf", ""))
+    test  = "{}_TEST.mlf".format(out_lab.replace(".mlf", ""))
+    with open(train, 'w') as fp_train, open(test, 'w') as fp_test:
+        fp_train.write("#!MLF!#\n")
+        fp_test.write("#!MLF!#\n")
+        for c, ids in ids_cluster.items():
+            label = label_cluster(predictions, ids, reverse)
+            if c not in label_dict:
+                label_dict[c] = htk_name(c)
+            if label != "ECHO" and len(ids) > 1:
+                fp_train.write("\"*/{}.lab\"\n".format(label_dict[c]))
+                fp_test.write("\"*/{}.lab\"\n".format(label_dict[c]))
+                seq = []
+                random.shuffle(ids)                
+                train_ids = ids[0:len(ids)//2]
+                test_ids  = ids[len(ids)//2:len(ids)]
+                for i in train_ids:
+                    n = len(instances[i])
+                    seq.append(instances[i])
+                    fp_train.write("{} {} {}\n".format(cur, cur + n, label_dict[c]))
+                    cur += n
+                for i in test_ids:
+                    n = len(instances[i])
+                    seq.append(instances[i])
+                    fp_test.write("{} {} {}\n".format(cur, cur + n, label_dict[c]))
+                    cur += n
+                
+                seq = np.vstack(seq)
+                write_htk(seq, "{}/{}.htk".format(out_htk, label_dict[c]))
+                fp_train.write(".\n")
+                fp_test.write(".\n")
+    print("length: {}".format(seq.shape))
+    for c, k in label_dict.items():
+        print("{}\t{}".format(c, k))
+
+        
 if __name__ == '__main__':
     print("=====================================")
     print("Simplified WDP DS Pipeline")
@@ -236,11 +303,50 @@ if __name__ == '__main__':
         k        = int(sys.argv[5])
         out      =  sys.argv[6]
         export(labels, wav, clusters, k, out)
+    elif len(sys.argv) >= 5 and sys.argv[1] == 'htk':
+        mode   = sys.argv[2]
+        if mode == 'results':
+            k      = int(sys.argv[3])
+            folder = sys.argv[4]
+            htk    = sys.argv[5]
+            lab    = sys.argv[6] 
+            htk_export(folder, htk, lab, k)
+        elif mode == 'hmm_proto':
+            states = int(sys.argv[3])
+            folder = sys.argv[4]
+            hmm = left_right_hmm(states, states // 2, LATENT, name="proto")
+            with open("{}/proto".format(folder), "w") as fp:
+                fp.write(hmm)
+        elif mode == 'mmf':
+            proto  = sys.argv[3]
+            labels = sys.argv[4]
+            multi  = sys.argv[5]
+            lst    = sys.argv[6]
+            mmf(labels, proto, multi, lst)
+        else:
+            audio  = sys.argv[3]
+            folder = sys.argv[4]
+            htk    = sys.argv[5]
+            if audio.endswith('*.wav'):
+                path =  audio.replace('*.wav', '')
+                if len(path) == 0:
+                    path = '.'
+                for file in os.listdir(path):
+                    htk_file = "{}/{}".format(htk, file.replace('*.wav', '*.htk'))
+                    path     = "{}/{}".format(path, file)
+                    htk_converter(path, folder, htk_file)
+            else:
+                htk_file = "{}/{}".format(htk, audio.split('/')[-1].replace('*.wav', '*.htk'))
+                htk_converter(audio, folder, htk_file)
     else:
         print("""
             Usage:
                 + train:      python pipeline.py train LABEL_FILE AUDIO_FILE NOISE_FILE OUT_FOLDER
                 + clustering: python pipeline.py clustering LABEL_FILE AUDIO_FILE OUT_FOLDER
                 + export:     python pipeline.py export LABEL_FILE AUDIO_FILE FOLDER K OUT_FOLDER
+                + htk:        python pipeline.py htk results K FOLDER OUT_HTK OUT_LAB
+                              python pipeline.py htk convert AUDIO FOLDER OUT_FOLDER 
+                              python pipeline.py htk hmm_proto STATES OUTPUT_FOLDER 
+                              python pipeline.py htk mmf PROTOTYPE LABELS MMF LIST
         """)
     print("\n=====================================")

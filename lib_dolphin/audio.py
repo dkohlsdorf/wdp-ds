@@ -1,4 +1,3 @@
-import struct
 import numpy as np
 import pandas as pd
 from numba import jit
@@ -6,12 +5,6 @@ from numba import jit
 
 from numpy.fft        import fft
 from scipy.io.wavfile import read, write    
-
-
-PERIOD      = 1
-SAMPLE_SIZE = 4 
-USER        = 9
-ENDIEN      = 'big'
 
 
 def raw(path):
@@ -101,18 +94,5 @@ def dataset_supervised_windows(label, wavfile, lo, hi, win, step, raw_size):
     return instances, labels, label_dict
 
 
-def write_htk(sequence, to):
-    n = len(sequence)
-    dim = len(sequence[0])
-    with open(to, "wb") as f:
-        sze = dim * SAMPLE_SIZE
-        f.write(n.to_bytes(4, byteorder=ENDIEN))
-        f.write(PERIOD.to_bytes(4, byteorder=ENDIEN))
-        f.write(sze.to_bytes(2, byteorder=ENDIEN))
-        f.write(USER.to_bytes(2, byteorder=ENDIEN))
-        for i in range(0, n):
-            for j in range(0, dim):
-                x = sequence[i, j]
-                ba = bytearray(struct.pack(">f", x))
-                f.write(ba)
-                
+def htk_name(num):
+    return "".join([str(chr(int(i) + 97)) for i in str(num)])

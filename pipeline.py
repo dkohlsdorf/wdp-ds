@@ -225,7 +225,7 @@ def htk_converter(file, folder, out):
     write_htk(x, out)
     
 
-def htk_export(folder, out_htk, out_lab, k):
+def htk_export(folder, out_htk, out_lab, k, min_c = 25):
     instances_file   = "{}/instances.pkl".format(folder)
     predictions_file = "{}/predictions.pkl".format(folder)
     clusters_file    = "{}/clusters.pkl".format(folder)
@@ -254,7 +254,7 @@ def htk_export(folder, out_htk, out_lab, k):
             label = label_cluster(predictions, ids, reverse)
             if c not in label_dict:
                 label_dict[c] = htk_name(c)
-            if label != "ECHO" and len(ids) > 1:
+            if label != "ECHO" and len(ids) > min_c:
                 fp_train.write("\"*/{}.lab\"\n".format(label_dict[c]))
                 fp_test.write("\"*/{}.lab\"\n".format(label_dict[c]))
                 seq = []

@@ -50,7 +50,7 @@ def windowing(region, window):
 def dataset_unsupervised_regions(regions, wavfile, encoder, supervised, lo, hi, win, step, T):
     df        = pd.read_csv(regions)
     N         = len(df)
-    audio     = raw(wavfile)
+    audio     = raw(wavfile) 
     instances = []
     labels    = []
     ids       = []

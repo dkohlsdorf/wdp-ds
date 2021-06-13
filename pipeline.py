@@ -339,7 +339,6 @@ if __name__ == '__main__':
                 htk_file = "{}/{}".format(htk, audio.split('/')[-1].replace('*.wav', '*.htk'))
                 htk_converter(audio, folder, htk_file)
     else:
-        # TODO add prototype and mmf information export
         print("""
             Usage:
                 + train:      python pipeline.py train LABEL_FILE AUDIO_FILE NOISE_FILE OUT_FOLDER

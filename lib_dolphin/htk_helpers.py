@@ -33,7 +33,7 @@ def mat(x):
     return "\n".join([vec(x[i]) for i in range(len(x))])
 
 
-def left_right_hmm(max_states, min_states, dims, name="proto"):
+def left_right_hmm(max_states, dims, name="proto"):
     transitions = np.zeros((max_states, max_states))    
     means       = np.zeros(dims)
     variances   = np.ones(dims)  
@@ -49,13 +49,10 @@ def left_right_hmm(max_states, min_states, dims, name="proto"):
            {}
         """.format(i + 1, dims, vec(means), dims, vec(variances))
         states.append(state)
-        transitions[i,i] = 0.9
-        if i == min_states:
-            transitions[i, i + 1] = 0.05
-            transitions[i, max_states - 1] = 0.05
-        elif i + 1 < max_states:
+        transitions[i,i] = 0.9        
+        if i + 1 < max_states:
             transitions[i, i + 1] = 0.1
-
+            
     return """
     ~o <VecSize> {} <USER>
     ~h "{}"
@@ -63,10 +60,10 @@ def left_right_hmm(max_states, min_states, dims, name="proto"):
     <BeginHMM>
       <NumStates> {}
       {} 
-      <TransP> 8
+      <TransP> {}
       {}
     <EndHMM>
-    """.format(dims, name, max_states, "".join(states), mat(transitions))
+    """.format(dims, name, max_states, "".join(states), max_states, mat(transitions))
 
 
 def simple_grammar(label_file):
@@ -76,7 +73,7 @@ def simple_grammar(label_file):
     patterns = " | ".join(labels)
     patterns = "$patterns = {};".format(patterns)
     grammars = "( SENT-START (<$patterns>) SENT-END )"
-    grammars = "( <$patterns> )"
+    grammars = "( $patterns )"
     return "\n".join([patterns, grammars])
 
 

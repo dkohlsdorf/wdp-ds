@@ -10,7 +10,7 @@ from lib_dolphin.audio import *
 from lib_dolphin.features import *
 from lib_dolphin.eval import *
 from lib_dolphin.dtw import *
-from lib_dolphin.htk import *
+from lib_dolphin.htk_helpers import *
 from collections import namedtuple
 
 from scipy.io.wavfile import read, write
@@ -225,7 +225,7 @@ def htk_converter(file, folder, out):
     write_htk(x, out)
     
 
-def htk_export(folder, out_htk, out_lab, k, min_c = 25):
+def htk_export(folder, out_htk, out_lab, k, min_c = 10):
     instances_file   = "{}/instances.pkl".format(folder)
     predictions_file = "{}/predictions.pkl".format(folder)
     clusters_file    = "{}/clusters.pkl".format(folder)
@@ -247,6 +247,8 @@ def htk_export(folder, out_htk, out_lab, k, min_c = 25):
     label_dict = {}
     train = "{}_TRAIN.mlf".format(out_lab.replace(".mlf", ""))
     test  = "{}_TEST.mlf".format(out_lab.replace(".mlf", ""))
+    os.system("mkdir {}/train".format(out_htk))
+    os.system("mkdir {}/test".format(out_htk))
     n_exp = 0
     with open(train, 'w') as fp_train, open(test, 'w') as fp_test:
         fp_train.write("#!MLF!#\n")
@@ -257,28 +259,21 @@ def htk_export(folder, out_htk, out_lab, k, min_c = 25):
                 label_dict[c] = htk_name(c)
             if label != "ECHO" and len(ids) > min_c:
                 n_exp += 1
-                fp_train.write("\"*/{}.lab\"\n".format(label_dict[c]))
-                fp_test.write("\"*/{}.lab\"\n".format(label_dict[c]))
-                seq = []
                 random.shuffle(ids)                
                 train_ids = ids[0:len(ids)//2]
                 test_ids  = ids[len(ids)//2:len(ids)]
                 for i in train_ids:
                     n = len(instances[i])
-                    seq.append(instances[i])
-                    fp_train.write("{} {} {}\n".format(cur, cur + n, label_dict[c]))
-                    cur += n
+                    write_htk(instances[i], "{}/train/{}_{}.htk".format(out_htk, label_dict[c], i))
+                    fp_train.write("\"*/{}_{}.lab\"\n".format(label_dict[c], i))
+                    fp_train.write("{} {} {}\n".format(0, n, label_dict[c]))
+                    fp_train.write(".\n")
                 for i in test_ids:
                     n = len(instances[i])
-                    seq.append(instances[i])
-                    fp_test.write("{} {} {}\n".format(cur, cur + n, label_dict[c]))
-                    cur += n
-                
-                seq = np.vstack(seq)
-                write_htk(seq, "{}/{}.htk".format(out_htk, label_dict[c]))
-                fp_train.write(".\n")
-                fp_test.write(".\n")
-    print("length: {}".format(seq.shape))
+                    write_htk(instances[i], "{}/test/{}_{}.htk".format(out_htk, label_dict[c], i))
+                    fp_test.write("\"*/{}_{}.lab\"\n".format(label_dict[c], i))
+                    fp_test.write("{} {} {}\n".format(0, n, label_dict[c]))
+                    fp_test.write(".\n")                    
     for c, k in label_dict.items():
         print("{}\t{}".format(c, k))
     print("#clusters: {}".format(n_exp))
@@ -329,7 +324,7 @@ if __name__ == '__main__':
         elif mode == 'hmm_proto':
             states = int(sys.argv[3])
             folder = sys.argv[4]
-            hmm = left_right_hmm(states, states // 2, LATENT, name="proto")
+            hmm = left_right_hmm(states, LATENT, name="proto")
             with open("{}/proto".format(folder), "w") as fp:
                 fp.write(hmm)
         elif mode == 'mmf':

@@ -48,20 +48,12 @@ def plot_result_matrix(confusion, classes, predictions, title, cmap=plt.cm.Blues
 
 
 def plot_tensorflow_hist(hist, output):
-    if 'mse' in hist.history:
-        plt.plot(hist.history['mse'],     label="mse")
-        plt.plot(hist.history['val_mse'], label="val_mse")
-        plt.title("MSE")
-        plt.legend()
-        plt.xlabel('epoch')
-        plt.ylabel('mse')
-    elif 'accuracy' in hist.history:
-        plt.plot(hist.history['accuracy'],     label="accuracy")
-        plt.plot(hist.history['val_accuracy'], label="val_accuracy")
-        plt.title("Accuracy")
-        plt.legend()
-        plt.xlabel('epoch')
-        plt.ylabel('accuracy')
+    plt.plot(hist.history['accuracy'],     label="accuracy")
+    plt.plot(hist.history['val_accuracy'], label="val_accuracy")
+    plt.title("Accuracy")
+    plt.legend()
+    plt.xlabel('epoch')
+    plt.ylabel('accuracy')
     plt.savefig(output)
     plt.clf()
 

@@ -230,30 +230,29 @@ def htk_converter(file, folder, out):
 
 def htk_train(folder, inputs, states, niter):
     print("Prepare project: {}".format(folder))
-    files = glob.glob("{}/data/train/*.htk".format(folder))
     out = check_output(["rm", "-rf", folder])
     out = check_output(["mkdir", folder])
     out = check_output(["mkdir", "{}/data".format(folder)])
     htk_export(inputs, "{}/data".format(folder), "{}/clusters.mlf".format(folder))
-
+    files = glob.glob("{}/data/train/*.htk".format(folder))
     hmm = left_right_hmm(states, LATENT, name="proto")
     with open("{}/proto".format(folder), "w") as fp:
         fp.write(hmm)
         
-    grammar = simple_grammar("{}/clusters.mlf".format(folder))
-    with open(out, 'w') as fp:
+    grammar = simple_grammar("{}/clusters_TRAIN.mlf".format(folder))
+    with open("{}/gram".format(folder), 'w') as fp:
         fp.write(grammar + "\n")
 
-    wlist = wordlist("{}/clusters.mlf".format(folder))
-    with open(out, 'w') as fp:
+    wlist = wordlist("{}/clusters_TRAIN.mlf".format(folder))
+    with open("{}/dict".format(folder), 'w') as fp:
         fp.write(wlist + "\n")
         
     print("... flat start")    
     out = check_output(["rm", "-rf", "{}/hmm0".format(folder)])
     out = check_output(["mkdir", "{}/hmm0".format(folder)])
-    out = check_output("HCompV -v {} -A -T 10 -M {}/hmm0 -m {}/proto".format(FLOOR, folder, folder).split(" ") + files)
+    out = check_output("HCompV -v {} -T 10 -M {}/hmm0 -m {}/proto".format(FLOOR, folder, folder).split(" ") + files)
     out = check_output("HParse {}/gram {}/wdnet".format(folder, folder).split(" "))
-    mmf("{}/clusters.mlf".format(folder), "{}/hmm0/proto".format(folder), "{}/hmm0/hmm_mmf".format(folder), "{}/list".format(folder))        
+    mmf("{}/clusters_TRAIN.mlf".format(folder), "{}/hmm0/proto".format(folder),LATENT, "{}/hmm0/hmm_mmf".format(folder), "{}/list".format(folder))        
 
     likelihoods = []
     for i in range(1, niter + 1):
@@ -295,10 +294,10 @@ if __name__ == '__main__':
     elif len(sys.argv) >= 6 and sys.argv[1] == 'htk':
         mode   = sys.argv[2]
         if mode == 'train':
-            inputs = sys.argv[2]
-            folder = sys.argv[3]
-            states = int(sys.argv[4])
-            niter  = int(sys.argv[5]) 
+            inputs = sys.argv[3]
+            folder = sys.argv[4]
+            states = int(sys.argv[5])
+            niter  = int(sys.argv[6]) 
             htk_train(folder, inputs, states, niter)
         else:
             audio  = sys.argv[3]

@@ -1,9 +1,13 @@
+import os
 import numpy as np
 import struct
 import pandas as pd
 import sys
 import glob
+import pickle as pkl
+import random
 
+from lib_dolphin.eval import *
 from subprocess import check_output
 
 
@@ -17,7 +21,7 @@ ENDIEN      = 'big'
 def write_htk(sequence, to):
     n = len(sequence)
     dim = len(sequence[0])
-    with open(to, "wb") as f:
+    with open(to, "wb") as f:        
         sze = dim * SAMPLE_SIZE
         f.write(n.to_bytes(4, byteorder=ENDIEN))
         f.write(PERIOD.to_bytes(4, byteorder=ENDIEN))
@@ -26,6 +30,8 @@ def write_htk(sequence, to):
         for i in range(0, n):
             for j in range(0, dim):
                 x = sequence[i, j]
+                if np.isnan(x):
+                    print(to)
                 ba = bytearray(struct.pack(">f", x))
                 f.write(ba)
 
@@ -94,7 +100,7 @@ def wordlist(label_file):
     return "\n".join(labels)
 
 
-def mmf(label_file, proto_file, hmm_out="hmm0", hmm_list_out="monophones"):
+def mmf(label_file, proto_file, dim, hmm_out="hmm0", hmm_list_out="monophones"):
     df = pd.read_csv(label_file, sep=" ", header=None, names=["start", "stop", "lab"], skiprows=2)
     df = df.dropna()
     labels = set(df["lab"])
@@ -112,7 +118,7 @@ def mmf(label_file, proto_file, hmm_out="hmm0", hmm_list_out="monophones"):
             break
 
     monophones = []
-    mmf = ["""~o <VECSIZE> 128 <USER><DIAGC>"""]
+    mmf = ["""~o <VECSIZE> {} <USER><DIAGC>""".format(dim)]
 
     for i in labels:    
         header = "~h \"{}\"\n".format(i)
@@ -173,9 +179,10 @@ def htk_export(folder, out_htk, out_lab, k=46, min_c = 10):
     
     ids_cluster = {}
     for i, cluster in enumerate(clusters):
-        if cluster not in ids_cluster:
-            ids_cluster[cluster] = []
-        ids_cluster[cluster].append(i)
+        if len(instances[i]) > 0: 
+            if cluster not in ids_cluster:
+                ids_cluster[cluster] = []
+            ids_cluster[cluster].append(i)
         
     cur = 0
     label_dict = {}
@@ -208,6 +215,6 @@ def htk_export(folder, out_htk, out_lab, k=46, min_c = 10):
                     fp_test.write("\"*/{}_{}.lab\"\n".format(label_dict[c], i))
                     fp_test.write("{} {} {}\n".format(0, n, label_dict[c]))
                     fp_test.write(".\n")                    
-    for c, k in label_dict.items():
-        print("{}\t{}".format(c, k))
+    #for c, k in label_dict.items():
+    #    print("{}\t{}".format(c, k))
     print("#clusters: {}".format(n_exp))

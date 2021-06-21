@@ -25,8 +25,8 @@ def label_cluster(predictions, ids, reverse):
 
 def plot_result_matrix(confusion, classes, predictions, title, cmap=plt.cm.Blues):
     fig, ax = plt.subplots()
+    fig.set_size_inches(20, 20)
     im = ax.imshow(confusion, interpolation='nearest', cmap=cmap)
-    ax.figure.colorbar(im, ax=ax)
     ax.set(xticks=np.arange(confusion.shape[1]),
            yticks=np.arange(confusion.shape[0]),
            # ... and label them with the respective list entries

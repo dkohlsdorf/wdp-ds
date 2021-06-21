@@ -204,7 +204,7 @@ def htk_export(folder, out_htk, out_lab, k=5, min_c = 4):
             label = label_cluster(predictions, ids, reverse)
             if c not in label_dict:
                 label_dict[c] = htk_name(c)
-            if label != "ECHO" and len(ids) > min_c:
+            if label != "ECHO" and len(ids) >= min_c:
                 n_exp += 1
                 random.shuffle(ids)                
                 train_ids = ids[0:len(ids)//2]
@@ -222,3 +222,65 @@ def htk_export(folder, out_htk, out_lab, k=5, min_c = 4):
                     fp_test.write("{} {} {}\n".format(0, n, label_dict[c]))
                     fp_test.write(".\n")                    
     print("#clusters: {}".format(n_exp))
+
+    import numpy as np
+
+
+def is_header(line):
+    return line.startswith("#!") or line.startswith('.')
+    
+    
+def label(line):
+    if line.strip().endswith(".rec\""):
+        return line.strip().split('/')[-1].replace(".rec\"", "").split("_")[0]
+    else:
+        return line.strip().split(" ")[2]
+        
+        
+def parse_htk(file):
+    corr = []
+    pred = []
+    i = 0
+    for line in open(file):
+        if not is_header(line):
+            l = label(line)
+            if i % 2 == 0:
+                corr.append(l)
+            else:
+                pred.append(l)
+            i += 1
+    return corr, pred
+        
+    
+def number(x):
+    strg = ""
+    for i in x:
+        strg += str(ord(i) - 97)
+    return int(strg)
+
+
+def htk_confusion(file, out):
+    corr, pred = parse_htk(file)
+    ldict = {}
+    confusions = []
+    cur = 0
+    for c, p in zip(corr, pred):
+        cl = number(c)
+        pl = number(p)
+        if cl not in ldict:
+            ldict[cl] = cur
+            cur += 1
+        if pl not in ldict:
+            ldict[pl] = cur
+            cur += 1
+        confusions.append([ldict[cl], ldict[pl]])
+    conf = np.zeros((len(ldict), len(ldict)))
+    names = []
+    for i, j in confusions:
+        conf[i, j] += 1
+    names = [(k, v) for k, v in ldict.items()]
+    names.sort(key = lambda x:  x[1])
+    names = [k for k, _ in names]
+    plot_result_matrix(conf, names, names, "Confusion Window")
+    plt.savefig(out)
+    plt.close()

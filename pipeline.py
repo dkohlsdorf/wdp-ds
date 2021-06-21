@@ -29,9 +29,9 @@ D            = FFT_WIN // 2 - FFT_LO - (FFT_WIN // 2 - FFT_HI)
 RAW_AUDIO    = 5120
 T            = int((RAW_AUDIO - FFT_WIN) / FFT_STEP)
 
-CONV_PARAM   = (8, 8, 32)
+CONV_PARAM   = (8, 8, 128)
 WINDOW_PARAM = (T, D, 1)
-LATENT       = 32
+LATENT       = 128
 BATCH        = 25
 EPOCHS       = 25
 
@@ -192,7 +192,7 @@ def export(csvfile, wavfile, folder, k, out, min_c = 4):
         label = label_cluster(predictions, ids_cluster[c], reverse)
         if label != "ECHO":
             print(" ... export cluster {} {} {}".format(c, len(rng), label))
-            if len(rng) > min_c:
+            if len(rng) >= min_c:
                 counts.append(len(rng))
                 audio = []
                 for start, stop in rng:
@@ -267,6 +267,7 @@ def htk_train(folder, inputs, states, niter):
     plt.ylabel("ll")
     plt.savefig('{}/ll'.format(folder))
     plt.close()
+    htk_confusion("{}/predictions.mlf".format(folder), "{}/confusion_window.png".format(folder))
 
     
 if __name__ == '__main__':

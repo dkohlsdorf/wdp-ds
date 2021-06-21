@@ -191,8 +191,8 @@ def export(csvfile, wavfile, folder, k, out, min_c = 4):
     for c, rng in by_cluster.items():
         label = label_cluster(predictions, ids_cluster[c], reverse)
         if label != "ECHO":
-            print(" ... export cluster {} {} {}".format(c, len(rng), label))
             if len(rng) >= min_c:
+                print(" ... export cluster {} {} {} {}".format(c, htk_name(c), len(rng), label))
                 counts.append(len(rng))
                 audio = []
                 for start, stop in rng:
@@ -209,6 +209,7 @@ def export(csvfile, wavfile, folder, k, out, min_c = 4):
                     unmerged.append(f)
                 for i in range(0, 1000):
                     unmerged.append(0)
+    print("Done Export")
     unmerged = np.array(unmerged)
     filename = "{}/unmerged.wav".format(out)
     write(filename, 44100, unmerged.astype(np.int16)) 
@@ -228,7 +229,7 @@ def htk_converter(file, folder, out):
     write_htk(x, out)
     
 
-def htk_train(folder, inputs, states, niter):
+def htk_train(folder, inputs, states, niter, flat=False):
     print("Prepare project: {}".format(folder))
     out = check_output(["rm", "-rf", folder])
     out = check_output(["mkdir", folder])
@@ -250,9 +251,14 @@ def htk_train(folder, inputs, states, niter):
     print("... flat start")    
     out = check_output(["rm", "-rf", "{}/hmm0".format(folder)])
     out = check_output(["mkdir", "{}/hmm0".format(folder)])
-    out = check_output("HCompV -v {} -T 10 -M {}/hmm0 -m {}/proto".format(FLOOR, folder, folder).split(" ") + files)
+    
+    
+    if flat:
+        out = check_output("HCompV -v {} -T 10 -M {}/hmm0 -m {}/proto".format(FLOOR, folder, folder).split(" ") + files)
+        mmf("{}/clusters_TRAIN.mlf".format(folder), "{}/hmm0/proto".format(folder),LATENT, "{}/hmm0/hmm_mmf".format(folder), "{}/list".format(folder))        
+    else:
+        htk_init("{}/clusters_TRAIN.mlf".format(folder), "{}/proto".format(folder), LATENT, "{}/data/train/*.htk".format(folder), "{}/hmm0".format(folder),  "{}/list".format(folder))
     out = check_output("HParse {}/gram {}/wdnet".format(folder, folder).split(" "))
-    mmf("{}/clusters_TRAIN.mlf".format(folder), "{}/hmm0/proto".format(folder),LATENT, "{}/hmm0/hmm_mmf".format(folder), "{}/list".format(folder))        
 
     likelihoods = []
     for i in range(1, niter + 1):

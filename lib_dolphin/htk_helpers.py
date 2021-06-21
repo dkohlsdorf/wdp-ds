@@ -30,7 +30,7 @@ def write_htk(sequence, to, norm = False):
         for i in range(0, n):
             if norm:
                 mu  = np.mean(sequence[i])
-                std = np.std(sequence[i]) + 1.0
+                std = np.std(sequence[i]) + 1e-8
             for j in range(0, dim):
                 x = sequence[i, j]
                 if np.isnan(x):
@@ -106,13 +106,8 @@ def wordlist(label_file):
     return "\n".join(labels)
 
 
-def mmf(label_file, proto_file, dim, hmm_out="hmm0", hmm_list_out="monophones"):
-    df = pd.read_csv(label_file, sep=" ", header=None, names=["start", "stop", "lab"], skiprows=2)
-    df = df.dropna()
-    labels = set(df["lab"])
-    print(labels)
-    lines = [line for line in open(proto_file)]
-
+def parse_model(model):
+    lines = [line for line in open(model)]
     hmm = []
     start = False
     for line in lines:
@@ -122,7 +117,16 @@ def mmf(label_file, proto_file, dim, hmm_out="hmm0", hmm_list_out="monophones"):
             hmm.append(line)    
         if line.endswith("<ENDHMM>"):
             break
+    return hmm
 
+
+def mmf(label_file, proto_file, dim, hmm_out="hmm0", hmm_list_out="monophones"):
+    df = pd.read_csv(label_file, sep=" ", header=None, names=["start", "stop", "lab"], skiprows=2)
+    df = df.dropna()
+    labels = set(df["lab"])
+    print(labels)
+    
+    hmm = parse_model(proto_file)
     monophones = []
     mmf = ["""~o <VECSIZE> {} <USER><DIAGC>""".format(dim)]
 
@@ -171,7 +175,7 @@ def htk_eval(folder, last_hmm):
     return out.decode("utf-8")
     
 
-def htk_export(folder, out_htk, out_lab, k=5, min_c = 4):
+def htk_export(folder, out_htk, out_lab, k=10, min_c = 4):
     instances_file   = "{}/instances.pkl".format(folder)
     predictions_file = "{}/predictions.pkl".format(folder)
     clusters_file    = "{}/clusters.pkl".format(folder)
@@ -201,14 +205,15 @@ def htk_export(folder, out_htk, out_lab, k=5, min_c = 4):
         fp_train.write("#!MLF!#\n")
         fp_test.write("#!MLF!#\n")
         for c, ids in ids_cluster.items():
-            label = label_cluster(predictions, ids, reverse)
-            if c not in label_dict:
-                label_dict[c] = htk_name(c)
+            label = label_cluster(predictions, ids, reverse)         
             if label != "ECHO" and len(ids) >= min_c:
+                if c not in label_dict:
+                    label_dict[c] = htk_name(c)
                 n_exp += 1
                 random.shuffle(ids)                
-                train_ids = ids[0:len(ids)//2]
-                test_ids  = ids[len(ids)//2:len(ids)]
+                n_train = int(0.75 * len(ids))
+                train_ids = ids[0:n_train]
+                test_ids  = ids[n_train:len(ids)]
                 for i in train_ids:
                     n = len(instances[i])
                     write_htk(instances[i], "{}/train/{}_{}.htk".format(out_htk, label_dict[c], i))
@@ -220,10 +225,11 @@ def htk_export(folder, out_htk, out_lab, k=5, min_c = 4):
                     write_htk(instances[i], "{}/test/{}_{}.htk".format(out_htk, label_dict[c], i))
                     fp_test.write("\"*/{}_{}.lab\"\n".format(label_dict[c], i))
                     fp_test.write("{} {} {}\n".format(0, n, label_dict[c]))
-                    fp_test.write(".\n")                    
-    print("#clusters: {}".format(n_exp))
+                    fp_test.write(".\n")
 
-    import numpy as np
+    for c, name in label_dict.items():
+        print(" ... {} {}".format(c, name))
+    print("#clusters: {}".format(n_exp))
 
 
 def is_header(line):
@@ -237,19 +243,25 @@ def label(line):
         return line.strip().split(" ")[2]
         
         
+def ids(line):
+    return line.strip().split('/')[-1].replace(".rec\"", "").split("_")[1]
+        
+    
 def parse_htk(file):
-    corr = []
-    pred = []
+    corr  = []
+    pred  = []
+    ids_c = []
     i = 0
     for line in open(file):
         if not is_header(line):
             l = label(line)
             if i % 2 == 0:
                 corr.append(l)
+                ids_c.append(ids(line))
             else:
                 pred.append(l)
             i += 1
-    return corr, pred
+    return corr, pred, ids_c
         
     
 def number(x):
@@ -260,7 +272,7 @@ def number(x):
 
 
 def htk_confusion(file, out):
-    corr, pred = parse_htk(file)
+    corr, pred, _ = parse_htk(file)
     ldict = {}
     confusions = []
     cur = 0
@@ -284,3 +296,32 @@ def htk_confusion(file, out):
     plot_result_matrix(conf, names, names, "Confusion Window")
     plt.savefig(out)
     plt.close()
+    
+    
+def htk_init(label_file, proto_file, dim, train_folder, hmm_out="hmm0", hmm_list_out="monophones"):
+    files = glob.glob(train_folder)
+    df = pd.read_csv(label_file, sep=" ", header=None, names=["start", "stop", "lab"], skiprows=2)
+    df = df.dropna()
+    labels = set(df["lab"])
+        
+    monophones = []
+    mmf = ["""~o <VECSIZE> {} <USER><DIAGC>""".format(dim)]
+    for label in labels:
+        monophones.append("{}".format(label))
+        header = "~h \"{}\"\n".format(label)
+        cmd = "HInit -A -D -T 1 -m 1 -v 1.0 -M {} -H {} -I {} -l {} proto".format(
+            hmm_out, proto_file, label_file, label
+        )
+        out = check_output(cmd.split(" ") + files)
+        hmm = parse_model("{}/proto".format(hmm_out))   
+        mmf.append(header)
+        mmf.extend(hmm)
+        mmf.append("\n")
+        
+    mmf = "".join(mmf)
+    monophones = "\n".join(monophones)
+    with open("{}/hmm_mmf".format(hmm_out), "w") as f:
+        f.write(mmf)
+    with open(hmm_list_out, "w") as f:
+        f.write(monophones)        
+

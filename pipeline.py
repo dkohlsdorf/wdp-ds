@@ -88,10 +88,14 @@ def train(label_file, wav_file, noise_file, out_folder="output", perc_test=0.25)
     y_train = np.array(y_train)
     y_test  = np.array(y_test)
     model, enc  = classifier(WINDOW_PARAM, LATENT, 5, CONV_PARAM) 
-    model.compile(optimizer='adam', loss='sparse_categorical_crossentropy', metrics=['accuracy'])
-
-    hist = model.fit(x=x_train, y=y_train, validation_data=(x_test, y_test), batch_size=BATCH, epochs=EPOCHS, shuffle=True)
+    ae          = auto_encoder(WINDOW_PARAM, enc, LATENT, CONV_PARAM)
     
+    model.compile(optimizer='adam', loss='sparse_categorical_crossentropy', metrics=['accuracy'])
+    
+    hist = model.fit(x=x_train, y=y_train, validation_data=(x_test, y_test), batch_size=BATCH, epochs=EPOCHS, shuffle=True)
+    ae.fit(x=x_train, y=x_train, batch_size=10, epochs=EPOCHS, shuffle=True)
+    hist = model.fit(x=x_train, y=y_train, validation_data=(x_test, y_test), batch_size=BATCH, epochs=EPOCHS, shuffle=True)
+
     enc_filters(enc, CONV_PARAM[-1], "{}/filters.png".format(out_folder))
     plot_tensorflow_hist(hist, "{}/history_train.png".format(out_folder))
     

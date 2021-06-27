@@ -234,11 +234,8 @@ def htk_train(folder, inputs, states, niter, flat=False):
     out = check_output(["rm", "-rf", folder])
     out = check_output(["mkdir", folder])
     out = check_output(["mkdir", "{}/data".format(folder)])
-    htk_export(inputs, "{}/data".format(folder), "{}/clusters.mlf".format(folder))
+    htk_export(inputs, "{}/data".format(folder), "{}/clusters.mlf".format(folder), folder)
     files = glob.glob("{}/data/train/*.htk".format(folder))
-    hmm = left_right_hmm(states, LATENT, name="proto")
-    with open("{}/proto".format(folder), "w") as fp:
-        fp.write(hmm)
         
     grammar = simple_grammar("{}/clusters_TRAIN.mlf".format(folder))
     with open("{}/gram".format(folder), 'w') as fp:
@@ -254,10 +251,13 @@ def htk_train(folder, inputs, states, niter, flat=False):
     
     
     if flat:
+        hmm = left_right_hmm(states, LATENT, name="proto")
+        with open("{}/proto".format(folder), "w") as fp:
+            fp.write(hmm)
         out = check_output("HCompV -v {} -T 10 -M {}/hmm0 -m {}/proto".format(FLOOR, folder, folder).split(" ") + files)
         mmf("{}/clusters_TRAIN.mlf".format(folder), "{}/hmm0/proto".format(folder),LATENT, "{}/hmm0/hmm_mmf".format(folder), "{}/list".format(folder))        
     else:
-        htk_init("{}/clusters_TRAIN.mlf".format(folder), "{}/proto".format(folder), LATENT, "{}/data/train/*.htk".format(folder), "{}/hmm0".format(folder),  "{}/list".format(folder))
+        htk_init("{}/clusters_TRAIN.mlf".format(folder), None, LATENT, "{}/data/train/*.htk".format(folder), folder, LATENT, states, "{}/hmm0".format(folder), "{}/list".format(folder))
     out = check_output("HParse {}/gram {}/wdnet".format(folder, folder).split(" "))
 
     likelihoods = []

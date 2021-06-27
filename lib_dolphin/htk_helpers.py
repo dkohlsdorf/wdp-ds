@@ -18,7 +18,7 @@ USER        = 9
 ENDIEN      = 'big'
 
 
-def write_htk(sequence, to, norm = False):
+def write_htk(sequence, to, norm = True):
     n = len(sequence)
     dim = len(sequence[0])
     with open(to, "wb") as f:        
@@ -67,9 +67,9 @@ def left_right_hmm(max_states, dims, name="proto"):
            {}
         """.format(i + 1, dims, vec(means), dims, vec(variances))
         states.append(state)
-        transitions[i,i] = 0.9
+        transitions[i,i] = 1.0 - 1.0 / max_states
         if i + 1 < max_states:
-            transitions[i, i + 1] = 0.1
+            transitions[i, i + 1] = 1.0 - transitions[i, i]
             
     return """
     ~o <VecSize> {} <USER>
@@ -174,12 +174,18 @@ def htk_eval(folder, last_hmm):
     out = check_output("HResults -I {}/clusters_TEST.mlf {}/list {}/predictions.mlf".format(folder, folder, folder).split(" "))
     return out.decode("utf-8")
     
+    
+def states(instance, per_state=3):
+    n = len(instance)
+    return n // per_state
 
-def htk_export(folder, out_htk, out_lab, k=10, min_c = 4):
+
+def htk_export(folder, out_htk, out_lab, htk, k=10, min_c = 4):
     instances_file   = "{}/instances.pkl".format(folder)
     predictions_file = "{}/predictions.pkl".format(folder)
     clusters_file    = "{}/clusters.pkl".format(folder)
     label_file       = "{}/labels.pkl".format(folder)
+    n_states_file    = "{}/states.pkl".format(htk)
     
     instances   = pkl.load(open(instances_file, "rb")) 
     clusters    = pkl.load(open(clusters_file, "rb"))[k, :]
@@ -194,6 +200,21 @@ def htk_export(folder, out_htk, out_lab, k=10, min_c = 4):
                 ids_cluster[cluster] = []
             ids_cluster[cluster].append(i)
         
+    states_dict = {}
+    for i, c in enumerate(clusters):
+        l = htk_name(c)
+        n = states(instances[i])
+        if l not in states_dict:
+            states_dict[l] = []
+        states_dict[l].append(n)
+    states_dict = dict([(k, int(np.mean(v))) for k, v in states_dict.items()])
+    pkl.dump(states_dict, open(n_states_file, "wb"))
+    
+    plt.hist([x for _, x in states_dict.items()], bins=40)
+    plt.title('State Distribution')
+    plt.savefig('{}/state_hist.png'.format(htk))
+    plt.close()
+    
     cur = 0
     label_dict = {}
     train = "{}_TRAIN.mlf".format(out_lab.replace(".mlf", ""))
@@ -226,7 +247,7 @@ def htk_export(folder, out_htk, out_lab, k=10, min_c = 4):
                     fp_test.write("\"*/{}_{}.lab\"\n".format(label_dict[c], i))
                     fp_test.write("{} {} {}\n".format(0, n, label_dict[c]))
                     fp_test.write(".\n")
-
+    
     for c, name in label_dict.items():
         print(" ... {} {}".format(c, name))
     print("#clusters: {}".format(n_exp))
@@ -298,19 +319,30 @@ def htk_confusion(file, out):
     plt.close()
     
     
-def htk_init(label_file, proto_file, dim, train_folder, hmm_out="hmm0", hmm_list_out="monophones"):
+def htk_init(label_file, proto_file, dim, train_folder, htk, latent, min_states, hmm_out="hmm0", hmm_list_out="monophones"):
     files = glob.glob(train_folder)
     df = pd.read_csv(label_file, sep=" ", header=None, names=["start", "stop", "lab"], skiprows=2)
     df = df.dropna()
     labels = set(df["lab"])
-        
+    print(htk)
+    if proto_file == None:
+        n_states = pkl.load(open('{}/states.pkl'.format(htk), 'rb'))
+    
     monophones = []
     mmf = ["""~o <VECSIZE> {} <USER><DIAGC>""".format(dim)]
     for label in labels:
+        if proto_file == None:
+            states = int(max(n_states[label], min_states))
+            hmm = left_right_hmm(states, latent, name="proto")
+            p_file = "{}/proto".format(htk)
+            with open(p_file, "w") as fp:
+                fp.write(hmm)
+        else:
+            p_file = proto_file
         monophones.append("{}".format(label))
         header = "~h \"{}\"\n".format(label)
         cmd = "HInit -A -D -T 1 -m 1 -v 1.0 -M {} -H {} -I {} -l {} proto".format(
-            hmm_out, proto_file, label_file, label
+            hmm_out, p_file, label_file, label
         )
         out = check_output(cmd.split(" ") + files)
         hmm = parse_model("{}/proto".format(hmm_out))   

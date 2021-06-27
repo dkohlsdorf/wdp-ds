@@ -11,7 +11,7 @@ from lib_dolphin.eval import *
 from subprocess import check_output
 
 
-FLOOR = 1.0
+FLOOR       = 1.0
 PERIOD      = 1
 SAMPLE_SIZE = 4 
 USER        = 9
@@ -180,7 +180,7 @@ def states(instance, per_state=3):
     return n // per_state
 
 
-def htk_export(folder, out_htk, out_lab, htk, k=10, min_c = 4):
+def htk_export(folder, out_htk, out_lab, htk, k=5, min_c = 4):
     instances_file   = "{}/instances.pkl".format(folder)
     predictions_file = "{}/predictions.pkl".format(folder)
     clusters_file    = "{}/clusters.pkl".format(folder)

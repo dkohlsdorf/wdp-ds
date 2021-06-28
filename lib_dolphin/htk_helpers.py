@@ -168,7 +168,7 @@ def take_step(folder, i):
 
 def htk_eval(folder, last_hmm):
     files = glob.glob("{}/data/test/*.htk".format(folder))
-    out = check_output("HVite -T 1 -n 10 -p 0.0 -s 5.0 -H {}/hmm{}/hmm_mmf -i {}/predictions.mlf -w {}/wdnet {}/dict {}/list".format(
+    out = check_output("HVite -T 1 -n 25 -H {}/hmm{}/hmm_mmf -i {}/predictions.mlf -w {}/wdnet {}/dict {}/list".format(
         folder, last_hmm, folder, folder, folder, folder
     ).split(" ") + files)
     out = check_output("HResults -I {}/clusters_TEST.mlf {}/list {}/predictions.mlf".format(folder, folder, folder).split(" "))
@@ -180,7 +180,7 @@ def states(instance, per_state=3):
     return n // per_state
 
 
-def htk_export(folder, out_htk, out_lab, htk, k=5, min_c = 4):
+def htk_export(folder, out_htk, out_lab, htk, k=10, min_c = 5):
     instances_file   = "{}/instances.pkl".format(folder)
     predictions_file = "{}/predictions.pkl".format(folder)
     clusters_file    = "{}/clusters.pkl".format(folder)
@@ -232,7 +232,7 @@ def htk_export(folder, out_htk, out_lab, htk, k=5, min_c = 4):
                     label_dict[c] = htk_name(c)
                 n_exp += 1
                 random.shuffle(ids)                
-                n_train = int(0.75 * len(ids))
+                n_train = int(0.9 * len(ids))
                 train_ids = ids[0:n_train]
                 test_ids  = ids[n_train:len(ids)]
                 for i in train_ids:
@@ -308,7 +308,6 @@ def htk_confusion(file, out):
             cur += 1
         confusions.append([ldict[cl], ldict[pl]])
     conf = np.zeros((len(ldict), len(ldict)))
-    names = []
     for i, j in confusions:
         conf[i, j] += 1
     names = [(k, v) for k, v in ldict.items()]
@@ -341,8 +340,8 @@ def htk_init(label_file, proto_file, dim, train_folder, htk, latent, min_states,
             p_file = proto_file
         monophones.append("{}".format(label))
         header = "~h \"{}\"\n".format(label)
-        cmd = "HInit -A -D -T 1 -m 1 -v 1.0 -M {} -H {} -I {} -l {} proto".format(
-            hmm_out, p_file, label_file, label
+        cmd = "HInit -A -D -T 1 -m 1 -v {} -M {} -H {} -I {} -l {} proto".format(
+            FLOOR, hmm_out, p_file, label_file, label
         )
         out = check_output(cmd.split(" ") + files)
         hmm = parse_model("{}/proto".format(hmm_out))   

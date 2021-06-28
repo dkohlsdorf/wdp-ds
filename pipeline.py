@@ -12,7 +12,7 @@ from lib_dolphin.features import *
 from lib_dolphin.eval import *
 from lib_dolphin.dtw import *
 from lib_dolphin.htk_helpers import *
-from collections import namedtuple
+from collections import namedtuple, Counter
 
 from scipy.io.wavfile import read, write
 from tensorflow.keras.models import load_model
@@ -222,17 +222,74 @@ def export(csvfile, wavfile, folder, k, out, min_c = 4):
     plt.grid(True)
     plt.savefig('{}/{}_log-log.png'.format(out, k))
     plt.close()
-
-
-def htk_converter(file, folder, out):
-    enc      = load_model('{}/encoder.h5'.format(folder))
-    audio    = raw(file) 
-    spec     = spectrogram(audio, FFT_LO, FFT_HI, FFT_WIN, FFT_STEP)
-    windowed = windowing(spec, T)
-    x        = enc.predict(windowed)
-    write_htk(x, out)
     
 
+
+def dtw_baseline(folder, k = 10, min_c = 4, nn=2):
+    clusters_file    = "{}/clusters.pkl".format(folder)
+    distances_file   = "{}/distances.pkl".format(folder)    
+    label_file       = "{}/labels.pkl".format(folder)
+    predictions_file = "{}/predictions.pkl".format(folder)
+    instances_file   = "{}/instances.pkl".format(folder)
+    
+    distances   = pkl.load(open(distances_file, "rb"))
+    clusters    = pkl.load(open(clusters_file, "rb"))[k, :]
+    predictions = pkl.load(open(predictions_file, "rb")) 
+    label_dict  = pkl.load(open(label_file, "rb"))
+    reverse     = dict([(v,k) for k, v in label_dict.items()])
+    instances   = pkl.load(open(instances_file, "rb"))
+    
+    ids_cluster = {}
+    for i, cluster in enumerate(clusters):
+        if len(instances[i]) > 0: 
+            if cluster not in ids_cluster:
+                ids_cluster[cluster] = []
+            ids_cluster[cluster].append(i)
+            
+    train = []
+    test  = []
+    for c, ids in ids_cluster.items():
+        label = label_cluster(predictions, ids, reverse)         
+        if label != "ECHO" and len(ids) >= min_c:
+            random.shuffle(ids)                
+            n_train = int(0.9 * len(ids))
+            for i in ids[0:n_train]:
+                train.append([i, c])
+            for i in ids[n_train:len(ids)]:
+                test.append([i, c])
+    corr = 0.0
+    confusion = []
+    ldict = {}
+    cur = 0
+    for j, true in test:
+        candidates = []
+        for i, pred in train:            
+            candidates.append([pred, distances[i, j]])
+        candidates.sort(key = lambda x: x[-1])
+        neighbors = [p for p, _ in candidates[0:nn]]
+        labels    = [(p, c) for p, c in Counter(neighbors).items()]
+        labels.sort(key = lambda x: -x[1])
+        if true == labels[0][0]:
+            corr += 1
+        if true not in ldict: 
+            ldict[true] = cur
+            cur += 1
+        if labels[0][0] not in ldict:
+            ldict[labels[0][0]] = cur
+            cur += 1
+        confusion.append([ldict[true], ldict[labels[0][0]]])
+    conf = np.zeros((cur, cur))
+    for i, j in confusion:
+        conf[i, j] += 1
+    names = [(k, v) for k, v in ldict.items()]
+    names.sort(key = lambda x:  x[1])
+    names = [k for k, _ in names]
+    plot_result_matrix(conf, names, names, "Confusion Window")
+    plt.savefig("{}/baseline.png".format(folder))
+    plt.close()
+    print("Acc: {}".format(corr / len(test)))
+
+    
 def htk_train(folder, inputs, states, niter, flat=False):
     print("Prepare project: {}".format(folder))
     out = check_output(["rm", "-rf", folder])
@@ -310,21 +367,9 @@ if __name__ == '__main__':
             states = int(sys.argv[5])
             niter  = int(sys.argv[6]) 
             htk_train(folder, inputs, states, niter)
-        else:
-            audio  = sys.argv[3]
-            folder = sys.argv[4]
-            htk    = sys.argv[5]
-            if audio.endswith('*.wav'):
-                path =  audio.replace('*.wav', '')
-                if len(path) == 0:
-                    path = '.'
-                for file in os.listdir(path):
-                    htk_file = "{}/{}".format(htk, file.replace('*.wav', '*.htk'))
-                    path     = "{}/{}".format(path, file)
-                    htk_converter(path, folder, htk_file)
-            else:
-                htk_file = "{}/{}".format(htk, audio.split('/')[-1].replace('*.wav', '*.htk'))
-                htk_converter(audio, folder, htk_file)
+    elif len(sys.argv) >= 3 and sys.argv[1] == 'baseline':
+          folder = sys.argv[2]
+          dtw_baseline(folder)          
     else:
         print("""
             Usage:
@@ -332,7 +377,6 @@ if __name__ == '__main__':
                 + clustering: python pipeline.py clustering LABEL_FILE AUDIO_FILE OUT_FOLDER
                 + export:     python pipeline.py export LABEL_FILE AUDIO_FILE FOLDER K OUT_FOLDER
                 + htk:        python pipeline.py htk train FOLDER OUT_HTK STATES ITER
-                              python pipeline.py htk convert AUDIO FOLDER OUT_FOLDER 
-
+                + baseline:   python pipeline.py baseline FOLDER
         """)
     print("\n=====================================")

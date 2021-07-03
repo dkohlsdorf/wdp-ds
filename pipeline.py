@@ -224,8 +224,16 @@ def export(csvfile, wavfile, folder, k, out, min_c = 4):
     plt.close()
     
 
+def htk_converter(file, folder, out):
+    enc      = load_model('{}/encoder.h5'.format(folder))
+    audio    = raw(file) 
+    spec     = spectrogram(audio, FFT_LO, FFT_HI, FFT_WIN, FFT_STEP)
+    windowed = windowing(spec, T)
+    x        = enc.predict(windowed)
+    write_htk(x, out)
 
-def dtw_baseline(folder, k = 10, min_c = 4, nn=2):
+
+def dtw_baseline(folder, k = 10, min_c = 4, nn=3, debug = False):
     clusters_file    = "{}/clusters.pkl".format(folder)
     distances_file   = "{}/distances.pkl".format(folder)    
     label_file       = "{}/labels.pkl".format(folder)
@@ -269,8 +277,11 @@ def dtw_baseline(folder, k = 10, min_c = 4, nn=2):
         neighbors = [p for p, _ in candidates[0:nn]]
         labels    = [(p, c) for p, c in Counter(neighbors).items()]
         labels.sort(key = lambda x: -x[1])
+
         if true == labels[0][0]:
             corr += 1
+        elif debug:            
+            print(true, neighbors, labels)
         if true not in ldict: 
             ldict[true] = cur
             cur += 1
@@ -367,6 +378,22 @@ if __name__ == '__main__':
             states = int(sys.argv[5])
             niter  = int(sys.argv[6]) 
             htk_train(folder, inputs, states, niter)
+        else:
+            audio  = sys.argv[3]
+            folder = sys.argv[4]
+            htk    = sys.argv[5]
+            if audio.endswith('*.wav'):
+                path =  audio.replace('*.wav', '')
+                if len(path) == 0:
+                    path = '.'
+                for file in os.listdir(path):
+                    htk_file = "{}/{}".format(htk, file.replace('*.wav', '*.htk'))
+                    path     = "{}/{}".format(path, file)
+                    htk_converter(path, folder, htk_file)
+            else:
+                htk_file = "{}/{}".format(htk, audio.split('/')[-1].replace('*.wav', '*.htk'))
+                htk_converter(audio, folder, htk_file)
+
     elif len(sys.argv) >= 3 and sys.argv[1] == 'baseline':
           folder = sys.argv[2]
           dtw_baseline(folder)          
@@ -377,6 +404,7 @@ if __name__ == '__main__':
                 + clustering: python pipeline.py clustering LABEL_FILE AUDIO_FILE OUT_FOLDER
                 + export:     python pipeline.py export LABEL_FILE AUDIO_FILE FOLDER K OUT_FOLDER
                 + htk:        python pipeline.py htk train FOLDER OUT_HTK STATES ITER
+                              python pipeline.py htk convert AUDIO FOLDER OUT_FOLDER 
                 + baseline:   python pipeline.py baseline FOLDER
         """)
     print("\n=====================================")

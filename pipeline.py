@@ -225,6 +225,7 @@ def export(csvfile, wavfile, folder, k, out, min_c = 4):
     
 
 def htk_converter(file, folder, out):
+    print("... convert {} using {} to {}".format(file, folder, out))
     enc      = load_model('{}/encoder.h5'.format(folder))
     audio    = raw(file) 
     spec     = spectrogram(audio, FFT_LO, FFT_HI, FFT_WIN, FFT_STEP)
@@ -382,18 +383,8 @@ if __name__ == '__main__':
             audio  = sys.argv[3]
             folder = sys.argv[4]
             htk    = sys.argv[5]
-            if audio.endswith('*.wav'):
-                path =  audio.replace('*.wav', '')
-                if len(path) == 0:
-                    path = '.'
-                for file in os.listdir(path):
-                    htk_file = "{}/{}".format(htk, file.replace('*.wav', '*.htk'))
-                    path     = "{}/{}".format(path, file)
-                    htk_converter(path, folder, htk_file)
-            else:
-                htk_file = "{}/{}".format(htk, audio.split('/')[-1].replace('*.wav', '*.htk'))
-                htk_converter(audio, folder, htk_file)
-
+            htk_file = "{}/{}".format(htk, audio.split('/')[-1].replace('.wav', '.htk'))
+            htk_converter(audio, folder, htk_file)
     elif len(sys.argv) >= 3 and sys.argv[1] == 'baseline':
           folder = sys.argv[2]
           dtw_baseline(folder)          

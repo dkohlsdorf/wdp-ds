@@ -19,3 +19,4 @@ and communicate the results with domain experts.
 + tensorflow 2.0
 + numpy / scipy
 + numba
++ htk

@@ -1,6 +1,7 @@
 import re
 import numpy as np
 import matplotlib.pyplot as plt
+import matplotlib.patches as patches
 
 import pandas as pd
 import os
@@ -8,9 +9,45 @@ import os
 from collections import Counter
 from collections import namedtuple
 from lib_dolphin.audio import *
+from lib_dolphin.htk_helpers import * 
 from scipy.io.wavfile import read, write    
 
 
+
+COLORS = list(
+    pd.read_csv('lib_dolphin/colors.txt', sep='\t', header=None)[1].apply(lambda x: x + "80")
+)
+
+
+def plot_annotations(anno_files, wav_folder, out_folder, win):
+    n = -1
+    for file, annotations in anno_files.items():
+        n += 1
+        if len(annotations) > 1:
+            annotations = compress(annotations)
+        if len(annotations) > 1:
+            path = "{}/{}.wav".format(wav_folder, file)
+            x = raw(path)
+            s = spectrogram(x, lo = 0, hi = 256)
+            print(file, n, len(s))
+            if len(s) < 10000:
+                fig, ax = plt.subplots()
+                fig.set_size_inches(len(s) / 100, len(s[0]) / 100)
+                ax.imshow(1.0 - s.T, cmap='gray')
+                for start, stop, i in annotations:
+                    start = start
+                    stop  = stop 
+                    a = start * WIN
+                    e = stop  * WIN
+                    plt.text(a + (e - a) // 2 , 30, i, size=20)
+                    rect = patches.Rectangle((a, 0), e - a, 256, linewidth=1, edgecolor='r', facecolor=COLORS[i])
+                    ax.add_patch(rect)
+                plt.savefig("{}/{}.png".format(out_folder, file))
+                plt.close()
+            else:
+                print("\t skip")
+                
+                
 def label_cluster(predictions, ids, reverse):
     x = np.sum([np.mean(predictions[i], axis=0) for i in ids], axis=0)
     x = dict([(reverse[i], x[i]) for i in range(0, len(x))])

@@ -16,7 +16,9 @@ from collections import namedtuple, Counter
 
 from scipy.io.wavfile import read, write
 from tensorflow.keras.models import load_model
-from sklearn.cluster import AgglomerativeClustering
+from sklearn.cluster import AgglomerativeClustering, KMeans
+
+
 from subprocess import check_output
 
 
@@ -224,16 +226,6 @@ def export(csvfile, wavfile, folder, k, out, min_c = 4):
     plt.close()
     
 
-def htk_converter(file, folder, out):
-    print("... convert {} using {} to {}".format(file, folder, out))
-    enc      = load_model('{}/encoder.h5'.format(folder))
-    audio    = raw(file) 
-    spec     = spectrogram(audio, FFT_LO, FFT_HI, FFT_WIN, FFT_STEP)
-    windowed = windowing(spec, T)
-    x        = enc.predict(windowed)
-    write_htk(x, out)
-
-
 def dtw_baseline(folder, k = 10, min_c = 4, nn=3, debug = False):
     clusters_file    = "{}/clusters.pkl".format(folder)
     distances_file   = "{}/distances.pkl".format(folder)    
@@ -348,7 +340,89 @@ def htk_train(folder, inputs, states, niter, flat=False):
     plt.close()
     htk_confusion("{}/predictions.mlf".format(folder), "{}/confusion_window.png".format(folder))
 
+
+def htk_converter(file, folder, out):
+    print("... convert {} using {} to {}".format(file, folder, out))
+    enc      = load_model('{}/encoder.h5'.format(folder))
+    audio    = raw(file) 
+    spec     = spectrogram(audio, FFT_LO, FFT_HI, FFT_WIN, FFT_STEP)
+    windowed = windowing(spec, T)
+    x        = enc.predict(windowed)
+    return write_htk(x, out), x
+
+
+def htk_continuous(folder, htk, noise, hmm, epochs=10, components=10):
+    htk_file = "{}/data/{}".format(htk, noise.split('/')[-1].replace('.wav', '.htk'))
+    n,x      = htk_converter(noise, folder, htk_file)
+    out      = check_output(["rm", "-rf", "{}/sil0".format(htk)])
+    out      = check_output(["mkdir", "{}/sil0".format(htk)])
+
+    km = KMeans(components)
+    km.fit(x)
+    cmp = km.cluster_centers_
+
+    with open("{}/sil0/sil".format(htk), "w") as fp:
+        model = silence_proto(LATENT, cmp)
+        fp.write(model)    
+
+    with open("{}/list_sil".format(htk), "w") as fp:
+        fp.write("sil\n")
+
+    with open("{}/clusters_sil.mlf".format(htk), "w") as fp:
+        fp.write("#!MLF!#\n")
+        fp.write("\"*/{}\"\n".format(noise.split('/')[-1].replace('.wav', '.lab')))
+        fp.write("{} {} sil\n".format(0, n))
+        fp.write(".\n")
     
+    out = check_output("HERest -A -T 1 -v {} -I {}/clusters_sil.mlf -M {}/sil0 -H {}/sil0/sil {}/list_sil".format(FLOOR, htk, htk, htk, htk).split(" ") + [htk_file])
+    print("Sil LL: {}".format(get_ll(out)))
+
+    out = check_output("cp {} {}/continuous".format(hmm, htk).split(" "))
+    with open("{}/continuous".format(htk), "a") as fp:
+        for i, line in enumerate(open("{}/sil0/sil".format(htk))):
+            if i > 2:
+                fp.write(line)
+
+    out = check_output("cp {}/list {}/list_continuous".format(htk, htk).split(" "))
+    with open("{}/list_continuous".format(htk), "a") as fp:
+        fp.write("sil\n")
+
+    grammar = simple_grammar("{}/clusters_TRAIN.mlf".format(htk), True)
+    with open("{}/gram_continuous".format(htk), 'w') as fp:
+        fp.write(grammar + "\n")
+
+    wlist = wordlist("{}/clusters_TRAIN.mlf".format(htk), True)
+    with open("{}/dict_continuous".format(htk), 'w') as fp:
+        fp.write(wlist + "\n")
+    
+    out = check_output("HParse {}/gram_continuous {}/wdnet_continuous".format(htk, htk).split(" "))
+                
+
+def sequencing(audio, folder, htk ,outfolder):
+    print("SEQUENCING")
+    out       = check_output(["rm", "-rf", outfolder])
+    out       = check_output(["mkdir", outfolder])
+    out       = check_output(["mkdir", "{}/images".format(outfolder)]) 
+    htk_files = []
+    for file in os.listdir(audio):
+        if file.endswith(".wav"):
+            path     = "{}/{}".format(audio, file)
+            out_path = "{}/{}".format(outfolder, file).replace(".wav", ".htk")
+            htk_files.append(out_path)
+            print(path)
+            htk_converter(path, folder, out_path)
+            print("Convert: {}".format(path))
+    
+    cmd = "HVite -H {}/continuous -i {}/sequenced.lab -w {}/wdnet_continuous {}/dict_continuous {}/list_continuous"\
+        .format(htk, outfolder, htk, htk, htk)\
+        .split(" ")
+    cmd.extend(htk_files)
+    out = check_output(cmd)
+    annotations = parse_mlf('{}/sequenced.lab'.format(outfolder))
+    plot_annotations(annotations, audio, outfolder, T // 2)
+
+    
+
 if __name__ == '__main__':
     print("=====================================")
     print("Simplified WDP DS Pipeline")
@@ -379,6 +453,12 @@ if __name__ == '__main__':
             states = int(sys.argv[5])
             niter  = int(sys.argv[6]) 
             htk_train(folder, inputs, states, niter)
+        elif mode == 'continuous':
+            folder = sys.argv[3]
+            htk    = sys.argv[4]
+            noise  = sys.argv[5]
+            hmm    = sys.argv[6]
+            htk_continuous(folder, htk, noise, hmm)
         else:
             audio  = sys.argv[3]
             folder = sys.argv[4]
@@ -387,7 +467,13 @@ if __name__ == '__main__':
             htk_converter(audio, folder, htk_file)
     elif len(sys.argv) >= 3 and sys.argv[1] == 'baseline':
           folder = sys.argv[2]
-          dtw_baseline(folder)          
+          dtw_baseline(folder)
+    elif len(sys.argv) > 5 and sys.argv[1] == 'sequencing':
+        audio  = sys.argv[2]
+        folder = sys.argv[3]
+        htk    = sys.argv[4]
+        out    = sys.argv[5]
+        sequencing(audio, folder, htk ,out) 
     else:
         print("""
             Usage:
@@ -395,7 +481,9 @@ if __name__ == '__main__':
                 + clustering: python pipeline.py clustering LABEL_FILE AUDIO_FILE OUT_FOLDER
                 + export:     python pipeline.py export LABEL_FILE AUDIO_FILE FOLDER K OUT_FOLDER
                 + htk:        python pipeline.py htk train FOLDER OUT_HTK STATES ITER
+                              python pipeline.py htk continuous FOLDER OUT_HTK NOISE HMM
                               python pipeline.py htk convert AUDIO FOLDER OUT_FOLDER 
+                + sequencing: python pipeline.py sequencing AUDIO FOLDER HTK OUT
                 + baseline:   python pipeline.py baseline FOLDER
         """)
     print("\n=====================================")

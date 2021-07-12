@@ -40,6 +40,7 @@ def write_htk(sequence, to, norm = True):
                 else:
                     ba = bytearray(struct.pack(">f", x))
                 f.write(ba)
+    return n
 
                 
 def vec(v):    
@@ -49,6 +50,37 @@ def vec(v):
 
 def mat(x):
     return "\n".join([vec(x[i]) for i in range(len(x))])
+
+
+def silence_proto(dims, means, name = "sil"):
+    k = len(means)
+    transitions = np.zeros((3,3))
+    transitions[0, 1] = 1.00
+    transitions[1, 1] = 0.99
+    transitions[1, 2] = 0.01
+    variances   = np.ones(dims)  
+    components  = []
+    p = 1.0 / k
+    for i in range(0, k):
+        component = """
+        <MIXTURE> {} {} 
+          <Mean> {}
+           {}
+          <Variance> {}
+           {}        
+        """.format(i + 1, p, dims, vec(means[i]), dims, vec(variances))
+        components.append(component)
+    return """
+    ~o <VecSize> {} <USER>
+    ~h "{}"
+    <BeginHMM>
+      <NumStates> 3
+      <STATE> 2 <NumMixes> {}
+      {} 
+      <TransP> 3
+      {}
+    <EndHMM>
+    """.format(dims, name, k, "".join(components), mat(transitions))
 
 
 def left_right_hmm(max_states, dims, name="proto"):
@@ -84,23 +116,29 @@ def left_right_hmm(max_states, dims, name="proto"):
     """.format(dims, name, max_states, "".join(states), max_states, mat(transitions))
 
 
-def simple_grammar(label_file):
+def simple_grammar(label_file, continuous=False):
     df = pd.read_csv(label_file, sep=" ", header=None, names=["start", "stop", "lab"], skiprows=2)
     df = df.dropna()
     labels = list(set(df["lab"]))
+    if continuous:
+        labels.append("sil")
+        
     patterns = " | ".join(labels)
     patterns = "$patterns = {};".format(patterns)
-    grammars = "( SENT-START (<$patterns>) SENT-END )"
-    grammars = "( $patterns )"
+    
+    if continuous:
+        grammars = "( <$patterns> )"
+    else:
+        grammars = "( $patterns )"
     return "\n".join([patterns, grammars])
+    
 
-
-def wordlist(label_file):
+def wordlist(label_file, continuous=False):
     df = pd.read_csv(label_file, sep=" ", header=None, names=["start", "stop", "lab"], skiprows=2)
     df = df.dropna()
     labels = list(set(df["lab"]))
-    labels.append("SENT-START")
-    labels.append("SENT-END")
+    if continuous:
+        labels.append("sil")    
     labels = sorted(labels)
     labels = ["{} {}".format(i,j) for i, j in zip(labels, labels)]
     return "\n".join(labels)
@@ -168,7 +206,7 @@ def take_step(folder, i):
 
 def htk_eval(folder, last_hmm):
     files = glob.glob("{}/data/test/*.htk".format(folder))
-    out = check_output("HVite -T 1 -n 25 -H {}/hmm{}/hmm_mmf -i {}/predictions.mlf -w {}/wdnet {}/dict {}/list".format(
+    out = check_output("HVite -T 1 -H {}/hmm{}/hmm_mmf -i {}/predictions.mlf -w {}/wdnet {}/dict {}/list".format(
         folder, last_hmm, folder, folder, folder, folder
     ).split(" ") + files)
     out = check_output("HResults -I {}/clusters_TEST.mlf {}/list {}/predictions.mlf".format(folder, folder, folder).split(" "))
@@ -356,3 +394,35 @@ def htk_init(label_file, proto_file, dim, train_folder, htk, latent, min_states,
     with open(hmm_list_out, "w") as f:
         f.write(monophones)        
 
+
+def compress(annotations):
+    cur = annotations[0]
+    anno = []
+    for i in range(1, len(annotations)):
+        if annotations[i][0] <= cur[1] and cur[2] == annotations[i][2]:
+            cur = (cur[0], annotations[i][1], cur[2])
+        else:
+            anno.append(cur)
+            cur = annotations[i]
+    anno.append(cur)
+    return anno
+
+
+def parse_mlf(mlf):
+    files = {}
+    cur = None
+    for line in open (mlf):
+        line = line.strip()
+        if line != '#!MLF!#' and line != '.':
+            if line[1:-1].endswith('.rec'):
+                cur = line.split("/")[-1].replace(".rec", "")[:-1]
+                files[cur] = []
+            else:
+                cmp = line.split(" ")
+                start = int(cmp[0])
+                stop  = int(cmp[1])
+                lab   = cmp[2]
+                if lab != 'sil':
+                    cluster = number(lab)
+                    files[cur].append([start, stop, cluster])
+    return files

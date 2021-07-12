@@ -11,14 +11,14 @@ from lib_dolphin.eval import *
 from subprocess import check_output
 
 
-FLOOR = 1.0
+FLOOR       = 1.0
 PERIOD      = 1
 SAMPLE_SIZE = 4 
 USER        = 9
 ENDIEN      = 'big'
 
 
-def write_htk(sequence, to, norm = False):
+def write_htk(sequence, to, norm = True):
     n = len(sequence)
     dim = len(sequence[0])
     with open(to, "wb") as f:        
@@ -30,7 +30,7 @@ def write_htk(sequence, to, norm = False):
         for i in range(0, n):
             if norm:
                 mu  = np.mean(sequence[i])
-                std = np.std(sequence[i]) + 1.0
+                std = np.std(sequence[i]) + 1e-8
             for j in range(0, dim):
                 x = sequence[i, j]
                 if np.isnan(x):
@@ -40,6 +40,7 @@ def write_htk(sequence, to, norm = False):
                 else:
                     ba = bytearray(struct.pack(">f", x))
                 f.write(ba)
+    return n
 
                 
 def vec(v):    
@@ -49,6 +50,37 @@ def vec(v):
 
 def mat(x):
     return "\n".join([vec(x[i]) for i in range(len(x))])
+
+
+def silence_proto(dims, means, name = "sil"):
+    k = len(means)
+    transitions = np.zeros((3,3))
+    transitions[0, 1] = 1.00
+    transitions[1, 1] = 0.99
+    transitions[1, 2] = 0.01
+    variances   = np.ones(dims)  
+    components  = []
+    p = 1.0 / k
+    for i in range(0, k):
+        component = """
+        <MIXTURE> {} {} 
+          <Mean> {}
+           {}
+          <Variance> {}
+           {}        
+        """.format(i + 1, p, dims, vec(means[i]), dims, vec(variances))
+        components.append(component)
+    return """
+    ~o <VecSize> {} <USER>
+    ~h "{}"
+    <BeginHMM>
+      <NumStates> 3
+      <STATE> 2 <NumMixes> {}
+      {} 
+      <TransP> 3
+      {}
+    <EndHMM>
+    """.format(dims, name, k, "".join(components), mat(transitions))
 
 
 def left_right_hmm(max_states, dims, name="proto"):
@@ -67,9 +99,9 @@ def left_right_hmm(max_states, dims, name="proto"):
            {}
         """.format(i + 1, dims, vec(means), dims, vec(variances))
         states.append(state)
-        transitions[i,i] = 0.9
+        transitions[i,i] = 1.0 - 1.0 / max_states
         if i + 1 < max_states:
-            transitions[i, i + 1] = 0.1
+            transitions[i, i + 1] = 1.0 - transitions[i, i]
             
     return """
     ~o <VecSize> {} <USER>
@@ -84,35 +116,36 @@ def left_right_hmm(max_states, dims, name="proto"):
     """.format(dims, name, max_states, "".join(states), max_states, mat(transitions))
 
 
-def simple_grammar(label_file):
+def simple_grammar(label_file, continuous=False):
     df = pd.read_csv(label_file, sep=" ", header=None, names=["start", "stop", "lab"], skiprows=2)
     df = df.dropna()
     labels = list(set(df["lab"]))
+    if continuous:
+        labels.append("sil")
+        
     patterns = " | ".join(labels)
     patterns = "$patterns = {};".format(patterns)
-    grammars = "( SENT-START (<$patterns>) SENT-END )"
-    grammars = "( $patterns )"
+    
+    if continuous:
+        grammars = "( <$patterns> )"
+    else:
+        grammars = "( $patterns )"
     return "\n".join([patterns, grammars])
+    
 
-
-def wordlist(label_file):
+def wordlist(label_file, continuous=False):
     df = pd.read_csv(label_file, sep=" ", header=None, names=["start", "stop", "lab"], skiprows=2)
     df = df.dropna()
     labels = list(set(df["lab"]))
-    labels.append("SENT-START")
-    labels.append("SENT-END")
+    if continuous:
+        labels.append("sil")    
     labels = sorted(labels)
     labels = ["{} {}".format(i,j) for i, j in zip(labels, labels)]
     return "\n".join(labels)
 
 
-def mmf(label_file, proto_file, dim, hmm_out="hmm0", hmm_list_out="monophones"):
-    df = pd.read_csv(label_file, sep=" ", header=None, names=["start", "stop", "lab"], skiprows=2)
-    df = df.dropna()
-    labels = set(df["lab"])
-    print(labels)
-    lines = [line for line in open(proto_file)]
-
+def parse_model(model):
+    lines = [line for line in open(model)]
     hmm = []
     start = False
     for line in lines:
@@ -122,7 +155,16 @@ def mmf(label_file, proto_file, dim, hmm_out="hmm0", hmm_list_out="monophones"):
             hmm.append(line)    
         if line.endswith("<ENDHMM>"):
             break
+    return hmm
 
+
+def mmf(label_file, proto_file, dim, hmm_out="hmm0", hmm_list_out="monophones"):
+    df = pd.read_csv(label_file, sep=" ", header=None, names=["start", "stop", "lab"], skiprows=2)
+    df = df.dropna()
+    labels = set(df["lab"])
+    print(labels)
+    
+    hmm = parse_model(proto_file)
     monophones = []
     mmf = ["""~o <VECSIZE> {} <USER><DIAGC>""".format(dim)]
 
@@ -164,18 +206,24 @@ def take_step(folder, i):
 
 def htk_eval(folder, last_hmm):
     files = glob.glob("{}/data/test/*.htk".format(folder))
-    out = check_output("HVite -T 1 -n 10 -p 0.0 -s 5.0 -H {}/hmm{}/hmm_mmf -i {}/predictions.mlf -w {}/wdnet {}/dict {}/list".format(
+    out = check_output("HVite -T 1 -H {}/hmm{}/hmm_mmf -i {}/predictions.mlf -w {}/wdnet {}/dict {}/list".format(
         folder, last_hmm, folder, folder, folder, folder
     ).split(" ") + files)
     out = check_output("HResults -I {}/clusters_TEST.mlf {}/list {}/predictions.mlf".format(folder, folder, folder).split(" "))
     return out.decode("utf-8")
     
+    
+def states(instance, per_state=3):
+    n = len(instance)
+    return n // per_state
 
-def htk_export(folder, out_htk, out_lab, k=5, min_c = 4):
+
+def htk_export(folder, out_htk, out_lab, htk, k=10, min_c = 5):
     instances_file   = "{}/instances.pkl".format(folder)
     predictions_file = "{}/predictions.pkl".format(folder)
     clusters_file    = "{}/clusters.pkl".format(folder)
     label_file       = "{}/labels.pkl".format(folder)
+    n_states_file    = "{}/states.pkl".format(htk)
     
     instances   = pkl.load(open(instances_file, "rb")) 
     clusters    = pkl.load(open(clusters_file, "rb"))[k, :]
@@ -190,6 +238,21 @@ def htk_export(folder, out_htk, out_lab, k=5, min_c = 4):
                 ids_cluster[cluster] = []
             ids_cluster[cluster].append(i)
         
+    states_dict = {}
+    for i, c in enumerate(clusters):
+        l = htk_name(c)
+        n = states(instances[i])
+        if l not in states_dict:
+            states_dict[l] = []
+        states_dict[l].append(n)
+    states_dict = dict([(k, int(np.mean(v))) for k, v in states_dict.items()])
+    pkl.dump(states_dict, open(n_states_file, "wb"))
+    
+    plt.hist([x for _, x in states_dict.items()], bins=40)
+    plt.title('State Distribution')
+    plt.savefig('{}/state_hist.png'.format(htk))
+    plt.close()
+    
     cur = 0
     label_dict = {}
     train = "{}_TRAIN.mlf".format(out_lab.replace(".mlf", ""))
@@ -201,14 +264,15 @@ def htk_export(folder, out_htk, out_lab, k=5, min_c = 4):
         fp_train.write("#!MLF!#\n")
         fp_test.write("#!MLF!#\n")
         for c, ids in ids_cluster.items():
-            label = label_cluster(predictions, ids, reverse)
-            if c not in label_dict:
-                label_dict[c] = htk_name(c)
-            if label != "ECHO" and len(ids) > min_c:
+            label = label_cluster(predictions, ids, reverse)         
+            if label != "ECHO" and len(ids) >= min_c:
+                if c not in label_dict:
+                    label_dict[c] = htk_name(c)
                 n_exp += 1
                 random.shuffle(ids)                
-                train_ids = ids[0:len(ids)//2]
-                test_ids  = ids[len(ids)//2:len(ids)]
+                n_train = int(0.9 * len(ids))
+                train_ids = ids[0:n_train]
+                test_ids  = ids[n_train:len(ids)]
                 for i in train_ids:
                     n = len(instances[i])
                     write_htk(instances[i], "{}/train/{}_{}.htk".format(out_htk, label_dict[c], i))
@@ -220,5 +284,145 @@ def htk_export(folder, out_htk, out_lab, k=5, min_c = 4):
                     write_htk(instances[i], "{}/test/{}_{}.htk".format(out_htk, label_dict[c], i))
                     fp_test.write("\"*/{}_{}.lab\"\n".format(label_dict[c], i))
                     fp_test.write("{} {} {}\n".format(0, n, label_dict[c]))
-                    fp_test.write(".\n")                    
+                    fp_test.write(".\n")
+    
+    for c, name in label_dict.items():
+        print(" ... {} {}".format(c, name))
     print("#clusters: {}".format(n_exp))
+
+
+def is_header(line):
+    return line.startswith("#!") or line.startswith('.')
+    
+    
+def label(line):
+    if line.strip().endswith(".rec\""):
+        return line.strip().split('/')[-1].replace(".rec\"", "").split("_")[0]
+    else:
+        return line.strip().split(" ")[2]
+        
+        
+def ids(line):
+    return line.strip().split('/')[-1].replace(".rec\"", "").split("_")[1]
+        
+    
+def parse_htk(file):
+    corr  = []
+    pred  = []
+    ids_c = []
+    i = 0
+    for line in open(file):
+        if not is_header(line):
+            l = label(line)
+            if i % 2 == 0:
+                corr.append(l)
+                ids_c.append(ids(line))
+            else:
+                pred.append(l)
+            i += 1
+    return corr, pred, ids_c
+        
+    
+def number(x):
+    strg = ""
+    for i in x:
+        strg += str(ord(i) - 97)
+    return int(strg)
+
+
+def htk_confusion(file, out):
+    corr, pred, _ = parse_htk(file)
+    ldict = {}
+    confusions = []
+    cur = 0
+    for c, p in zip(corr, pred):
+        cl = number(c)
+        pl = number(p)
+        if cl not in ldict:
+            ldict[cl] = cur
+            cur += 1
+        if pl not in ldict:
+            ldict[pl] = cur
+            cur += 1
+        confusions.append([ldict[cl], ldict[pl]])
+    conf = np.zeros((len(ldict), len(ldict)))
+    for i, j in confusions:
+        conf[i, j] += 1
+    names = [(k, v) for k, v in ldict.items()]
+    names.sort(key = lambda x:  x[1])
+    names = [k for k, _ in names]
+    plot_result_matrix(conf, names, names, "Confusion Window")
+    plt.savefig(out)
+    plt.close()
+    
+    
+def htk_init(label_file, proto_file, dim, train_folder, htk, latent, min_states, hmm_out="hmm0", hmm_list_out="monophones"):
+    files = glob.glob(train_folder)
+    df = pd.read_csv(label_file, sep=" ", header=None, names=["start", "stop", "lab"], skiprows=2)
+    df = df.dropna()
+    labels = set(df["lab"])
+    print(htk)
+    if proto_file == None:
+        n_states = pkl.load(open('{}/states.pkl'.format(htk), 'rb'))
+    
+    monophones = []
+    mmf = ["""~o <VECSIZE> {} <USER><DIAGC>""".format(dim)]
+    for label in labels:
+        if proto_file == None:
+            states = int(max(n_states[label], min_states))
+            hmm = left_right_hmm(states, latent, name="proto")
+            p_file = "{}/proto".format(htk)
+            with open(p_file, "w") as fp:
+                fp.write(hmm)
+        else:
+            p_file = proto_file
+        monophones.append("{}".format(label))
+        header = "~h \"{}\"\n".format(label)
+        cmd = "HInit -A -D -T 1 -m 1 -v {} -M {} -H {} -I {} -l {} proto".format(
+            FLOOR, hmm_out, p_file, label_file, label
+        )
+        out = check_output(cmd.split(" ") + files)
+        hmm = parse_model("{}/proto".format(hmm_out))   
+        mmf.append(header)
+        mmf.extend(hmm)
+        mmf.append("\n")
+        
+    mmf = "".join(mmf)
+    monophones = "\n".join(monophones)
+    with open("{}/hmm_mmf".format(hmm_out), "w") as f:
+        f.write(mmf)
+    with open(hmm_list_out, "w") as f:
+        f.write(monophones)        
+
+
+def compress(annotations):
+    cur = annotations[0]
+    anno = []
+    for i in range(1, len(annotations)):
+        if annotations[i][0] <= cur[1] and cur[2] == annotations[i][2]:
+            cur = (cur[0], annotations[i][1], cur[2])
+        else:
+            anno.append(cur)
+            cur = annotations[i]
+    anno.append(cur)
+    return anno
+
+
+def parse_mlf(mlf):
+    files = {}
+    cur = None
+    for line in open (mlf):
+        line = line.strip()
+        if line != '#!MLF!#' and line != '.':
+            if line[1:-1].endswith('.rec'):
+                cur = line.split("/")[-1].replace(".rec", "")[:-1]
+                files[cur] = []
+            else:
+                cmp = line.split(" ")
+                start = int(cmp[0])
+                stop  = int(cmp[1])
+                lab   = cmp[2]
+                if lab != 'sil':
+                    cluster = number(lab)
+                    files[cur].append([start, stop, cluster])
+    return files

@@ -12,11 +12,13 @@ from lib_dolphin.features import *
 from lib_dolphin.eval import *
 from lib_dolphin.dtw import *
 from lib_dolphin.htk_helpers import *
-from collections import namedtuple
+from collections import namedtuple, Counter
 
 from scipy.io.wavfile import read, write
 from tensorflow.keras.models import load_model
-from sklearn.cluster import AgglomerativeClustering
+from sklearn.cluster import AgglomerativeClustering, KMeans
+
+
 from subprocess import check_output
 
 
@@ -29,9 +31,9 @@ D            = FFT_WIN // 2 - FFT_LO - (FFT_WIN // 2 - FFT_HI)
 RAW_AUDIO    = 5120
 T            = int((RAW_AUDIO - FFT_WIN) / FFT_STEP)
 
-CONV_PARAM   = (8, 8, 32)
+CONV_PARAM   = (8, 8, 128)
 WINDOW_PARAM = (T, D, 1)
-LATENT       = 32
+LATENT       = 128
 BATCH        = 25
 EPOCHS       = 25
 
@@ -88,10 +90,14 @@ def train(label_file, wav_file, noise_file, out_folder="output", perc_test=0.25)
     y_train = np.array(y_train)
     y_test  = np.array(y_test)
     model, enc  = classifier(WINDOW_PARAM, LATENT, 5, CONV_PARAM) 
-    model.compile(optimizer='adam', loss='sparse_categorical_crossentropy', metrics=['accuracy'])
-
-    hist = model.fit(x=x_train, y=y_train, validation_data=(x_test, y_test), batch_size=BATCH, epochs=EPOCHS, shuffle=True)
+    ae          = auto_encoder(WINDOW_PARAM, enc, LATENT, CONV_PARAM)
     
+    model.compile(optimizer='adam', loss='sparse_categorical_crossentropy', metrics=['accuracy'])
+    
+    hist = model.fit(x=x_train, y=y_train, validation_data=(x_test, y_test), batch_size=BATCH, epochs=EPOCHS, shuffle=True)
+    ae.fit(x=x_train, y=x_train, batch_size=10, epochs=EPOCHS, shuffle=True)
+    hist = model.fit(x=x_train, y=y_train, validation_data=(x_test, y_test), batch_size=BATCH, epochs=EPOCHS, shuffle=True)
+
     enc_filters(enc, CONV_PARAM[-1], "{}/filters.png".format(out_folder))
     plot_tensorflow_hist(hist, "{}/history_train.png".format(out_folder))
     
@@ -191,8 +197,8 @@ def export(csvfile, wavfile, folder, k, out, min_c = 4):
     for c, rng in by_cluster.items():
         label = label_cluster(predictions, ids_cluster[c], reverse)
         if label != "ECHO":
-            print(" ... export cluster {} {} {}".format(c, len(rng), label))
-            if len(rng) > min_c:
+            if len(rng) >= min_c:
+                print(" ... export cluster {} {} {} {}".format(c, htk_name(c), len(rng), label))
                 counts.append(len(rng))
                 audio = []
                 for start, stop in rng:
@@ -209,6 +215,7 @@ def export(csvfile, wavfile, folder, k, out, min_c = 4):
                     unmerged.append(f)
                 for i in range(0, 1000):
                     unmerged.append(0)
+    print("Done Export")
     unmerged = np.array(unmerged)
     filename = "{}/unmerged.wav".format(out)
     write(filename, 44100, unmerged.astype(np.int16)) 
@@ -217,27 +224,83 @@ def export(csvfile, wavfile, folder, k, out, min_c = 4):
     plt.grid(True)
     plt.savefig('{}/{}_log-log.png'.format(out, k))
     plt.close()
-
-
-def htk_converter(file, folder, out):
-    enc      = load_model('{}/encoder.h5'.format(folder))
-    audio    = raw(file) 
-    spec     = spectrogram(audio, FFT_LO, FFT_HI, FFT_WIN, FFT_STEP)
-    windowed = windowing(spec, T)
-    x        = enc.predict(windowed)
-    write_htk(x, out)
     
 
-def htk_train(folder, inputs, states, niter):
+def dtw_baseline(folder, k = 10, min_c = 4, nn=3, debug = False):
+    clusters_file    = "{}/clusters.pkl".format(folder)
+    distances_file   = "{}/distances.pkl".format(folder)    
+    label_file       = "{}/labels.pkl".format(folder)
+    predictions_file = "{}/predictions.pkl".format(folder)
+    instances_file   = "{}/instances.pkl".format(folder)
+    
+    distances   = pkl.load(open(distances_file, "rb"))
+    clusters    = pkl.load(open(clusters_file, "rb"))[k, :]
+    predictions = pkl.load(open(predictions_file, "rb")) 
+    label_dict  = pkl.load(open(label_file, "rb"))
+    reverse     = dict([(v,k) for k, v in label_dict.items()])
+    instances   = pkl.load(open(instances_file, "rb"))
+    
+    ids_cluster = {}
+    for i, cluster in enumerate(clusters):
+        if len(instances[i]) > 0: 
+            if cluster not in ids_cluster:
+                ids_cluster[cluster] = []
+            ids_cluster[cluster].append(i)
+            
+    train = []
+    test  = []
+    for c, ids in ids_cluster.items():
+        label = label_cluster(predictions, ids, reverse)         
+        if label != "ECHO" and len(ids) >= min_c:
+            random.shuffle(ids)                
+            n_train = int(0.9 * len(ids))
+            for i in ids[0:n_train]:
+                train.append([i, c])
+            for i in ids[n_train:len(ids)]:
+                test.append([i, c])
+    corr = 0.0
+    confusion = []
+    ldict = {}
+    cur = 0
+    for j, true in test:
+        candidates = []
+        for i, pred in train:            
+            candidates.append([pred, distances[i, j]])
+        candidates.sort(key = lambda x: x[-1])
+        neighbors = [p for p, _ in candidates[0:nn]]
+        labels    = [(p, c) for p, c in Counter(neighbors).items()]
+        labels.sort(key = lambda x: -x[1])
+
+        if true == labels[0][0]:
+            corr += 1
+        elif debug:            
+            print(true, neighbors, labels)
+        if true not in ldict: 
+            ldict[true] = cur
+            cur += 1
+        if labels[0][0] not in ldict:
+            ldict[labels[0][0]] = cur
+            cur += 1
+        confusion.append([ldict[true], ldict[labels[0][0]]])
+    conf = np.zeros((cur, cur))
+    for i, j in confusion:
+        conf[i, j] += 1
+    names = [(k, v) for k, v in ldict.items()]
+    names.sort(key = lambda x:  x[1])
+    names = [k for k, _ in names]
+    plot_result_matrix(conf, names, names, "Confusion Window")
+    plt.savefig("{}/baseline.png".format(folder))
+    plt.close()
+    print("Acc: {}".format(corr / len(test)))
+
+    
+def htk_train(folder, inputs, states, niter, flat=False):
     print("Prepare project: {}".format(folder))
     out = check_output(["rm", "-rf", folder])
     out = check_output(["mkdir", folder])
     out = check_output(["mkdir", "{}/data".format(folder)])
-    htk_export(inputs, "{}/data".format(folder), "{}/clusters.mlf".format(folder))
+    htk_export(inputs, "{}/data".format(folder), "{}/clusters.mlf".format(folder), folder)
     files = glob.glob("{}/data/train/*.htk".format(folder))
-    hmm = left_right_hmm(states, LATENT, name="proto")
-    with open("{}/proto".format(folder), "w") as fp:
-        fp.write(hmm)
         
     grammar = simple_grammar("{}/clusters_TRAIN.mlf".format(folder))
     with open("{}/gram".format(folder), 'w') as fp:
@@ -250,9 +313,17 @@ def htk_train(folder, inputs, states, niter):
     print("... flat start")    
     out = check_output(["rm", "-rf", "{}/hmm0".format(folder)])
     out = check_output(["mkdir", "{}/hmm0".format(folder)])
-    out = check_output("HCompV -v {} -T 10 -M {}/hmm0 -m {}/proto".format(FLOOR, folder, folder).split(" ") + files)
+    
+    
+    if flat:
+        hmm = left_right_hmm(states, LATENT, name="proto")
+        with open("{}/proto".format(folder), "w") as fp:
+            fp.write(hmm)
+        out = check_output("HCompV -v {} -T 10 -M {}/hmm0 -m {}/proto".format(FLOOR, folder, folder).split(" ") + files)
+        mmf("{}/clusters_TRAIN.mlf".format(folder), "{}/hmm0/proto".format(folder),LATENT, "{}/hmm0/hmm_mmf".format(folder), "{}/list".format(folder))        
+    else:
+        htk_init("{}/clusters_TRAIN.mlf".format(folder), None, LATENT, "{}/data/train/*.htk".format(folder), folder, LATENT, states, "{}/hmm0".format(folder), "{}/list".format(folder))
     out = check_output("HParse {}/gram {}/wdnet".format(folder, folder).split(" "))
-    mmf("{}/clusters_TRAIN.mlf".format(folder), "{}/hmm0/proto".format(folder),LATENT, "{}/hmm0/hmm_mmf".format(folder), "{}/list".format(folder))        
 
     likelihoods = []
     for i in range(1, niter + 1):
@@ -267,8 +338,92 @@ def htk_train(folder, inputs, states, niter):
     plt.ylabel("ll")
     plt.savefig('{}/ll'.format(folder))
     plt.close()
+    htk_confusion("{}/predictions.mlf".format(folder), "{}/confusion_window.png".format(folder))
+
+
+def htk_converter(file, folder, out):
+    print("... convert {} using {} to {}".format(file, folder, out))
+    enc      = load_model('{}/encoder.h5'.format(folder))
+    audio    = raw(file) 
+    spec     = spectrogram(audio, FFT_LO, FFT_HI, FFT_WIN, FFT_STEP)
+    windowed = windowing(spec, T)
+    x        = enc.predict(windowed)
+    return write_htk(x, out), x
+
+
+def htk_continuous(folder, htk, noise, hmm, epochs=10, components=10):
+    htk_file = "{}/data/{}".format(htk, noise.split('/')[-1].replace('.wav', '.htk'))
+    n,x      = htk_converter(noise, folder, htk_file)
+    out      = check_output(["rm", "-rf", "{}/sil0".format(htk)])
+    out      = check_output(["mkdir", "{}/sil0".format(htk)])
+
+    km = KMeans(components)
+    km.fit(x)
+    cmp = km.cluster_centers_
+
+    with open("{}/sil0/sil".format(htk), "w") as fp:
+        model = silence_proto(LATENT, cmp)
+        fp.write(model)    
+
+    with open("{}/list_sil".format(htk), "w") as fp:
+        fp.write("sil\n")
+
+    with open("{}/clusters_sil.mlf".format(htk), "w") as fp:
+        fp.write("#!MLF!#\n")
+        fp.write("\"*/{}\"\n".format(noise.split('/')[-1].replace('.wav', '.lab')))
+        fp.write("{} {} sil\n".format(0, n))
+        fp.write(".\n")
+    
+    out = check_output("HERest -A -T 1 -v {} -I {}/clusters_sil.mlf -M {}/sil0 -H {}/sil0/sil {}/list_sil".format(FLOOR, htk, htk, htk, htk).split(" ") + [htk_file])
+    print("Sil LL: {}".format(get_ll(out)))
+
+    out = check_output("cp {} {}/continuous".format(hmm, htk).split(" "))
+    with open("{}/continuous".format(htk), "a") as fp:
+        for i, line in enumerate(open("{}/sil0/sil".format(htk))):
+            if i > 2:
+                fp.write(line)
+
+    out = check_output("cp {}/list {}/list_continuous".format(htk, htk).split(" "))
+    with open("{}/list_continuous".format(htk), "a") as fp:
+        fp.write("sil\n")
+
+    grammar = simple_grammar("{}/clusters_TRAIN.mlf".format(htk), True)
+    with open("{}/gram_continuous".format(htk), 'w') as fp:
+        fp.write(grammar + "\n")
+
+    wlist = wordlist("{}/clusters_TRAIN.mlf".format(htk), True)
+    with open("{}/dict_continuous".format(htk), 'w') as fp:
+        fp.write(wlist + "\n")
+    
+    out = check_output("HParse {}/gram_continuous {}/wdnet_continuous".format(htk, htk).split(" "))
+                
+
+def sequencing(audio, folder, htk ,outfolder):
+    print("SEQUENCING")
+    out       = check_output(["rm", "-rf", outfolder])
+    out       = check_output(["mkdir", outfolder])
+    out       = check_output(["mkdir", "{}/images".format(outfolder)]) 
+    htk_files = []
+    for file in os.listdir(audio):
+        if file.endswith(".wav"):
+            path     = "{}/{}".format(audio, file)
+            out_path = "{}/{}".format(outfolder, file).replace(".wav", ".htk")
+            htk_files.append(out_path)
+            print(path)
+            htk_converter(path, folder, out_path)
+            print("Convert: {}".format(path))
+    
+    cmd = "HVite -H {}/continuous -i {}/sequenced.lab -w {}/wdnet_continuous {}/dict_continuous {}/list_continuous"\
+        .format(htk, outfolder, htk, htk, htk)\
+        .split(" ")
+    cmd.extend(htk_files)
+    out = check_output(cmd)
+    
+    annotations = parse_mlf('{}/sequenced.lab'.format(outfolder))
+    plot_annotations(annotations, audio, "{}/images".format(outfolder), T // 2)
 
     
+
 if __name__ == '__main__':
     print("=====================================")
     print("Simplified WDP DS Pipeline")
@@ -299,21 +454,27 @@ if __name__ == '__main__':
             states = int(sys.argv[5])
             niter  = int(sys.argv[6]) 
             htk_train(folder, inputs, states, niter)
+        elif mode == 'continuous':
+            folder = sys.argv[3]
+            htk    = sys.argv[4]
+            noise  = sys.argv[5]
+            hmm    = sys.argv[6]
+            htk_continuous(folder, htk, noise, hmm)
         else:
             audio  = sys.argv[3]
             folder = sys.argv[4]
             htk    = sys.argv[5]
-            if audio.endswith('*.wav'):
-                path =  audio.replace('*.wav', '')
-                if len(path) == 0:
-                    path = '.'
-                for file in os.listdir(path):
-                    htk_file = "{}/{}".format(htk, file.replace('*.wav', '*.htk'))
-                    path     = "{}/{}".format(path, file)
-                    htk_converter(path, folder, htk_file)
-            else:
-                htk_file = "{}/{}".format(htk, audio.split('/')[-1].replace('*.wav', '*.htk'))
-                htk_converter(audio, folder, htk_file)
+            htk_file = "{}/{}".format(htk, audio.split('/')[-1].replace('.wav', '.htk'))
+            htk_converter(audio, folder, htk_file)
+    elif len(sys.argv) >= 3 and sys.argv[1] == 'baseline':
+          folder = sys.argv[2]
+          dtw_baseline(folder)
+    elif len(sys.argv) > 5 and sys.argv[1] == 'sequencing':
+        audio  = sys.argv[2]
+        folder = sys.argv[3]
+        htk    = sys.argv[4]
+        out    = sys.argv[5]
+        sequencing(audio, folder, htk ,out) 
     else:
         print("""
             Usage:
@@ -321,7 +482,9 @@ if __name__ == '__main__':
                 + clustering: python pipeline.py clustering LABEL_FILE AUDIO_FILE OUT_FOLDER
                 + export:     python pipeline.py export LABEL_FILE AUDIO_FILE FOLDER K OUT_FOLDER
                 + htk:        python pipeline.py htk train FOLDER OUT_HTK STATES ITER
+                              python pipeline.py htk continuous FOLDER OUT_HTK NOISE HMM
                               python pipeline.py htk convert AUDIO FOLDER OUT_FOLDER 
-
+                + sequencing: python pipeline.py sequencing AUDIO FOLDER HTK OUT
+                + baseline:   python pipeline.py baseline FOLDER
         """)
     print("\n=====================================")

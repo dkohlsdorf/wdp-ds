@@ -37,8 +37,8 @@ def plot_annotations(anno_files, wav_folder, out_folder, win):
                 for start, stop, i in annotations:
                     start = start
                     stop  = stop 
-                    a = start * WIN
-                    e = stop  * WIN
+                    a = start * win
+                    e = stop  * win
                     plt.text(a + (e - a) // 2 , 30, i, size=20)
                     rect = patches.Rectangle((a, 0), e - a, 256, linewidth=1, edgecolor='r', facecolor=COLORS[i])
                     ax.add_patch(rect)

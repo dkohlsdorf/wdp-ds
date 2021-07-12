@@ -419,8 +419,8 @@ def sequencing(audio, folder, htk ,outfolder):
     cmd.extend(htk_files)
     out = check_output(cmd)
     
-    annotations = parse_mlf('{}/images/sequenced.lab'.format(outfolder))
-    plot_annotations(annotations, audio, outfolder, T // 2)
+    annotations = parse_mlf('{}/sequenced.lab'.format(outfolder))
+    plot_annotations(annotations, audio, "{}/images".format(outfolder), T // 2)
 
     
 

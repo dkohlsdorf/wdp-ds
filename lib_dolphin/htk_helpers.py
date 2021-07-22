@@ -6,9 +6,11 @@ import sys
 import glob
 import pickle as pkl
 import random
+import matplotlib.pyplot as plt 
 
 from lib_dolphin.eval import *
 from subprocess import check_output
+from kneed import KneeLocator
 
 
 FLOOR       = 1.0
@@ -422,7 +424,35 @@ def parse_mlf(mlf):
                 start = int(cmp[0])
                 stop  = int(cmp[1])
                 lab   = cmp[2]
+                ll    = float(cmp[3])
                 if lab != 'sil':
                     cluster = number(lab)
-                    files[cur].append([start, stop, cluster])
+                    files[cur].append([start, stop, cluster, ll])
     return files
+
+
+def htk_threshold(mlf, output):
+    counts = {}
+    for k, x in parse_mlf(mlf):
+        for _,_, c, ll in x:
+            if c in counts:
+                counts[c].append(ll)
+            else:
+                counts[c] = [ll]
+    for c, v in counts.items():
+        counts[c] = np.mean(v)
+
+    kneedle = KneeLocator(
+        [i for i in range(0, len(x))], [ll for _, ll in x], S=10, curve="concave", direction="increasing", interp_method="polynomial",
+    )
+
+    x = [(c, ll) for c, ll in counts.items()]
+    sorted(x, key = lambda x : x[1])
+
+    plt.figure(figsize=(15, 10))
+    plt.plot(sorted([ll for _, ll in x]))
+    plt.vlines(kneedle.knee, plt.ylim()[0], plt.ylim()[1], linestyles='dashed')
+    plt.savefig('{}/kneed.png'.format(output))
+    plt.close()
+
+    return x[kneedle.knee][1]

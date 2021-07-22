@@ -420,8 +420,8 @@ def sequencing(audio, folder, htk ,outfolder):
     out = check_output(cmd)
     
     annotations = parse_mlf('{}/sequenced.lab'.format(outfolder))
-    plot_annotations(annotations, audio, "{}/images".format(outfolder), T // 2)
-
+    th = htk_threshold('{}/sequenced.lab'.format(outfolder), outfolder)
+    plot_annotations(annotations, audio, "{}/images".format(outfolder), T // 2, th)
     
 
 if __name__ == '__main__':

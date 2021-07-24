@@ -10,7 +10,6 @@ import matplotlib.pyplot as plt
 
 from lib_dolphin.eval import *
 from subprocess import check_output
-from kneed import KneeLocator
 
 
 FLOOR       = 1.0
@@ -402,7 +401,7 @@ def compress(annotations):
     anno = []
     for i in range(1, len(annotations)):
         if annotations[i][0] <= cur[1] and cur[2] == annotations[i][2]:
-            cur = (cur[0], annotations[i][1], cur[2])
+            cur = [cur[0], annotations[i][1], cur[2], annotations[i][3] + cur[3]]
         else:
             anno.append(cur)
             cur = annotations[i]
@@ -432,27 +431,17 @@ def parse_mlf(mlf):
 
 
 def htk_threshold(mlf, output):
-    counts = {}
-    for k, x in parse_mlf(mlf):
-        for _,_, c, ll in x:
-            if c in counts:
-                counts[c].append(ll)
-            else:
-                counts[c] = [ll]
-    for c, v in counts.items():
-        counts[c] = np.mean(v)
-
-    kneedle = KneeLocator(
-        [i for i in range(0, len(x))], [ll for _, ll in x], S=10, curve="concave", direction="increasing", interp_method="polynomial",
-    )
-
-    x = [(c, ll) for c, ll in counts.items()]
-    sorted(x, key = lambda x : x[1])
-
+    likelihoods = []
+    for k, x in parse_mlf(mlf).items():
+        for _,_, _, ll in x:
+            likelihoods.append(ll)
+            
+    likelihoods = sorted(likelihoods)
+    t = int(len(likelihoods) * 0.05)
     plt.figure(figsize=(15, 10))
-    plt.plot(sorted([ll for _, ll in x]))
-    plt.vlines(kneedle.knee, plt.ylim()[0], plt.ylim()[1], linestyles='dashed')
+    plt.plot(likelihoods)
+    plt.vlines(t, plt.ylim()[0], plt.ylim()[1], linestyles='dashed')
     plt.savefig('{}/kneed.png'.format(output))
     plt.close()
-
-    return x[kneedle.knee][1]
+    
+    return likelihoods[t]

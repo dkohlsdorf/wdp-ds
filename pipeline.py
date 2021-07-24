@@ -24,8 +24,8 @@ from subprocess import check_output
 
 FFT_STEP     = 128
 FFT_WIN      = 512
-FFT_HI       = 180
-FFT_LO       = 60
+FFT_HI       = 230
+FFT_LO       = 100
 
 D            = FFT_WIN // 2 - FFT_LO - (FFT_WIN // 2 - FFT_HI)
 RAW_AUDIO    = 5120

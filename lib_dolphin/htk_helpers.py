@@ -433,11 +433,13 @@ def parse_mlf(mlf):
 def htk_threshold(mlf, output):
     likelihoods = []
     for k, x in parse_mlf(mlf).items():
+        if len(x) > 1:
+            x = compress(x)
         for _,_, _, ll in x:
             likelihoods.append(ll)
             
     likelihoods = sorted(likelihoods)
-    t = int(len(likelihoods) * 0.05)
+    t = int(len(likelihoods) * 0.1)
     plt.figure(figsize=(15, 10))
     plt.plot(likelihoods)
     plt.vlines(t, plt.ylim()[0], plt.ylim()[1], linestyles='dashed')

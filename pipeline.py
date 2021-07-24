@@ -322,6 +322,7 @@ def htk_train(folder, inputs, states, niter, flat=False):
         out = check_output("HCompV -v {} -T 10 -M {}/hmm0 -m {}/proto".format(FLOOR, folder, folder).split(" ") + files)
         mmf("{}/clusters_TRAIN.mlf".format(folder), "{}/hmm0/proto".format(folder),LATENT, "{}/hmm0/hmm_mmf".format(folder), "{}/list".format(folder))        
     else:
+        print("INIT")
         htk_init("{}/clusters_TRAIN.mlf".format(folder), None, LATENT, "{}/data/train/*.htk".format(folder), folder, LATENT, states, "{}/hmm0".format(folder), "{}/list".format(folder))
     out = check_output("HParse {}/gram {}/wdnet".format(folder, folder).split(" "))
 
@@ -338,7 +339,10 @@ def htk_train(folder, inputs, states, niter, flat=False):
     plt.ylabel("ll")
     plt.savefig('{}/ll'.format(folder))
     plt.close()
-    htk_confusion("{}/predictions.mlf".format(folder), "{}/confusion_window.png".format(folder))
+    conf, names = htk_confusion("{}/predictions.mlf".format(folder))
+    plot_result_matrix(conf, names, names, "Confusion Window")
+    plt.savefig("{}/confusion_window.png".format(folder))
+    plt.close()
 
 
 def htk_converter(file, folder, out):
@@ -400,7 +404,6 @@ def htk_continuous(folder, htk, noise, hmm, epochs=10, components=10):
 
 def sequencing(audio, folder, htk ,outfolder):
     print("SEQUENCING")
-    """
     out       = check_output(["rm", "-rf", outfolder])
     out       = check_output(["mkdir", outfolder])
     out       = check_output(["mkdir", "{}/images".format(outfolder)]) 
@@ -418,8 +421,7 @@ def sequencing(audio, folder, htk ,outfolder):
         .format(htk, outfolder, htk, htk, htk)\
         .split(" ")
     cmd.extend(htk_files)
-    out = check_output(cmd)
-    """
+    out = check_output(cmd)    
     annotations = parse_mlf('{}/sequenced.lab'.format(outfolder))
     th = htk_threshold('{}/sequenced.lab'.format(outfolder), outfolder)    
     plot_annotations(annotations, audio, "{}/images".format(outfolder), T // 2, th)

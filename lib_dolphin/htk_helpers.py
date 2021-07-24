@@ -11,7 +11,6 @@ import matplotlib.pyplot as plt
 from lib_dolphin.eval import *
 from subprocess import check_output
 
-
 FLOOR       = 1.0
 PERIOD      = 1
 SAMPLE_SIZE = 4 
@@ -205,6 +204,18 @@ def take_step(folder, i):
     return get_ll(out)
 
 
+def label_cluster(predictions, ids, reverse):
+    x = np.sum([np.mean(predictions[i], axis=0) for i in ids], axis=0)
+    x = dict([(reverse[i], x[i]) for i in range(0, len(x))])
+    y = {}
+    y['WSTL']  = x['WSTL_UP'] + x['WSTL_DOWN']
+    y['BURST'] = x['BURST']
+    y['ECHO']  = x['ECHO']
+    y = list(y.items())
+    y.sort(key = lambda x: -x[1])
+    return y[0][0]
+
+
 def htk_eval(folder, last_hmm):
     files = glob.glob("{}/data/test/*.htk".format(folder))
     out = check_output("HVite -T 1 -H {}/hmm{}/hmm_mmf -i {}/predictions.mlf -w {}/wdnet {}/dict {}/list".format(
@@ -331,7 +342,7 @@ def number(x):
     return int(strg)
 
 
-def htk_confusion(file, out):
+def htk_confusion(file):
     corr, pred, _ = parse_htk(file)
     ldict = {}
     confusions = []
@@ -352,9 +363,7 @@ def htk_confusion(file, out):
     names = [(k, v) for k, v in ldict.items()]
     names.sort(key = lambda x:  x[1])
     names = [k for k, _ in names]
-    plot_result_matrix(conf, names, names, "Confusion Window")
-    plt.savefig(out)
-    plt.close()
+    return conf, names
     
     
 def htk_init(label_file, proto_file, dim, train_folder, htk, latent, min_states, hmm_out="hmm0", hmm_list_out="monophones"):

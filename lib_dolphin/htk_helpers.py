@@ -439,7 +439,7 @@ def htk_threshold(mlf, output):
             likelihoods.append(ll)
             
     likelihoods = sorted(likelihoods)
-    t = int(len(likelihoods) * 0.05)
+    t = int(len(likelihoods) * 0.2)
     plt.figure(figsize=(15, 10))
     plt.plot(likelihoods)
     plt.vlines(t, plt.ylim()[0], plt.ylim()[1], linestyles='dashed')

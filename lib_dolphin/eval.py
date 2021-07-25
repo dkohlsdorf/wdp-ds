@@ -19,7 +19,7 @@ COLORS = list(
 )
 
 
-def plot_annotations(anno_files, wav_folder, out_folder, win, th):
+def plot_annotations(anno_files, label_files, wav_folder, out_folder, win, th):
     n = -1
     for file, annotations in anno_files.items():
         n += 1
@@ -36,6 +36,7 @@ def plot_annotations(anno_files, wav_folder, out_folder, win, th):
                 ax.imshow(1.0 - s.T, cmap='gray')
                 for start, stop, i, ll in annotations:
                     if ll >= th:
+                        # TODO Daniel is here
                         start = start
                         stop  = stop 
                         a = start * win

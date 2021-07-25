@@ -120,7 +120,7 @@ def train(label_file, wav_file, noise_file, out_folder="output", perc_test=0.25)
     enc.save('{}/encoder.h5'.format(out_folder))
     pkl.dump(label_dict, open('{}/labels.pkl'.format(out_folder), "wb"))
 
-    
+
 def clustering(regions, wav_file, folder):
     instances_file   = "{}/instances.pkl".format(folder)
     ids_file         = "{}/ids.pkl".format(folder)
@@ -352,12 +352,12 @@ def htk_converter(file, folder, out):
     spec     = spectrogram(audio, FFT_LO, FFT_HI, FFT_WIN, FFT_STEP)
     windowed = windowing(spec, T)
     x        = enc.predict(windowed)
-    return write_htk(x, out), x
+    return write_htk(x, out), x, windowed
 
 
 def htk_continuous(folder, htk, noise, hmm, epochs=10, components=10):
     htk_file = "{}/data/{}".format(htk, noise.split('/')[-1].replace('.wav', '.htk'))
-    n,x      = htk_converter(noise, folder, htk_file)
+    n,x,_    = htk_converter(noise, folder, htk_file)
     out      = check_output(["rm", "-rf", "{}/sil0".format(htk)])
     out      = check_output(["mkdir", "{}/sil0".format(htk)])
 
@@ -404,17 +404,38 @@ def htk_continuous(folder, htk, noise, hmm, epochs=10, components=10):
 
 def sequencing(audio, folder, htk ,outfolder):
     print("SEQUENCING")
-    out       = check_output(["rm", "-rf", outfolder])
-    out       = check_output(["mkdir", outfolder])
-    out       = check_output(["mkdir", "{}/images".format(outfolder)]) 
-    htk_files = []
+    out = check_output(["rm", "-rf", outfolder])
+    out = check_output(["mkdir", outfolder])
+    out = check_output(["mkdir", "{}/images".format(outfolder)]) 
+
+    model      = load_model('{}/supervised.h5'.format(folder))
+    label_dict = pkl.load(open('{}/labels.pkl'.format(folder), "rb"))
+
+    n = len(label_dict)
+    label_names = ["" for i in range(n)]
+    for l, i in label_dict.items():
+        label_names[i] = l    
+    
+    htk_files   = []
+    label_files = []
     for file in os.listdir(audio):
         if file.endswith(".wav"):
-            path     = "{}/{}".format(audio, file)
-            out_path = "{}/{}".format(outfolder, file).replace(".wav", ".htk")
+            path         = "{}/{}".format(audio, file)
+            out_path     = "{}/{}".format(outfolder, file).replace(".wav", ".htk")
+            out_path_lab = "{}/{}".format(outfolder, file).replace(".wav", ".csv")
+
+            _, _, w = htk_converter(path, folder, out_path)
+
+            y = model.predict(w)            
+            y = [np.argmax(y[i]) for i in range(len(y))]
+            y = [label_names[i]  for i in y] 
+
+            df = pd.DataFrame({
+                'labals': y
+            })
+            df.to_csv(out_path_lab)
             htk_files.append(out_path)
-            print(path)
-            htk_converter(path, folder, out_path)
+            label_files.append(out_path_lab)
             print("Convert: {}".format(path))
     
     cmd = "HVite -H {}/continuous -i {}/sequenced.lab -w {}/wdnet_continuous {}/dict_continuous {}/list_continuous"\
@@ -424,7 +445,7 @@ def sequencing(audio, folder, htk ,outfolder):
     out = check_output(cmd)    
     annotations = parse_mlf('{}/sequenced.lab'.format(outfolder))
     th = htk_threshold('{}/sequenced.lab'.format(outfolder), outfolder)    
-    plot_annotations(annotations, audio, "{}/images".format(outfolder), T // 2, th)
+    plot_annotations(annotations, label_files, audio, "{}/images".format(outfolder), T // 2, th)
     
 
 if __name__ == '__main__':

@@ -12,11 +12,18 @@ from lib_dolphin.audio import *
 from lib_dolphin.htk_helpers import * 
 from scipy.io.wavfile import read, write    
 
+from matplotlib.colors import Normalize
 
 
 COLORS = list(
     pd.read_csv('lib_dolphin/colors.txt', sep='\t', header=None)[1].apply(lambda x: x + "80")
 )
+
+
+BIAS   = 0.7
+START  = 0.2
+STOP   = 0.9
+SCALER = 1.0
 
 
 def plot_annotations(anno_files, labels, wav_folder, out_folder, win, th, noise_th = 0.9, plot_noise = False):
@@ -36,7 +43,7 @@ def plot_annotations(anno_files, labels, wav_folder, out_folder, win, th, noise_
             if len(s) < 10000:
                 fig, ax = plt.subplots()
                 fig.set_size_inches(len(s) / 100, len(s[0]) / 100)
-                ax.imshow(1.0 - s.T, cmap='gray')
+                ax.imshow(BIAS - s.T * SCALER, norm=Normalize(START, STOP), cmap='gray')
                 for start, stop, i, ll in annotations:
                     if ll >= th:
                         label_regions = lab_df['labels'][start:stop]

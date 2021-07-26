@@ -19,7 +19,7 @@ COLORS = list(
 )
 
 
-def plot_annotations(anno_files, label_files, wav_folder, out_folder, win, th):
+def plot_annotations(anno_files, labels, wav_folder, out_folder, win, th, noise_th = 0.9, plot_noise = False):
     n = -1
     for file, annotations in anno_files.items():
         n += 1
@@ -29,21 +29,32 @@ def plot_annotations(anno_files, label_files, wav_folder, out_folder, win, th):
             path = "{}/{}.wav".format(wav_folder, file)
             x = raw(path)
             s = spectrogram(x, lo = 0, hi = 256)
-            print(file, n, len(s))
+
+            max_annotations = max([stop for _, stop, _, _ in annotations])
+            lab_df = pd.read_csv(labels[file])
+            print(file, n, len(s), len(lab_df), max_annotations)
             if len(s) < 10000:
                 fig, ax = plt.subplots()
                 fig.set_size_inches(len(s) / 100, len(s[0]) / 100)
                 ax.imshow(1.0 - s.T, cmap='gray')
                 for start, stop, i, ll in annotations:
                     if ll >= th:
-                        # TODO Daniel is here
-                        start = start
-                        stop  = stop 
-                        a = start * win
-                        e = stop  * win
-                        plt.text(a + (e - a) // 2 , 30, i, size=20)
-                        rect = patches.Rectangle((a, 0), e - a, 256, linewidth=1, edgecolor='r', facecolor=COLORS[i])
-                        ax.add_patch(rect)
+                        label_regions = lab_df['labels'][start:stop]
+                        counter = Counter(label_regions)
+                        n_noise = counter['NOISE'] 
+                        n_not_noise = len(label_regions) - n_noise
+                        ratio = n_noise / (n_not_noise + n_noise)
+                        
+                        is_noise = n_not_noise == 0 or ratio > noise_th
+                        print(i, ratio, n_noise, n_not_noise, is_noise)
+                        if not is_noise or plot_noise:
+                            a = start * win
+                            e = stop  * win
+                            plt.text(a + (e - a) // 2 , 30, i, size=20)
+                            if is_noise:
+                                plt.text(a, 30, "N", size=20)                        
+                            rect = patches.Rectangle((a, 0), e - a, 256, linewidth=1, edgecolor='r', facecolor=COLORS[i])
+                            ax.add_patch(rect)
                 plt.savefig("{}/{}.png".format(out_folder, file))
                 plt.close()
             else:

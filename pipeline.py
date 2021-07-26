@@ -404,6 +404,7 @@ def htk_continuous(folder, htk, noise, hmm, epochs=10, components=10):
 
 def sequencing(audio, folder, htk ,outfolder):
     print("SEQUENCING")
+    """
     out = check_output(["rm", "-rf", outfolder])
     out = check_output(["mkdir", outfolder])
     out = check_output(["mkdir", "{}/images".format(outfolder)]) 
@@ -431,20 +432,22 @@ def sequencing(audio, folder, htk ,outfolder):
             y = [label_names[i]  for i in y] 
 
             df = pd.DataFrame({
-                'labals': y
+                'labels': y
             })
-            df.to_csv(out_path_lab)
+            df.to_csv(out_path_lab, index=False)
             htk_files.append(out_path)
             label_files.append(out_path_lab)
             print("Convert: {}".format(path))
     
     cmd = "HVite -H {}/continuous -i {}/sequenced.lab -w {}/wdnet_continuous {}/dict_continuous {}/list_continuous"\
         .format(htk, outfolder, htk, htk, htk)\
-        .split(" ")
+        .split(' ')
     cmd.extend(htk_files)
     out = check_output(cmd)    
+    """
     annotations = parse_mlf('{}/sequenced.lab'.format(outfolder))
-    th = htk_threshold('{}/sequenced.lab'.format(outfolder), outfolder)    
+    th = htk_threshold('{}/sequenced.lab'.format(outfolder), outfolder)        
+    label_files = dict([(f.replace('.csv', ''), "{}/{}".format(outfolder, f))for f in os.listdir(outfolder) if f.endswith('.csv')])
     plot_annotations(annotations, label_files, audio, "{}/images".format(outfolder), T // 2, th)
     
 

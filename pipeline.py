@@ -404,7 +404,6 @@ def htk_continuous(folder, htk, noise, hmm, epochs=10, components=10):
 
 def sequencing(audio, folder, htk ,outfolder):
     print("SEQUENCING")
-    """
     out = check_output(["rm", "-rf", outfolder])
     out = check_output(["mkdir", outfolder])
     out = check_output(["mkdir", "{}/images".format(outfolder)]) 
@@ -444,7 +443,7 @@ def sequencing(audio, folder, htk ,outfolder):
         .split(' ')
     cmd.extend(htk_files)
     out = check_output(cmd)    
-    """
+    
     annotations = parse_mlf('{}/sequenced.lab'.format(outfolder))
     th = htk_threshold('{}/sequenced.lab'.format(outfolder), outfolder)        
     label_files = dict([(f.replace('.csv', ''), "{}/{}".format(outfolder, f))for f in os.listdir(outfolder) if f.endswith('.csv')])

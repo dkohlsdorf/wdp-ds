@@ -8,6 +8,7 @@ import pickle as pkl
 import random
 import matplotlib.pyplot as plt 
 
+from numba import jit
 from lib_dolphin.eval import *
 from subprocess import check_output
 
@@ -456,3 +457,135 @@ def htk_threshold(mlf, output):
     plt.close()
     
     return likelihoods[t]
+
+
+def sequence(x):
+    return [str(i) for _, _, i, _ in x]
+
+
+def string(x):
+    return " ".join(sequence(x))
+
+
+def context(f):
+    p = re.compile('[a-z]+')
+    return p.search(f).group()
+
+
+def video(f, prefix):
+    return f.replace(prefix, '').split('_')[0]
+
+
+def timestamp(f):
+    return f.split('_')[1]
+
+
+@jit
+def levenstein(x, y):
+    n = len(x)
+    m = len(y)
+    d = np.zeros((n + 1, m + 1))
+    d[:, 0] = np.arange(0, n + 1)
+    d[0, :] = np.arange(0, m + 1)
+    
+    for i in range(1, n + 1):
+        for j in range(1, m + 1):
+            error = 0
+            if x[i - 1] != y[j - 1]:
+                error += 1
+            d[i, j] = min([
+                d[i - 1, j] + 1,
+                d[i, j - 1] + 1,
+                d[i - 1, j - 1] + error
+            ])
+    return d[n, m]
+
+
+def merge_next(i, d, closed):
+    min_val = [0, np.float('inf')]
+    for j in range(0, len(d)):
+        if j not in closed and i != j:
+            if d[i,j] < min_val[1]:
+                min_val[0] = j
+                min_val[1] = d[i,j]
+    return min_val
+
+
+def htk_sequencing_eval(anno, out):
+    sequences = []
+    cs  = []
+    vs  = []
+    ts  = []
+    img = [] 
+    for f, x in anno.items():
+        if len(x) > 1 and len(x) < 100:
+            sequences.append(sequence(x))
+            cs.append(context(f))
+            vs.append(video(f, context(f)))
+            ts.append(timestamp(f))
+            img.append("images/{}.png".format(f))
+
+    N = len(sequences)
+    d = np.zeros((N, N))
+    for i in range(0, N):
+        for j in range(i, N):
+            l = levenstein(sequences[i], sequences[j])
+            d[i, j] = l
+            d[j, i] = l
+
+    j, di = merge_next(0, d, set([]))
+    closed  = set([j]) 
+
+    cs_sorted  = []
+    vs_sorted  = []
+    ts_sorted  = []
+    seq_sorted = []
+    img_sorted = []
+    while di < np.float('inf'):
+        j, di = merge_next(j, d, closed)
+        closed.add(j)
+        cs_sorted.append(cs[j])
+        vs_sorted.append(vs[j])
+        ts_sorted.append(ts[j])
+        seq_sorted.append(" ".join(sequences[j]))
+        img_sorted.append(img[j])
+        
+    df = pd.DataFrame({
+        'context': cs_sorted,
+        'video': vs_sorted,
+        'time': ts_sorted,
+        'strg': seq_sorted,
+        'img': img_sorted
+    })
+
+    df[['context', 'video', 'time', 'strg']].to_csv('{}/sequenced_strings.csv'.format(out), index=None)
+    with open('{}/sequenced_strings.html'.format(out), 'w') as f:
+        f.write('<HTML><BODY><TABLE border="1">')
+        f.write("""
+        <TR>
+            <TH> Context </TH>
+            <TH> Video </TH>
+            <TH> Time </TH>
+            <TH> String </TH>
+            <TH> Image </TH>
+        </TR>    
+        """)
+        for i, row in df.iterrows():
+            f.write("""
+            <TR>
+                <TD> {} </TD>
+                <TD> {} </TD>
+                <TD> {} </TD>
+                <TD> {} </TD>
+                <TD> 
+                   <div style="width: 1024px; height: 100px; overflow: auto">
+                     <img src="{}" height=100/> </div></TD>
+            </TR>    
+            """.format(
+                row['context'], 
+                row['video'], 
+                row['time'], 
+                row['strg'],
+                row['img']
+            ))
+        f.write('</TABLE></BODY> </HTML>')

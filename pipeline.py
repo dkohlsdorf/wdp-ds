@@ -445,11 +445,12 @@ def sequencing(audio, folder, htk, outfolder, recode = False):
         cmd.extend(htk_files)
         out = check_output(cmd)    
     
-    annotations = parse_mlf('{}/sequenced.lab'.format(outfolder))
-    th = htk_threshold('{}/sequenced.lab'.format(outfolder), outfolder)        
-    label_files = dict([(f.replace('.csv', ''), "{}/{}".format(outfolder, f))for f in os.listdir(outfolder) if f.endswith('.csv')])
-    plot_annotations(annotations, label_files, audio, "{}/images".format(outfolder), T // 2, th)
-    
+    annotations         = parse_mlf('{}/sequenced.lab'.format(outfolder))
+    th                  = htk_threshold('{}/sequenced.lab'.format(outfolder), outfolder)        
+    label_files         = dict([(f.replace('.csv', ''), "{}/{}".format(outfolder, f))for f in os.listdir(outfolder) if f.endswith('.csv')])
+    filtered            = plot_annotations(annotations, label_files, audio, "{}/images".format(outfolder), T // 2, th)
+    htk_sequencing_eval(filtered, outfolder)
+
 
 if __name__ == '__main__':
     print("=====================================")

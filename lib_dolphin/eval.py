@@ -28,11 +28,13 @@ SCALER = 1.0
 
 def plot_annotations(anno_files, labels, wav_folder, out_folder, win, th, noise_th = 0.95, plot_noise = False):
     n = -1
+    filtered = {}
     for file, annotations in anno_files.items():
         n += 1
         if len(annotations) > 1:
             annotations = compress(annotations)
         if len(annotations) > 1:
+            filtered[file] = []
             path = "{}/{}.wav".format(wav_folder, file)
             x = raw(path)
             s = spectrogram(x, lo = 0, hi = 256)
@@ -53,8 +55,8 @@ def plot_annotations(anno_files, labels, wav_folder, out_folder, win, th, noise_
                         ratio = n_noise / (n_not_noise + n_noise)
                         
                         is_noise = n_not_noise == 0 or ratio > noise_th
-                        print(i, ratio, n_noise, n_not_noise, is_noise)
                         if not is_noise or plot_noise:
+                            filtered[file].append((start, stop, i, ll))
                             a = start * win
                             e = stop  * win
                             plt.text(a + (e - a) // 2 , 30, i, size=20)
@@ -66,7 +68,8 @@ def plot_annotations(anno_files, labels, wav_folder, out_folder, win, th, noise_
                 plt.close()
             else:
                 print("\t skip")
-                
+    return filtered
+
 
 def plot_result_matrix(confusion, classes, predictions, title, cmap=plt.cm.Blues):
     fig, ax = plt.subplots()

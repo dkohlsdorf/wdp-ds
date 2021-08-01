@@ -402,47 +402,48 @@ def htk_continuous(folder, htk, noise, hmm, epochs=10, components=10):
     out = check_output("HParse {}/gram_continuous {}/wdnet_continuous".format(htk, htk).split(" "))
                 
 
-def sequencing(audio, folder, htk ,outfolder):
+def sequencing(audio, folder, htk, outfolder, recode = False):
     print("SEQUENCING")
-    out = check_output(["rm", "-rf", outfolder])
-    out = check_output(["mkdir", outfolder])
-    out = check_output(["mkdir", "{}/images".format(outfolder)]) 
+    if recode: 
+        out = check_output(["rm", "-rf", outfolder])
+        out = check_output(["mkdir", outfolder])
+        out = check_output(["mkdir", "{}/images".format(outfolder)]) 
 
-    model      = load_model('{}/supervised.h5'.format(folder))
-    label_dict = pkl.load(open('{}/labels.pkl'.format(folder), "rb"))
+        model      = load_model('{}/supervised.h5'.format(folder))
+        label_dict = pkl.load(open('{}/labels.pkl'.format(folder), "rb"))
 
-    n = len(label_dict)
-    label_names = ["" for i in range(n)]
-    for l, i in label_dict.items():
-        label_names[i] = l    
-    
-    htk_files   = []
-    label_files = []
-    for file in os.listdir(audio):
-        if file.endswith(".wav"):
-            path         = "{}/{}".format(audio, file)
-            out_path     = "{}/{}".format(outfolder, file).replace(".wav", ".htk")
-            out_path_lab = "{}/{}".format(outfolder, file).replace(".wav", ".csv")
+        n = len(label_dict)
+        label_names = ["" for i in range(n)]
+        for l, i in label_dict.items():
+            label_names[i] = l    
 
-            _, _, w = htk_converter(path, folder, out_path)
+        htk_files   = []
+        label_files = []
+        for file in os.listdir(audio):
+            if file.endswith(".wav"):
+                path         = "{}/{}".format(audio, file)
+                out_path     = "{}/{}".format(outfolder, file).replace(".wav", ".htk")
+                out_path_lab = "{}/{}".format(outfolder, file).replace(".wav", ".csv")
 
-            y = model.predict(w)            
-            y = [np.argmax(y[i]) for i in range(len(y))]
-            y = [label_names[i]  for i in y] 
+                _, _, w = htk_converter(path, folder, out_path)
 
-            df = pd.DataFrame({
-                'labels': y
-            })
-            df.to_csv(out_path_lab, index=False)
-            htk_files.append(out_path)
-            label_files.append(out_path_lab)
-            print("Convert: {}".format(path))
-    
-    cmd = "HVite -H {}/continuous -i {}/sequenced.lab -w {}/wdnet_continuous {}/dict_continuous {}/list_continuous"\
-        .format(htk, outfolder, htk, htk, htk)\
-        .split(' ')
-    cmd.extend(htk_files)
-    out = check_output(cmd)    
+                y = model.predict(w)            
+                y = [np.argmax(y[i]) for i in range(len(y))]
+                y = [label_names[i]  for i in y] 
+
+                df = pd.DataFrame({
+                    'labels': y
+                })
+                df.to_csv(out_path_lab, index=False)
+                htk_files.append(out_path)
+                label_files.append(out_path_lab)
+                print("Convert: {}".format(path))
+
+        cmd = "HVite -H {}/continuous -i {}/sequenced.lab -w {}/wdnet_continuous {}/dict_continuous {}/list_continuous"\
+            .format(htk, outfolder, htk, htk, htk)\
+            .split(' ')
+        cmd.extend(htk_files)
+        out = check_output(cmd)    
     
     annotations = parse_mlf('{}/sequenced.lab'.format(outfolder))
     th = htk_threshold('{}/sequenced.lab'.format(outfolder), outfolder)        

@@ -577,7 +577,9 @@ def htk_sequencing_eval(anno, out):
                 <TD> {} </TD>
                 <TD> {} </TD>
                 <TD> {} </TD>
-                <TD> <img src="{}" height=100/> </TD>
+                <TD> 
+                   <div style="width: 1024px; height: 100px; overflow: auto">
+                     <img src="{}" height=100/> </div></TD>
             </TR>    
             """.format(
                 row['context'], 

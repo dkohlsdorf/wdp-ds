@@ -48,7 +48,6 @@ def plot_annotations(anno_files, labels, wav_folder, out_folder, win, th, noise_
                 ax.imshow(BIAS - s.T * SCALER, norm=Normalize(START, STOP), cmap='gray')
                 for start, stop, i, ll in annotations:
                     if ll >= th:
-                        filtered[file].append((start, stop, i, ll))
                         label_regions = lab_df['labels'][start:stop]
                         counter = Counter(label_regions)
                         n_noise = counter['NOISE'] 
@@ -57,6 +56,7 @@ def plot_annotations(anno_files, labels, wav_folder, out_folder, win, th, noise_
                         
                         is_noise = n_not_noise == 0 or ratio > noise_th
                         if not is_noise or plot_noise:
+                            filtered[file].append((start, stop, i, ll))
                             a = start * win
                             e = stop  * win
                             plt.text(a + (e - a) // 2 , 30, i, size=20)

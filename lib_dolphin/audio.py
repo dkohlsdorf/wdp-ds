@@ -1,3 +1,4 @@
+import random
 import numpy as np
 import pandas as pd
 from numba import jit
@@ -71,6 +72,24 @@ def dataset_unsupervised_regions(regions, wavfile, encoder, supervised, lo, hi, 
                 ids.append(i)
     return ids, instances, labels
 
+
+def dataset_unsupervised_windows(label, wavfile, lo, hi, win, step, raw_size, T, n = 10000):
+    df = pd.read_csv(label)
+    audio     = raw(wavfile)
+    instances = []
+    for _, row in df.iterrows():
+        start = row['starts']
+        stop  = row['stops']
+        w     = audio[start:stop]
+        if len(w) > 0:
+            s = spectrogram(w, lo, hi, win, step)
+            w = windowing(s, T)
+            if w is not None:
+                for i in range(0, len(w)):
+                    instances.append(w[i])
+    random.shuffle(instances)
+    return instances[0:n]
+    
 
 def dataset_supervised_windows(label, wavfile, lo, hi, win, step, raw_size):
     df        = pd.read_csv(label)

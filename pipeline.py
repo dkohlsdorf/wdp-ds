@@ -38,10 +38,12 @@ BATCH        = 25
 EPOCHS       = 25
 
 
-def train(label_file, wav_file, noise_file, out_folder="output", perc_test=0.25):
+def train(label_file, wav_file, noise_file, unsupervised_labels, unsupervised_audio, out_folder="output", perc_test=0.25):
     instances, labels, label_dict = dataset_supervised_windows(
         label_file, wav_file, lo=FFT_LO, hi=FFT_HI, win=FFT_WIN, step=FFT_STEP, raw_size=RAW_AUDIO)    
- 
+    unsup = dataset_unsupervised_windows(
+        unsupervised_labels, unsupervised_audio, lo=FFT_LO, hi=FFT_HI, win=FFT_WIN, step=FFT_STEP, raw_size=RAW_AUDIO, T=T)
+    print("INST: {} / UNSUP: {}".format(len(instances), len(unsup)))
     noise_label  = np.max([i for _, i in label_dict.items()]) + 1
     label_dict['NOISE'] = noise_label
     label_counts = {}
@@ -50,6 +52,7 @@ def train(label_file, wav_file, noise_file, out_folder="output", perc_test=0.25)
             label_counts[i] += 1
         else:
             label_counts[i] =1
+            
     max_count = np.max([c for _, c in label_counts.items()])
     print("Count: {}".format(max_count))
     print("Labels: {}".format(label_dict))
@@ -70,7 +73,7 @@ def train(label_file, wav_file, noise_file, out_folder="output", perc_test=0.25)
     print("Added: {} ".format(n_noise ))
     visualize_dataset(instances, "{}/dataset.png".format(out_folder))
     visualize_dataset(instances_inp, "{}/dataset_noisy.png".format(out_folder))
-
+    
     y_train = []
     y_test  = []
     x_train = []
@@ -83,6 +86,7 @@ def train(label_file, wav_file, noise_file, out_folder="output", perc_test=0.25)
             x_train.append(instances_inp[i])
             y_train.append(labels[i])
 
+    u       = np.stack(unsup).reshape(len(unsup), T, D, 1)
     x       = np.stack(instances_inp)[0:len(instances)].reshape(len(instances), T, D, 1)
     x_train = np.stack(x_train).reshape(len(x_train), T, D, 1)
     x_test  = np.stack(x_test).reshape(len(x_test), T, D, 1)
@@ -96,6 +100,7 @@ def train(label_file, wav_file, noise_file, out_folder="output", perc_test=0.25)
     
     hist = model.fit(x=x_train, y=y_train, validation_data=(x_test, y_test), batch_size=BATCH, epochs=EPOCHS, shuffle=True)
     ae.fit(x=x_train, y=x_train, batch_size=10, epochs=EPOCHS, shuffle=True)
+    ae.fit(x=u, y=u, batch_size=10, epochs=EPOCHS, shuffle=True)
     hist = model.fit(x=x_train, y=y_train, validation_data=(x_test, y_test), batch_size=BATCH, epochs=EPOCHS, shuffle=True)
 
     enc_filters(enc, CONV_PARAM[-1], "{}/filters.png".format(out_folder))
@@ -460,8 +465,10 @@ if __name__ == '__main__':
         labels = sys.argv[2]
         wav    = sys.argv[3]
         noise  = sys.argv[4]
-        out    = sys.argv[5]
-        train(labels, wav, noise, out)
+        ulab   = sys.argv[5]
+        uwav   = sys.argv[6]
+        out    = sys.argv[7]
+        train(labels, wav, noise, ulab, uwav, out)
     elif len(sys.argv) >= 5 and sys.argv[1] == 'clustering':
         labels = sys.argv[2]
         wav    = sys.argv[3]
@@ -506,7 +513,7 @@ if __name__ == '__main__':
     else:
         print("""
             Usage:
-                + train:      python pipeline.py train LABEL_FILE AUDIO_FILE NOISE_FILE OUT_FOLDER
+                + train:      python pipeline.py train LABEL_FILE AUDIO_FILE NOISE_FILE UNUSP_LAB UNSUP_FILE OUT_FOLDER
                 + clustering: python pipeline.py clustering LABEL_FILE AUDIO_FILE OUT_FOLDER
                 + export:     python pipeline.py export LABEL_FILE AUDIO_FILE FOLDER K OUT_FOLDER
                 + htk:        python pipeline.py htk train FOLDER OUT_HTK STATES ITER

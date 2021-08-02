@@ -407,7 +407,7 @@ def htk_continuous(folder, htk, noise, hmm, epochs=10, components=10):
     out = check_output("HParse {}/gram_continuous {}/wdnet_continuous".format(htk, htk).split(" "))
                 
 
-def sequencing(audio, folder, htk, outfolder, recode = False):
+def sequencing(audio, folder, htk, outfolder, recode = True):
     print("SEQUENCING")
     if recode: 
         out = check_output(["rm", "-rf", outfolder])

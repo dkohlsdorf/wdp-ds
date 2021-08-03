@@ -444,6 +444,7 @@ def sequencing(audio, folder, htk, outfolder, recode = False):
                 label_files.append(out_path_lab)
                 print("Convert: {}".format(path))
 
+        # TODO Adjust silence model
         cmd = "HVite -H {}/continuous -i {}/sequenced.lab -w {}/wdnet_continuous {}/dict_continuous {}/list_continuous"\
             .format(htk, outfolder, htk, htk, htk)\
             .split(' ')

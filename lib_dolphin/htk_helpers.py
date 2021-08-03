@@ -59,7 +59,7 @@ def silence_proto(dims, means, name = "sil"):
     transitions[0, 1] = 1.00
     transitions[1, 1] = 0.99
     transitions[1, 2] = 0.01
-    variances   = np.ones(dims)  
+    variances   = FLOOR * np.ones(dims)  
     components  = []
     p = 1.0 / k
     for i in range(0, k):

@@ -440,7 +440,7 @@ def parse_mlf(mlf):
     return files
 
 
-def htk_threshold(mlf, output, perc=0.01, do_compress=False):
+def htk_threshold(mlf, output, perc=0.001, do_compress=False):
     likelihoods = []
     for k, x in parse_mlf(mlf).items():
         if len(x) > 1 and do_compress:
@@ -449,7 +449,7 @@ def htk_threshold(mlf, output, perc=0.01, do_compress=False):
             likelihoods.append(ll)
             
     likelihoods = sorted(likelihoods)
-    t = int(len(likelihoods) * 0.01)
+    t = int(len(likelihoods) * perc)
     plt.figure(figsize=(15, 10))
     plt.plot(likelihoods)
     plt.vlines(t, plt.ylim()[0], plt.ylim()[1], linestyles='dashed')

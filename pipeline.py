@@ -31,9 +31,9 @@ D            = FFT_WIN // 2 - FFT_LO - (FFT_WIN // 2 - FFT_HI)
 RAW_AUDIO    = 5120
 T            = int((RAW_AUDIO - FFT_WIN) / FFT_STEP)
 
-CONV_PARAM   = (8, 8, 128)
+CONV_PARAM   = (8, 8, 512)
 WINDOW_PARAM = (T, D, 1)
-LATENT       = 128
+LATENT       = 256
 BATCH        = 25
 EPOCHS       = 25
 
@@ -360,7 +360,7 @@ def htk_converter(file, folder, out):
     return write_htk(x, out), x, windowed
 
 
-def htk_continuous(folder, htk, noise, hmm, epochs=10, components=10):
+def htk_continuous(folder, htk, noise, hmm, epochs=10, components=3):
     htk_file = "{}/data/{}".format(htk, noise.split('/')[-1].replace('.wav', '.htk'))
     n,x,_    = htk_converter(noise, folder, htk_file)
     out      = check_output(["rm", "-rf", "{}/sil0".format(htk)])
@@ -409,7 +409,7 @@ def htk_continuous(folder, htk, noise, hmm, epochs=10, components=10):
 
 def sequencing(audio, folder, htk, outfolder, recode = False):
     print("SEQUENCING")
-    if recode: 
+    if recode:        
         out = check_output(["rm", "-rf", outfolder])
         out = check_output(["mkdir", outfolder])
         out = check_output(["mkdir", "{}/images".format(outfolder)]) 
@@ -433,11 +433,14 @@ def sequencing(audio, folder, htk, outfolder, recode = False):
                 _, _, w = htk_converter(path, folder, out_path)
 
                 y = model.predict(w)            
-                y = [np.argmax(y[i]) for i in range(len(y))]
-                y = [label_names[i]  for i in y] 
-
+                p = [np.max(y[i]) for i in range(len(y))]
+                l = [np.argmax(y[i]) for i in range(len(y))]
+                
+                y = [label_names[i]  for i in l] 
+                
                 df = pd.DataFrame({
-                    'labels': y
+                    'labels': y,
+                    'prob': p
                 })
                 df.to_csv(out_path_lab, index=False)
                 htk_files.append(out_path)

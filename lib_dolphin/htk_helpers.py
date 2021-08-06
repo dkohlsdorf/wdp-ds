@@ -59,7 +59,7 @@ def silence_proto(dims, means, name = "sil"):
     transitions[0, 1] = 1.00
     transitions[1, 1] = 0.99
     transitions[1, 2] = 0.01
-    variances   = FLOOR * np.ones(dims)  
+    variances   = 0.1 * np.ones(dims)
     components  = []
     p = 1.0 / k
     for i in range(0, k):
@@ -437,10 +437,12 @@ def parse_mlf(mlf):
                 if lab != 'sil':
                     cluster = number(lab)
                     files[cur].append([start, stop, cluster, ll])
+                else:
+                    files[cur].append([start, stop, lab, ll])
     return files
 
 
-def htk_threshold(mlf, output, perc=0.001, do_compress=False):
+def htk_threshold(mlf, output, perc=0.1, do_compress=False):
     likelihoods = []
     for k, x in parse_mlf(mlf).items():
         if len(x) > 1 and do_compress:

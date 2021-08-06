@@ -26,7 +26,7 @@ STOP   = 0.9
 SCALER = 1.0
 
 
-def plot_annotations(anno_files, labels, wav_folder, out_folder, win, th, noise_th = 1.0, plot_noise = False, do_compress=False):
+def plot_annotations(anno_files, labels, wav_folder, out_folder, win, th, noise_th = 0.97, plot_noise = True, do_compress=False):
     n = -1
     filtered = {}
     for file, annotations in anno_files.items():
@@ -47,23 +47,39 @@ def plot_annotations(anno_files, labels, wav_folder, out_folder, win, th, noise_
                 fig.set_size_inches(len(s) / 100, len(s[0]) / 100)
                 ax.imshow(BIAS - s.T * SCALER, norm=Normalize(START, STOP), cmap='gray')
                 for start, stop, i, ll in annotations:
-                    if ll >= th:
-                        label_regions = lab_df['labels'][start:stop]
-                        counter = Counter(label_regions)
-                        n_noise = counter['NOISE'] 
-                        n_not_noise = len(label_regions) - n_noise
+                    label_regions = list(lab_df['labels'][start:stop])
+                    probs         = list(lab_df['prob'][start:stop])
+                    label_regions = [label_regions[i] for i in range(0, len(label_regions)) if (label_regions[i] == 'NOISE' and probs[i] > 0.99) or (label_regions[i] != 'NOISE')]
+                    counter = Counter(label_regions)
+                    n_noise = counter['NOISE'] 
+                    n_not_noise = len(label_regions) - n_noise
+                    if n_noise + n_not_noise == 0:
+                        ratio = 0.0
+                    else:
                         ratio = n_noise / (n_not_noise + n_noise)
-                        
-                        is_noise = n_not_noise == 0 or ratio > noise_th
-                        if not is_noise or plot_noise:
-                            filtered[file].append((start, stop, i, ll))
-                            a = start * win
-                            e = stop  * win
+                    is_ll    = ll <= th
+                    is_noise = ratio > noise_th
+                    is_sil   = i == 'sil'
+                    supress  = is_sil or (is_ll and is_noise)
+                    if not supress or plot_noise:                    
+                        if not supress:
+                            filtered[file].append((start, stop, i, ll))                        
+                        a = start * win
+                        e = stop  * win
+                        if not supress: 
                             plt.text(a + (e - a) // 2 , 30, i, size=20)
-                            if is_noise:
-                                plt.text(a, 30, "N", size=20)                        
-                            rect = patches.Rectangle((a, 0), e - a, 256, linewidth=1, edgecolor='r', facecolor=COLORS[i])
+                            rect = patches.Rectangle((a, 0), e - a, 256, linewidth=1, edgecolor='r', facecolor=COLORS[i + 1])
                             ax.add_patch(rect)
+                        if is_noise and supress:
+                            print("Neural")
+                            plt.text(a, 30, "N", size=20)
+                        if is_ll and supress:
+                            print("Likelihood")
+                            plt.text(a, 50, "L", size=20)
+                        if is_sil and supress:
+                            print("HTK")
+                            plt.text(a, 70, "H", size=20)                            
+
                 plt.savefig("{}/{}.png".format(out_folder, file))
                 plt.close()
             else:

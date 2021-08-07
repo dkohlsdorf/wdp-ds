@@ -360,7 +360,7 @@ def htk_converter(file, folder, out):
     return write_htk(x, out), x, windowed
 
 
-def htk_continuous(folder, htk, noise, hmm, epochs=10, components=3):
+def htk_continuous(folder, htk, noise, hmm, epochs=10, components=10):
     htk_file = "{}/data/{}".format(htk, noise.split('/')[-1].replace('.wav', '.htk'))
     n,x,_    = htk_converter(noise, folder, htk_file)
     out      = check_output(["rm", "-rf", "{}/sil0".format(htk)])
@@ -407,7 +407,7 @@ def htk_continuous(folder, htk, noise, hmm, epochs=10, components=3):
     out = check_output("HParse {}/gram_continuous {}/wdnet_continuous".format(htk, htk).split(" "))
                 
 
-def sequencing(audio, folder, htk, outfolder, recode = True):
+def sequencing(audio, folder, htk, outfolder, recode=True):
     print("SEQUENCING")
     if recode:        
         out = check_output(["rm", "-rf", outfolder])

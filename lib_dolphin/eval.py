@@ -26,9 +26,11 @@ STOP   = 0.9
 SCALER = 1.0
 
 
-def plot_annotations(anno_files, labels, wav_folder, out_folder, win, th, noise_th = 0.97, plot_noise = True, do_compress=False):
+def plot_annotations(anno_files, labels, wav_folder, out_folder, win, th, noise_th = 0.75, plot_noise = True, do_compress=False):
     n = -1
     filtered = {}
+    anno_mapping = {}
+    cur = 0 
     for file, annotations in anno_files.items():
         n += 1
         if len(annotations) > 1 and do_compress:
@@ -49,7 +51,7 @@ def plot_annotations(anno_files, labels, wav_folder, out_folder, win, th, noise_
                 for start, stop, i, ll in annotations:
                     label_regions = list(lab_df['labels'][start:stop])
                     probs         = list(lab_df['prob'][start:stop])
-                    label_regions = [label_regions[i] for i in range(0, len(label_regions)) if (label_regions[i] == 'NOISE' and probs[i] > 0.99) or (label_regions[i] != 'NOISE')]
+                    label_regions = [label_regions[i] for i in range(0, len(label_regions)) if (label_regions[i] == 'NOISE' and probs[i] > 0.9) or (label_regions[i] != 'NOISE')]
                     counter = Counter(label_regions)
                     n_noise = counter['NOISE'] 
                     n_not_noise = len(label_regions) - n_noise
@@ -61,14 +63,18 @@ def plot_annotations(anno_files, labels, wav_folder, out_folder, win, th, noise_
                     is_noise = ratio > noise_th
                     is_sil   = i == 'sil'
                     supress  = is_sil or (is_ll and is_noise)
+                    print("SUPRESS: {}, {} < {}, {} > {}, sil {}".format(supress, ll, th, ratio, noise_th, is_sil))
                     if not supress or plot_noise:                    
                         if not supress:
                             filtered[file].append((start, stop, i, ll))                        
                         a = start * win
                         e = stop  * win
                         if not supress: 
+                            if i not in anno_mapping:
+                                anno_mapping[i] = cur
+                                cur += 1
                             plt.text(a + (e - a) // 2 , 30, i, size=20)
-                            rect = patches.Rectangle((a, 0), e - a, 256, linewidth=1, edgecolor='r', facecolor=COLORS[i + 1])
+                            rect = patches.Rectangle((a, 0), e - a, 256, linewidth=1, edgecolor='r', facecolor=COLORS[anno_mapping[i] + 1])
                             ax.add_patch(rect)
                         if is_noise and supress:
                             print("Neural")

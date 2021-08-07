@@ -31,11 +31,11 @@ D            = FFT_WIN // 2 - FFT_LO - (FFT_WIN // 2 - FFT_HI)
 RAW_AUDIO    = 5120
 T            = int((RAW_AUDIO - FFT_WIN) / FFT_STEP)
 
-CONV_PARAM   = (8, 8, 512)
+CONV_PARAM   = (8, 8, 256)
 WINDOW_PARAM = (T, D, 1)
 LATENT       = 256
 BATCH        = 25
-EPOCHS       = 25
+EPOCHS       = 5
 
 
 def train(label_file, wav_file, noise_file, unsupervised_labels, unsupervised_audio, out_folder="output", perc_test=0.25):
@@ -88,6 +88,7 @@ def train(label_file, wav_file, noise_file, unsupervised_labels, unsupervised_au
 
     u       = np.stack(unsup).reshape(len(unsup), T, D, 1)
     x       = np.stack(instances_inp)[0:len(instances)].reshape(len(instances), T, D, 1)
+    x_out   = np.stack(instances)[0:len(instances)].reshape(len(instances), T, D, 1)
     x_train = np.stack(x_train).reshape(len(x_train), T, D, 1)
     x_test  = np.stack(x_test).reshape(len(x_test), T, D, 1)
     
@@ -98,9 +99,8 @@ def train(label_file, wav_file, noise_file, unsupervised_labels, unsupervised_au
     
     model.compile(optimizer='adam', loss='sparse_categorical_crossentropy', metrics=['accuracy'])
     
-    hist = model.fit(x=x_train, y=y_train, validation_data=(x_test, y_test), batch_size=BATCH, epochs=EPOCHS, shuffle=True)
-    ae.fit(x=x_train, y=x_train, batch_size=10, epochs=EPOCHS, shuffle=True)
     ae.fit(x=u, y=u, batch_size=10, epochs=EPOCHS, shuffle=True)
+    ae.fit(x=x, y=x_out, batch_size=10, epochs=EPOCHS, shuffle=True)
     hist = model.fit(x=x_train, y=y_train, validation_data=(x_test, y_test), batch_size=BATCH, epochs=EPOCHS, shuffle=True)
 
     enc_filters(enc, CONV_PARAM[-1], "{}/filters.png".format(out_folder))
@@ -407,7 +407,7 @@ def htk_continuous(folder, htk, noise, hmm, epochs=10, components=3):
     out = check_output("HParse {}/gram_continuous {}/wdnet_continuous".format(htk, htk).split(" "))
                 
 
-def sequencing(audio, folder, htk, outfolder, recode = False):
+def sequencing(audio, folder, htk, outfolder, recode = True):
     print("SEQUENCING")
     if recode:        
         out = check_output(["rm", "-rf", outfolder])

@@ -306,7 +306,7 @@ def htk_train(folder, inputs, states, niter, flat=False):
     out = check_output(["mkdir", "{}/data".format(folder)])
     htk_export(inputs, "{}/data".format(folder), "{}/clusters.mlf".format(folder), folder)
     files = glob.glob("{}/data/train/*.htk".format(folder))
-        
+
     grammar = simple_grammar("{}/clusters_TRAIN.mlf".format(folder))
     with open("{}/gram".format(folder), 'w') as fp:
         fp.write(grammar + "\n")
@@ -319,7 +319,6 @@ def htk_train(folder, inputs, states, niter, flat=False):
     out = check_output(["rm", "-rf", "{}/hmm0".format(folder)])
     out = check_output(["mkdir", "{}/hmm0".format(folder)])
     
-    
     if flat:
         hmm = left_right_hmm(states, LATENT, name="proto")
         with open("{}/proto".format(folder), "w") as fp:
@@ -330,7 +329,8 @@ def htk_train(folder, inputs, states, niter, flat=False):
         print("INIT")
         htk_init("{}/clusters_TRAIN.mlf".format(folder), None, LATENT, "{}/data/train/*.htk".format(folder), folder, LATENT, states, "{}/hmm0".format(folder), "{}/list".format(folder))
     out = check_output("HParse {}/gram {}/wdnet".format(folder, folder).split(" "))
-
+    
+    print("---")
     likelihoods = []
     for i in range(1, niter + 1):
         ll = take_step(folder, i)
@@ -348,7 +348,7 @@ def htk_train(folder, inputs, states, niter, flat=False):
     plot_result_matrix(conf, names, names, "Confusion Window")
     plt.savefig("{}/confusion_window.png".format(folder))
     plt.close()
-
+    
 
 def htk_converter(file, folder, out):
     print("... convert {} using {} to {}".format(file, folder, out))

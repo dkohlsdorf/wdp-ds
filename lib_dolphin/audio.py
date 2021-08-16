@@ -48,6 +48,33 @@ def windowing(region, window):
         return None
         
 
+def dataset_unsupervised_regions_windowed(regions, wavfile, encoder, supervised, lo, hi, win, step, T, l2_window, no_whistle):
+    df        = pd.read_csv(regions)
+    N         = len(df)
+    audio     = raw(wavfile) 
+    instances = []
+    labels    = []
+    ids       = []
+    for i, row in df.iterrows():
+        start = row['starts']
+        stop  = row['stops']
+        w     = audio[start:stop]
+        if len(w) > 0:
+            s = spectrogram(w, lo, hi, win, step)
+            w = windowing(s, T)
+            if w is not None:
+                if i % 100 == 0:
+                    print(" ... reading {}/{}={}".format(i, N, i / N))
+                x = encoder.predict(w)
+                y = supervised.predict(w)
+                # TODO Daniel is here if y mostly whistle return, else window and no whistle split
+                for j in range(l2_window, len(x), l2_window // 2):
+                    instances.append(x[j - l2_window:j])
+                    labels.append(y[j - l2_window:j])
+                    ids.append(i)
+    return ids, instances, labels
+
+        
 def dataset_unsupervised_regions(regions, wavfile, encoder, supervised, lo, hi, win, step, T):
     df        = pd.read_csv(regions)
     N         = len(df)

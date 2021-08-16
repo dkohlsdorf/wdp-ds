@@ -126,7 +126,7 @@ def train(label_file, wav_file, noise_file, unsupervised_labels, unsupervised_au
     pkl.dump(label_dict, open('{}/labels.pkl'.format(out_folder), "wb"))
 
 
-def clustering(regions, wav_file, folder):
+def clustering(regions, wav_file, folder, l2_window = 10):
     instances_file   = "{}/instances.pkl".format(folder)
     ids_file         = "{}/ids.pkl".format(folder)
     predictions_file = "{}/predictions.pkl".format(folder)
@@ -136,8 +136,12 @@ def clustering(regions, wav_file, folder):
     if not os.path.exists(instances_file):
         cls = load_model('{}/supervised.h5'.format(folder))
         enc = load_model('{}/encoder.h5'.format(folder))
-        ids, instances, predictions = dataset_unsupervised_regions(
-            regions, wav_file, enc, cls, lo=FFT_LO, hi=FFT_HI, win=FFT_WIN, step=FFT_STEP, T=T)   
+        if l2_window is not None:
+            ids, instances, predictions = dataset_unsupervised_regions_windowed(
+                regions, wav_file, enc, cls, lo=FFT_LO, hi=FFT_HI, win=FFT_WIN, step=FFT_STEP, T=T, l2_window=l2_window)
+        else:
+            ids, instances, predictions = dataset_unsupervised_regions(
+                regions, wav_file, enc, cls, lo=FFT_LO, hi=FFT_HI, win=FFT_WIN, step=FFT_STEP, T=T)   
         print("#Instances: {}".format(len(instances)))
         pkl.dump(ids, open(ids_file, "wb"))
         pkl.dump(instances, open(instances_file, "wb"))
@@ -407,7 +411,7 @@ def htk_continuous(folder, htk, noise, hmm, epochs=10, components=10):
     out = check_output("HParse {}/gram_continuous {}/wdnet_continuous".format(htk, htk).split(" "))
                 
 
-def sequencing(audio, folder, htk, outfolder, recode=False):
+def sequencing(audio, folder, htk, outfolder, recode=True):
     print("SEQUENCING")
     if recode:        
         out = check_output(["rm", "-rf", outfolder])

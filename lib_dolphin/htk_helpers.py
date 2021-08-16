@@ -231,7 +231,7 @@ def states(instance, per_state=3):
     return n // per_state
 
 
-def htk_export(folder, out_htk, out_lab, htk, k=25, min_c = 5):
+def htk_export(folder, out_htk, out_lab, htk, k=10, min_c = 5):
     instances_file   = "{}/instances.pkl".format(folder)
     predictions_file = "{}/predictions.pkl".format(folder)
     clusters_file    = "{}/clusters.pkl".format(folder)

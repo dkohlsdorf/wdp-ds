@@ -26,7 +26,7 @@ STOP   = 0.9
 SCALER = 1.0
 
 
-def plot_annotations(anno_files, labels, wav_folder, out_folder, win, th, noise_th = 0.9, plot_noise = True, do_compress=False):
+def plot_annotations(anno_files, labels, wav_folder, out_folder, win, th, noise_th = 0.95, plot_noise = True, do_compress=False):
     n = -1
     filtered = {}
     anno_mapping = {}

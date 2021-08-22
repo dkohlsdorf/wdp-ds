@@ -48,7 +48,7 @@ def windowing(region, window):
         return None
         
 
-def dataset_unsupervised_regions_windowed(regions, wavfile, encoder, supervised, lo, hi, win, step, T, l2_window, no_whistle):
+def dataset_unsupervised_regions_windowed(regions, wavfile, encoder, supervised, label_dict, lo, hi, win, step, T, l2_window):
     df        = pd.read_csv(regions)
     N         = len(df)
     audio     = raw(wavfile) 
@@ -67,11 +67,24 @@ def dataset_unsupervised_regions_windowed(regions, wavfile, encoder, supervised,
                     print(" ... reading {}/{}={}".format(i, N, i / N))
                 x = encoder.predict(w)
                 y = supervised.predict(w)
-                # TODO Daniel is here if y mostly whistle return, else window and no whistle split
-                for j in range(l2_window, len(x), l2_window // 2):
-                    instances.append(x[j - l2_window:j])
-                    labels.append(y[j - l2_window:j])
+
+                n_wstl = 0
+                n_others = 0
+                for l in np.argmax(y, axis=1):
+                    l = label_dict[l]
+                    if l == 'WSTL_UP' or l == 'WSTL_DOWN':
+                        n_wstl += 1
+                    else:
+                        n_others += 1
+                if n_wstl > n_others:
+                    instances.append(x)
+                    labels.append(y)
                     ids.append(i)
+                else:
+                    for j in range(l2_window, len(x), l2_window // 2):
+                        instances.append(x[j - l2_window:j])
+                        labels.append(y[j - l2_window:j])
+                        ids.append(i)
     return ids, instances, labels
 
         

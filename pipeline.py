@@ -132,13 +132,15 @@ def clustering(regions, wav_file, folder, l2_window = 10):
     predictions_file = "{}/predictions.pkl".format(folder)
     distances_file   = "{}/distances.pkl".format(folder)
     clusters_file    = "{}/clusters.pkl".format(folder)
-    
+
+    label_dict = pkl.load(open("{}/labels.pkl".format(folder), "rb"))
+    reverse = dict([(v,k) for k, v in label_dict.items()])
     if not os.path.exists(instances_file):
         cls = load_model('{}/supervised.h5'.format(folder))
         enc = load_model('{}/encoder.h5'.format(folder))
         if l2_window is not None:
             ids, instances, predictions = dataset_unsupervised_regions_windowed(
-                regions, wav_file, enc, cls, lo=FFT_LO, hi=FFT_HI, win=FFT_WIN, step=FFT_STEP, T=T, l2_window=l2_window)
+                regions, wav_file, enc, cls, reverse, lo=FFT_LO, hi=FFT_HI, win=FFT_WIN, step=FFT_STEP, T=T, l2_window=l2_window)
         else:
             ids, instances, predictions = dataset_unsupervised_regions(
                 regions, wav_file, enc, cls, lo=FFT_LO, hi=FFT_HI, win=FFT_WIN, step=FFT_STEP, T=T)   

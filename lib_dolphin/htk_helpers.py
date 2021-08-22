@@ -442,7 +442,7 @@ def parse_mlf(mlf):
     return files
 
 
-def htk_threshold(mlf, output, perc=0.75, do_compress=False):
+def htk_threshold(mlf, output, perc=0.25, do_compress=False):
     likelihoods = []
     for k, x in parse_mlf(mlf).items():
         if len(x) > 1 and do_compress:

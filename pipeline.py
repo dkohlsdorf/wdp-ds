@@ -362,11 +362,11 @@ def htk_converter(file, folder, out):
     audio    = raw(file) 
     spec     = spectrogram(audio, FFT_LO, FFT_HI, FFT_WIN, FFT_STEP)
     windowed = windowing(spec, T)
-    x        = enc.predict(windowed)
+    x        = enc.predict(windowed, batch_size=10)
     return write_htk(x, out), x, windowed
 
 
-def htk_continuous(folder, htk, noise, hmm, epochs=10, components=10):
+def htk_continuous(folder, htk, noise, hmm, epochs=10, components=3):
     htk_file = "{}/data/{}".format(htk, noise.split('/')[-1].replace('.wav', '.htk'))
     n,x,_    = htk_converter(noise, folder, htk_file)
     out      = check_output(["rm", "-rf", "{}/sil0".format(htk)])

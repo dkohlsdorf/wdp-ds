@@ -76,11 +76,14 @@ def dataset_unsupervised_regions_windowed(regions, wavfile, encoder, supervised,
                         n_wstl += 1
                     else:
                         n_others += 1
+                print("FRAMES: {} / {}".format(n_wstl, n_others))
                 if n_wstl > n_others:
+                    print(".. whole")
                     instances.append(x)
                     labels.append(y)
                     ids.append(i)
                 else:
+                    print(".. window")
                     for j in range(l2_window, len(x), l2_window // 2):
                         instances.append(x[j - l2_window:j])
                         labels.append(y[j - l2_window:j])

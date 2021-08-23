@@ -48,7 +48,7 @@ def windowing(region, window):
         return None
         
 
-def dataset_unsupervised_regions_windowed(regions, wavfile, encoder, supervised, label_dict, lo, hi, win, step, T, l2_window):
+def dataset_unsupervised_regions_windowed(regions, wavfile, encoder, supervised, label_dict, lo, hi, win, step, T, l2_window, dont_window_whistle):
     df        = pd.read_csv(regions)
     N         = len(df)
     audio     = raw(wavfile) 
@@ -77,13 +77,14 @@ def dataset_unsupervised_regions_windowed(regions, wavfile, encoder, supervised,
                     else:
                         n_others += 1
                 print("FRAMES: {} / {}".format(n_wstl, n_others))
-                if n_wstl > n_others:
+                if n_wstl > n_others and dont_window_whistle:
                     print(".. whole")
                     instances.append(x)
                     labels.append(y)
                     ids.append(i)
                 else:
                     print(".. window")
+                    # TODO add windowing info for export visuals
                     for j in range(l2_window, len(x), l2_window // 2):
                         instances.append(x[j - l2_window:j])
                         labels.append(y[j - l2_window:j])

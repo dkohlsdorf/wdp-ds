@@ -140,7 +140,7 @@ def clustering(regions, wav_file, folder, l2_window = 10):
         enc = load_model('{}/encoder.h5'.format(folder))
         if l2_window is not None:
             ids, instances, predictions = dataset_unsupervised_regions_windowed(
-                regions, wav_file, enc, cls, reverse, lo=FFT_LO, hi=FFT_HI, win=FFT_WIN, step=FFT_STEP, T=T, l2_window=l2_window)
+                regions, wav_file, enc, cls, reverse, lo=FFT_LO, hi=FFT_HI, win=FFT_WIN, step=FFT_STEP, T=T, l2_window=l2_window, dont_window_whistle=True)
         else:
             ids, instances, predictions = dataset_unsupervised_regions(
                 regions, wav_file, enc, cls, lo=FFT_LO, hi=FFT_HI, win=FFT_WIN, step=FFT_STEP, T=T)   
@@ -156,11 +156,19 @@ def clustering(regions, wav_file, folder, l2_window = 10):
     else:
         distances = pkl.load(open(distances_file, "rb")) 
 
-    n = 98
+    n = 100
     m = len(distances)
     clusters = np.zeros((n, m), dtype=np.int16)
+
+    th = np.percentile(distances.flatten(), 0.1)
+    clustering = AgglomerativeClustering(n_clusters=None, distance_threshold=th, affinity="precomputed", linkage="complete")
+    clusters[0, :] = clustering.fit_predict(distances)
+    th = np.percentile(distances.flatten(), 0.5)
+    clustering = AgglomerativeClustering(n_clusters=None, distance_threshold=th, affinity="precomputed", linkage="complete")
+    clusters[1, :] = clustering.fit_predict(distances)
+    
     for perc in range(1, 99):
-        i = perc - 1
+        i = perc - 1 + 2
         if i % 10 == 0:
             print(" ... clustering {}%".format(perc))
         th = np.percentile(distances.flatten(), perc)
@@ -366,7 +374,7 @@ def htk_converter(file, folder, out):
     return write_htk(x, out), x, windowed
 
 
-def htk_continuous(folder, htk, noise, hmm, epochs=10, components=3):
+def htk_continuous(folder, htk, noise, hmm, components=10):
     htk_file = "{}/data/{}".format(htk, noise.split('/')[-1].replace('.wav', '.htk'))
     n,x,_    = htk_converter(noise, folder, htk_file)
     out      = check_output(["rm", "-rf", "{}/sil0".format(htk)])

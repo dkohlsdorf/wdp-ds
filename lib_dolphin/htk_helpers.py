@@ -71,8 +71,7 @@ def silence_proto(dims, means, name = "sil"):
            {}        
         """.format(i + 1, p, dims, vec(means[i]), dims, vec(variances))
         components.append(component)
-    return """
-    ~o <VecSize> {} <USER>
+    return """~o <VecSize> {} <USER>
     ~h "{}"
     <BeginHMM>
       <NumStates> 3

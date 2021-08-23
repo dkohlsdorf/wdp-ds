@@ -33,7 +33,7 @@ T            = int((RAW_AUDIO - FFT_WIN) / FFT_STEP)
 
 CONV_PARAM   = (8, 8, 256)
 WINDOW_PARAM = (T, D, 1)
-LATENT       = 256
+LATENT       = 32
 BATCH        = 25
 EPOCHS       = 5
 
@@ -305,12 +305,12 @@ def dtw_baseline(folder, k = 10, min_c = 4, nn=3, debug = False):
     print("Acc: {}".format(corr / len(test)))
 
     
-def htk_train(folder, inputs, states, niter, flat=False):
+def htk_train(folder, inputs, states, niter, k, flat=False):
     print("Prepare project: {}".format(folder))
     out = check_output(["rm", "-rf", folder])
     out = check_output(["mkdir", folder])
     out = check_output(["mkdir", "{}/data".format(folder)])
-    htk_export(inputs, "{}/data".format(folder), "{}/clusters.mlf".format(folder), folder)
+    htk_export(inputs, "{}/data".format(folder), "{}/clusters.mlf".format(folder), folder, k)
     files = glob.glob("{}/data/train/*.htk".format(folder))
 
     grammar = simple_grammar("{}/clusters_TRAIN.mlf".format(folder))
@@ -497,8 +497,9 @@ if __name__ == '__main__':
             inputs = sys.argv[3]
             folder = sys.argv[4]
             states = int(sys.argv[5])
-            niter  = int(sys.argv[6]) 
-            htk_train(folder, inputs, states, niter)
+            niter  = int(sys.argv[6])
+            k      = int(sys.argv[7])
+            htk_train(folder, inputs, states, niter, k)
         elif mode == 'continuous':
             folder = sys.argv[3]
             htk    = sys.argv[4]
@@ -526,7 +527,7 @@ if __name__ == '__main__':
                 + train:      python pipeline.py train LABEL_FILE AUDIO_FILE NOISE_FILE UNUSP_LAB UNSUP_FILE OUT_FOLDER
                 + clustering: python pipeline.py clustering LABEL_FILE AUDIO_FILE OUT_FOLDER
                 + export:     python pipeline.py export LABEL_FILE AUDIO_FILE FOLDER K OUT_FOLDER
-                + htk:        python pipeline.py htk train FOLDER OUT_HTK STATES ITER
+                + htk:        python pipeline.py htk train FOLDER OUT_HTK STATES ITER K
                               python pipeline.py htk continuous FOLDER OUT_HTK NOISE HMM
                               python pipeline.py htk convert AUDIO FOLDER OUT_FOLDER 
                 + sequencing: python pipeline.py sequencing AUDIO FOLDER HTK OUT

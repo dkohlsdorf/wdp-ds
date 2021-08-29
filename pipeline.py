@@ -52,7 +52,7 @@ def train(label_file, wav_file, noise_file, unsupervised_labels, unsupervised_au
             label_counts[i] += 1
         else:
             label_counts[i] =1
-            
+
     max_count = np.max([c for _, c in label_counts.items()])
     print("Count: {}".format(max_count))
     print("Labels: {}".format(label_dict))
@@ -63,6 +63,11 @@ def train(label_file, wav_file, noise_file, unsupervised_labels, unsupervised_au
         start = stop - 36
         instances_inp.append((instances[i] + noise[start:stop, :]) / 2.0)
 
+    w      = Counter(labels)
+    total  = sum(w.values())
+    scaled = total / len(w.keys())
+    w      = dict([(k, (1.0 / v) * scaled) for k, v in w.items()])        
+    '''    
     n_noise = 0
     for i in range(0, max_count):
         stop  = np.random.randint(36, len(noise))
@@ -71,6 +76,7 @@ def train(label_file, wav_file, noise_file, unsupervised_labels, unsupervised_au
         labels.append(noise_label)
         n_noise += 1
     print("Added: {} ".format(n_noise ))
+    '''
     visualize_dataset(instances, "{}/dataset.png".format(out_folder))
     visualize_dataset(instances_inp, "{}/dataset_noisy.png".format(out_folder))
     
@@ -101,7 +107,7 @@ def train(label_file, wav_file, noise_file, unsupervised_labels, unsupervised_au
     
     ae.fit(x=u, y=u, batch_size=10, epochs=EPOCHS, shuffle=True)
     ae.fit(x=x, y=x_out, batch_size=10, epochs=EPOCHS, shuffle=True)
-    hist = model.fit(x=x_train, y=y_train, validation_data=(x_test, y_test), batch_size=BATCH, epochs=EPOCHS, shuffle=True)
+    hist = model.fit(x=x_train, y=y_train, validation_data=(x_test, y_test), batch_size=BATCH, epochs=EPOCHS, shuffle=True, class_weight=w)
 
     enc_filters(enc, CONV_PARAM[-1], "{}/filters.png".format(out_folder))
     plot_tensorflow_hist(hist, "{}/history_train.png".format(out_folder))

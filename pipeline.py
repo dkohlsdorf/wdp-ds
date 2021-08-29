@@ -43,9 +43,7 @@ def train(label_file, wav_file, noise_file, unsupervised_labels, unsupervised_au
         label_file, wav_file, lo=FFT_LO, hi=FFT_HI, win=FFT_WIN, step=FFT_STEP, raw_size=RAW_AUDIO)    
     unsup = dataset_unsupervised_windows(
         unsupervised_labels, unsupervised_audio, lo=FFT_LO, hi=FFT_HI, win=FFT_WIN, step=FFT_STEP, raw_size=RAW_AUDIO, T=T)
-    print("INST: {} / UNSUP: {}".format(len(instances), len(unsup)))
-    noise_label  = np.max([i for _, i in label_dict.items()]) + 1
-    label_dict['NOISE'] = noise_label
+    print("INST: {} / UNSUP: {}  ... {}".format(len(instances), len(unsup), label_dict))
     label_counts = {}
     for i in labels:
         if i in label_counts:
@@ -64,6 +62,7 @@ def train(label_file, wav_file, noise_file, unsupervised_labels, unsupervised_au
         instances_inp.append((instances[i] + noise[start:stop, :]) / 2.0)
 
     w      = Counter(labels)
+    print(w)
     total  = sum(w.values())
     scaled = total / len(w.keys())
     w      = dict([(k, (1.0 / v) * scaled) for k, v in w.items()])        
@@ -427,7 +426,7 @@ def htk_continuous(folder, htk, noise, hmm, components=10):
     out = check_output("HParse {}/gram_continuous {}/wdnet_continuous".format(htk, htk).split(" "))
                 
 
-def sequencing(audio, folder, htk, outfolder, recode=True):
+def sequencing(audio, folder, htk, outfolder, recode=False):
     print("SEQUENCING")
     if recode:        
         out = check_output(["rm", "-rf", outfolder])

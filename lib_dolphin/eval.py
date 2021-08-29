@@ -26,7 +26,7 @@ STOP   = 0.9
 SCALER = 1.0
 
 
-def plot_annotations(anno_files, labels, wav_folder, out_folder, win, th, noise_th = 0.95, plot_noise = True, do_compress=False):
+def plot_annotations(anno_files, labels, wav_folder, out_folder, win, th, noise_th = 0.9, plot_noise = True, do_compress=False):
     n = -1
     filtered = {}
     anno_mapping = {}
@@ -51,7 +51,7 @@ def plot_annotations(anno_files, labels, wav_folder, out_folder, win, th, noise_
                 for start, stop, i, ll in annotations:
                     label_regions = list(lab_df['labels'][start:stop])
                     probs         = list(lab_df['prob'][start:stop])
-                    label_regions = [label_regions[i] for i in range(0, len(label_regions)) if (label_regions[i] == 'NOISE' and probs[i] > 0.9) or (label_regions[i] != 'NOISE')]
+                    label_regions = [label_regions[i] for i in range(0, len(label_regions))] # if (label_regions[i] == 'NOISE' and probs[i] > 0.9) or (label_regions[i] != 'NOISE')]
                     counter = Counter(label_regions)
                     n_noise = counter['NOISE'] 
                     n_not_noise = len(label_regions) - n_noise
@@ -62,7 +62,7 @@ def plot_annotations(anno_files, labels, wav_folder, out_folder, win, th, noise_
                     is_ll    = ll <= th
                     is_noise = ratio > noise_th
                     is_sil   = i == 'sil'
-                    supress  = is_sil or (is_ll and is_noise)
+                    supress  = is_sil or (is_ll or is_noise)
                     print("SUPRESS: {}, {} < {}, {} > {}, sil {}".format(supress, ll, th, ratio, noise_th, is_sil))
                     if not supress or plot_noise:                    
                         if not supress:

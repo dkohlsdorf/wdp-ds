@@ -30,89 +30,66 @@ FFT_LO       = 100
 D            = FFT_WIN // 2 - FFT_LO - (FFT_WIN // 2 - FFT_HI)
 RAW_AUDIO    = 5120
 T            = int((RAW_AUDIO - FFT_WIN) / FFT_STEP)
-
-CONV_PARAM   = (8, 8, 256)
+perc_test    = 0.33
+CONV_PARAM   = (8, 8, 1024)
 WINDOW_PARAM = (T, D, 1)
-LATENT       = 32
-BATCH        = 25
-EPOCHS       = 5
+LATENT       = 128
+BATCH        = 10
+EPOCHS       = 25
+
+
+def cluster_model(data):
+    km = KMeans(n_clusters=64)
+    km.fit(data)
+    return km
 
 
 def train(label_file, wav_file, noise_file, unsupervised_labels, unsupervised_audio, out_folder="output", perc_test=0.25):
-    instances, labels, label_dict = dataset_supervised_windows(
+    instances, ra, labels, label_dict = dataset_supervised_windows(
         label_file, wav_file, lo=FFT_LO, hi=FFT_HI, win=FFT_WIN, step=FFT_STEP, raw_size=RAW_AUDIO)    
-    unsup = dataset_unsupervised_windows(
-        unsupervised_labels, unsupervised_audio, lo=FFT_LO, hi=FFT_HI, win=FFT_WIN, step=FFT_STEP, raw_size=RAW_AUDIO, T=T)
-    print("INST: {} / UNSUP: {}  ... {}".format(len(instances), len(unsup), label_dict))
-    label_counts = {}
-    for i in labels:
-        if i in label_counts:
-            label_counts[i] += 1
-        else:
-            label_counts[i] =1
 
-    max_count = np.max([c for _, c in label_counts.items()])
-    print("Count: {}".format(max_count))
-    print("Labels: {}".format(label_dict))
-    noise = spectrogram(raw(noise_file), lo=FFT_LO, hi=FFT_HI, win=FFT_WIN, step=FFT_STEP)
-    instances_inp = []
-    for i in range(0, len(instances)):
-        stop  = np.random.randint(36, len(noise))
-        start = stop - 36
-        instances_inp.append((instances[i] + noise[start:stop, :]) / 2.0)
-
-    w      = Counter(labels)
-    print(w)
-    total  = sum(w.values())
-    scaled = total / len(w.keys())
-    w      = dict([(k, (1.0 / v) * scaled) for k, v in w.items()])        
-    '''    
-    n_noise = 0
-    for i in range(0, max_count):
-        stop  = np.random.randint(36, len(noise))
-        start = stop - 36        
-        instances_inp.append(noise[start:stop, :])
-        labels.append(noise_label)
-        n_noise += 1
-    print("Added: {} ".format(n_noise ))
-    '''
-    visualize_dataset(instances, "{}/dataset.png".format(out_folder))
-    visualize_dataset(instances_inp, "{}/dataset_noisy.png".format(out_folder))
     
+    by_label = {}
+    for i in range(0, len(instances)):
+        y = labels[i] 
+        if y not in by_label:
+            by_label[y] = []
+        by_label[y].append(instances[i])
+
+    _instances = []
+    _labels = []
+    for k, v in by_label.items():
+        for _ in range(0, 10000):
+            i = np.random.randint(0, len(v))
+            _labels.append(k)
+            _instances.append(v[i])
+
     y_train = []
     y_test  = []
     x_train = []
     x_test  = []
-    for i in range(0, len(instances_inp)):
+    for i in range(0, len(instances)):
         if np.random.uniform() < perc_test:
-            x_test.append(instances_inp[i])
-            y_test.append(labels[i])
+            x_test.append(_instances[i])
+            y_test.append(_labels[i])
         else:            
-            x_train.append(instances_inp[i])
-            y_train.append(labels[i])
+            x_train.append(_instances[i])
+            y_train.append(_labels[i])
 
-    u       = np.stack(unsup).reshape(len(unsup), T, D, 1)
-    x       = np.stack(instances_inp)[0:len(instances)].reshape(len(instances), T, D, 1)
-    x_out   = np.stack(instances)[0:len(instances)].reshape(len(instances), T, D, 1)
     x_train = np.stack(x_train).reshape(len(x_train), T, D, 1)
-    x_test  = np.stack(x_test).reshape(len(x_test), T, D, 1)
-    
+    x_test  = np.stack(x_test).reshape(len(x_test), T, D, 1)    
     y_train = np.array(y_train)
     y_test  = np.array(y_test)
-    model, enc  = classifier(WINDOW_PARAM, LATENT, 5, CONV_PARAM) 
-    ae          = auto_encoder(WINDOW_PARAM, enc, LATENT, CONV_PARAM)
-    
-    model.compile(optimizer='adam', loss='sparse_categorical_crossentropy', metrics=['accuracy'])
-    
-    ae.fit(x=u, y=u, batch_size=10, epochs=EPOCHS, shuffle=True)
-    ae.fit(x=x, y=x_out, batch_size=10, epochs=EPOCHS, shuffle=True)
-    hist = model.fit(x=x_train, y=y_train, validation_data=(x_test, y_test), batch_size=BATCH, epochs=EPOCHS, shuffle=True, class_weight=w)
 
+    enc         = encoder(WINDOW_PARAM, LATENT, CONV_PARAM)
+    ae          = auto_encoder(WINDOW_PARAM, enc, LATENT, CONV_PARAM)
+    hist        = ae.fit(x=x_train, y=x_train, batch_size=BATCH, epochs=EPOCHS, shuffle=True)
+    model       = classifier(WINDOW_PARAM, enc, LATENT, 5, CONV_PARAM) 
+    hist        = model.fit(x=x_train, y=y_train, validation_data=(x_test, y_test), batch_size=BATCH, epochs=EPOCHS, shuffle=True)
+    
     enc_filters(enc, CONV_PARAM[-1], "{}/filters.png".format(out_folder))
     plot_tensorflow_hist(hist, "{}/history_train.png".format(out_folder))
     
-    x   = enc.predict(x)    
-
     n = len(label_dict)
     label_names = ["" for i in range(n)]
     for l, i in label_dict.items():
@@ -129,8 +106,27 @@ def train(label_file, wav_file, noise_file, unsupervised_labels, unsupervised_au
     model.save('{}/supervised.h5'.format(out_folder))
     enc.save('{}/encoder.h5'.format(out_folder))
     pkl.dump(label_dict, open('{}/labels.pkl'.format(out_folder), "wb"))
+    pkl.dump(clusters, open('{}/clusters.pkl'.format(out_folder),'wb'))
+    clusters = dict([(k, cluster_model(v)) for k, v in by_label.items()])
+    
+    extracted = {}
+    for n, i in enumerate(x):
+        li = int(np.argmax(i))
+        l = reverse[li]
+        c = int(clusters[li].predict(h[n].reshape(1, 128))[0])
+        if l != 'NOISE':
+            if l not in extracted:
+                extracted[l] = {}
+            if c not in extracted[l]:
+                extracted[l][c] = []
+            extracted[l][c].append(ra[n])
 
-
+    for l, clusters in extracted.items():
+        for c, audio in clusters.items():
+            path = "{}/{}_{}.wav".format(out_folder, l, c)
+            write(path, 44100, np.concatenate(audio))
+            
+            
 def clustering(regions, wav_file, folder, l2_window = 10):
     instances_file   = "{}/instances.pkl".format(folder)
     ids_file         = "{}/ids.pkl".format(folder)
@@ -145,7 +141,7 @@ def clustering(regions, wav_file, folder, l2_window = 10):
         enc = load_model('{}/encoder.h5'.format(folder))
         if l2_window is not None:
             ids, instances, predictions = dataset_unsupervised_regions_windowed(
-                regions, wav_file, enc, cls, reverse, lo=FFT_LO, hi=FFT_HI, win=FFT_WIN, step=FFT_STEP, T=T, l2_window=l2_window, dont_window_whistle=True)
+                regions, wav_file, enc, cls, reverse, lo=FFT_LO, hi=FFT_HI, win=FFT_WIN, step=FFT_STEP, T=T, l2_window=l2_window, dont_window_whistle=False)
         else:
             ids, instances, predictions = dataset_unsupervised_regions(
                 regions, wav_file, enc, cls, lo=FFT_LO, hi=FFT_HI, win=FFT_WIN, step=FFT_STEP, T=T)   
@@ -426,7 +422,7 @@ def htk_continuous(folder, htk, noise, hmm, components=10):
     out = check_output("HParse {}/gram_continuous {}/wdnet_continuous".format(htk, htk).split(" "))
                 
 
-def sequencing(audio, folder, htk, outfolder, recode=False):
+def sequencing(audio, folder, htk, outfolder, recode=True):
     print("SEQUENCING")
     if recode:        
         out = check_output(["rm", "-rf", outfolder])

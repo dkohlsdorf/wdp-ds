@@ -140,7 +140,7 @@ def dataset_supervised_windows(label, wavfile, lo, hi, win, step, raw_size):
     audio     = raw(wavfile)
     labels    = []
     instances = []
-
+    ra = []
     label_dict = {}
     cur_label  = 0
     for _, row in df.iterrows():
@@ -153,6 +153,7 @@ def dataset_supervised_windows(label, wavfile, lo, hi, win, step, raw_size):
         w = audio[start:stop]
         s = spectrogram(w, lo, hi, win, step)
         f, t = s.shape
+        ra.append(w)
         instances.append(s)
         labels.append(label_dict[label])
-    return instances, labels, label_dict
+    return instances, ra, labels, label_dict

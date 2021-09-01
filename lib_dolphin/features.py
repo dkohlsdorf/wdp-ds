@@ -20,15 +20,16 @@ def encoder(in_shape, latent_dim, conv_params):
     loc = Conv2D(n_filters, strides = (1, 1), kernel_size=kernel_size, activation='relu', padding='same')(inp) 
     loc = MaxPool2D(pool_size=(1, dft_dim))(loc) 
     loc = Reshape((in_shape[0], n_filters))(loc) 
+    x   = BatchNormalization()(loc)
     x   = Bidirectional(LSTM(latent_dim, return_sequences=True))(loc)
     x   = LSTM(latent_dim)(x)            
+    x   = BatchNormalization()(x)
     return Model(inputs =[inp], outputs=[x])
 
 
 def decoder(length, latent_dim, output_dim, conv_params):
     kernel_size = (conv_params[0], conv_params[1])
     n_filters = conv_params[2]
-
     inp = Input((latent_dim))
     x   = Reshape((1, latent_dim))(inp)
     x   = ZeroPadding1D((0, length - 1))(x)
@@ -50,11 +51,13 @@ def auto_encoder(in_shape, encoder, latent_dim, conv_params):
     return model
 
 
-def classifier(in_shape, latent_dim, out_dim, conv_params):
-    enc = encoder(in_shape, latent_dim, conv_params)
+def classifier(in_shape, enc, latent_dim, out_dim, conv_params):
     inp = Input(in_shape)
     x   = enc(inp)
+    x   = Dense(64, activation='relu')(x)
+    x   = Dense(32, activation='relu')(x)
     x   = Dropout(0.5)(x) 
     x   = Dense(out_dim, activation='softmax')(x) 
     model = Model(inputs = [inp], outputs = [x])
-    return model, enc
+    model.compile(optimizer='adam', loss='sparse_categorical_crossentropy', metrics=['accuracy'])
+    return model

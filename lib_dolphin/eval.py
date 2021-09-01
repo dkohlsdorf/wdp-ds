@@ -26,7 +26,7 @@ STOP   = 0.9
 SCALER = 1.0
 
 
-def plot_annotations(anno_files, labels, wav_folder, out_folder, win, th, noise_th = 0.9, plot_noise = True, do_compress=False):
+def plot_annotations(anno_files, labels, wav_folder, out_folder, win, th, noise_th = 0.75, plot_noise = True, do_compress=False):
     n = -1
     filtered = {}
     anno_mapping = {}
@@ -147,7 +147,7 @@ def visualize_dataset(instances, output):
 
     
 def enc_filters(enc, n_filters, output):
-    plt.figure(figsize=(10, 10))
+    plt.figure(figsize=(50, 50))
     w = enc.weights[0].numpy()
     for i in range(w.shape[-1]):
         weight = w[:, :, 0, i]

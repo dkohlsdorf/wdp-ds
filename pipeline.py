@@ -398,7 +398,7 @@ def htk_converter(file, folder, out):
     return write_htk(x, out), x, windowed
 
 
-def htk_continuous(folder, htk, noise, hmm, components=10):
+def htk_continuous(folder, htk, noise, hmm, components=3):
     htk_file = "{}/data/{}".format(htk, noise.split('/')[-1].replace('.wav', '.htk'))
     n,x,_    = htk_converter(noise, folder, htk_file)
     out      = check_output(["rm", "-rf", "{}/sil0".format(htk)])

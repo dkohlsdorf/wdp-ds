@@ -30,12 +30,12 @@ FFT_LO       = 100
 D            = FFT_WIN // 2 - FFT_LO - (FFT_WIN // 2 - FFT_HI)
 RAW_AUDIO    = 5120
 T            = int((RAW_AUDIO - FFT_WIN) / FFT_STEP)
-perc_test    = 0.33
+
 CONV_PARAM   = (8, 8, 256)
 WINDOW_PARAM = (T, D, 1)
 LATENT       = 64
 BATCH        = 25
-EPOCHS       = 5
+EPOCHS       = 10
 
 
 def cluster_model(data):
@@ -136,7 +136,7 @@ def train(label_file, wav_file, out_folder="output", perc_test=0.33, retrain = T
     for n, i in enumerate(x):
         li = int(np.argmax(i))
         l = reverse[li]
-        c = int(clusters[li].predict(h[n].reshape(1, 128))[0])
+        c = int(clusters[li].predict(h[n].reshape(1, LATENT))[0])
         if l != 'NOISE':
             if l not in extracted:
                 extracted[l] = {}

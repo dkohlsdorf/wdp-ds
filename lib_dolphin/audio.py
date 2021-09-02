@@ -138,6 +138,7 @@ def dataset_unsupervised_windows(label, wavfile, lo, hi, win, step, raw_size, T,
 def dataset_supervised_windows(label, wavfile, lo, hi, win, step, raw_size):
     df        = pd.read_csv(label)
     audio     = raw(wavfile)
+    print("DIFF: {}".format(len(audio) - (df['offset'].max() + raw_size)))
     labels    = []
     instances = []
     ra = []

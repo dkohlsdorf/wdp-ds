@@ -48,6 +48,50 @@ def windowing(region, window):
         return None
         
 
+def dataset_unsupervised_regions_windowed(regions, wavfile, encoder, supervised, label_dict, lo, hi, win, step, T, l2_window, dont_window_whistle):
+    df        = pd.read_csv(regions)
+    N         = len(df)
+    audio     = raw(wavfile) 
+    instances = []
+    labels    = []
+    ids       = []
+    for i, row in df.iterrows():
+        start = row['starts']
+        stop  = row['stops']
+        w     = audio[start:stop]
+        if len(w) > 0:
+            s = spectrogram(w, lo, hi, win, step)
+            w = windowing(s, T)
+            if w is not None:
+                if i % 100 == 0:
+                    print(" ... reading {}/{}={}".format(i, N, i / N))
+                x = encoder.predict(w)
+                y = supervised.predict(w)
+
+                n_wstl = 0
+                n_others = 0
+                for l in np.argmax(y, axis=1):
+                    l = label_dict[l]
+                    if l == 'WSTL_UP' or l == 'WSTL_DOWN':
+                        n_wstl += 1
+                    else:
+                        n_others += 1
+                print("FRAMES: {} / {}".format(n_wstl, n_others))
+                if n_wstl > n_others and dont_window_whistle:
+                    print(".. whole")
+                    instances.append(x)
+                    labels.append(y)
+                    ids.append(i)
+                else:
+                    print(".. window")
+                    # TODO add windowing info for export visuals
+                    for j in range(l2_window, len(x), l2_window // 2):
+                        instances.append(x[j - l2_window:j])
+                        labels.append(y[j - l2_window:j])
+                        ids.append(i)
+    return ids, instances, labels
+
+        
 def dataset_unsupervised_regions(regions, wavfile, encoder, supervised, lo, hi, win, step, T):
     df        = pd.read_csv(regions)
     N         = len(df)
@@ -94,9 +138,10 @@ def dataset_unsupervised_windows(label, wavfile, lo, hi, win, step, raw_size, T,
 def dataset_supervised_windows(label, wavfile, lo, hi, win, step, raw_size):
     df        = pd.read_csv(label)
     audio     = raw(wavfile)
+    print("DIFF: {}".format(len(audio) - (df['offset'].max() + raw_size)))
     labels    = []
     instances = []
-
+    ra = []
     label_dict = {}
     cur_label  = 0
     for _, row in df.iterrows():
@@ -109,6 +154,7 @@ def dataset_supervised_windows(label, wavfile, lo, hi, win, step, raw_size):
         w = audio[start:stop]
         s = spectrogram(w, lo, hi, win, step)
         f, t = s.shape
+        ra.append(w)
         instances.append(s)
         labels.append(label_dict[label])
-    return instances, labels, label_dict
+    return instances, ra, labels, label_dict

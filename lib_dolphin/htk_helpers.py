@@ -71,8 +71,7 @@ def silence_proto(dims, means, name = "sil"):
            {}        
         """.format(i + 1, p, dims, vec(means[i]), dims, vec(variances))
         components.append(component)
-    return """
-    ~o <VecSize> {} <USER>
+    return """~o <VecSize> {} <USER>
     ~h "{}"
     <BeginHMM>
       <NumStates> 3
@@ -231,7 +230,7 @@ def states(instance, per_state=3):
     return n // per_state
 
 
-def htk_export(folder, out_htk, out_lab, htk, k=25, min_c = 5):
+def htk_export(folder, out_htk, out_lab, htk, k, min_c = 5):
     instances_file   = "{}/instances.pkl".format(folder)
     predictions_file = "{}/predictions.pkl".format(folder)
     clusters_file    = "{}/clusters.pkl".format(folder)
@@ -442,7 +441,7 @@ def parse_mlf(mlf):
     return files
 
 
-def htk_threshold(mlf, output, perc=0.75, do_compress=False):
+def htk_threshold(mlf, output, perc=0.01, do_compress=False):
     likelihoods = []
     for k, x in parse_mlf(mlf).items():
         if len(x) > 1 and do_compress:

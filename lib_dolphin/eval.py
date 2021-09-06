@@ -26,7 +26,7 @@ STOP   = 0.9
 SCALER = 1.0
 
 
-def plot_annotations(anno_files, labels, wav_folder, out_folder, win, th, noise_th = 0.9, plot_noise = True, do_compress=False):
+def plot_annotations(anno_files, labels, wav_folder, out_folder, win, th, noise_th = 1.0, plot_noise = True, do_compress=False):
     n = -1
     filtered = {}
     anno_mapping = {}
@@ -51,7 +51,7 @@ def plot_annotations(anno_files, labels, wav_folder, out_folder, win, th, noise_
                 for start, stop, i, ll in annotations:
                     label_regions = list(lab_df['labels'][start:stop])
                     probs         = list(lab_df['prob'][start:stop])
-                    label_regions = [label_regions[i] for i in range(0, len(label_regions)) if (label_regions[i] == 'NOISE' and probs[i] > 0.9) or (label_regions[i] != 'NOISE')]
+                    label_regions = [label_regions[i] for i in range(0, len(label_regions))]
                     counter = Counter(label_regions)
                     n_noise = counter['NOISE'] 
                     n_not_noise = len(label_regions) - n_noise
@@ -60,9 +60,9 @@ def plot_annotations(anno_files, labels, wav_folder, out_folder, win, th, noise_
                     else:
                         ratio = n_noise / (n_not_noise + n_noise)
                     is_ll    = ll <= th
-                    is_noise = ratio > noise_th
+                    is_noise = ratio >= noise_th
                     is_sil   = i == 'sil'
-                    supress  = is_sil or (is_ll and is_noise)
+                    supress  = is_sil or is_noise or is_ll
                     print("SUPRESS: {}, {} < {}, {} > {}, sil {}".format(supress, ll, th, ratio, noise_th, is_sil))
                     if not supress or plot_noise:                    
                         if not supress:
@@ -141,13 +141,13 @@ def visualize_dataset(instances, output):
     for i in range(0, 100):
         xi = np.random.randint(0, len(instances))
         plt.subplot(10, 10, i + 1)
-        plt.imshow(1.0 - instances[xi].T, cmap='gray')
+        plt.imshow(1.0 - instances[xi].reshape((36, 130)).T, cmap='gray')
     plt.savefig(output)
     plt.clf()
 
     
 def enc_filters(enc, n_filters, output):
-    plt.figure(figsize=(10, 10))
+    plt.figure(figsize=(50, 50))
     w = enc.weights[0].numpy()
     for i in range(w.shape[-1]):
         weight = w[:, :, 0, i]

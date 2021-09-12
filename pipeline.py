@@ -119,7 +119,7 @@ def neighbours_encoder(encoder, x_train, y_train, x_test, y_test, label_dict, na
     plt.close()
 
             
-def train(label_file, wav_file, out_folder="output", perc_test=0.33, retrain = True):
+def train(label_file, wav_file, out_folder="output", perc_test=0.33, retrain = True, super_epochs=5):
     instances, ra, labels, label_dict = dataset_supervised_windows(
         label_file, wav_file, lo=FFT_LO, hi=FFT_HI, win=FFT_WIN, step=FFT_STEP, raw_size=RAW_AUDIO)    
     reverse = dict([(v, k) for k, v in label_dict.items()])
@@ -171,46 +171,49 @@ def train(label_file, wav_file, out_folder="output", perc_test=0.33, retrain = T
         enc         = encoder(WINDOW_PARAM, LATENT, CONV_PARAM)    
         enc.summary()
 
-        model       = classifier(WINDOW_PARAM, enc, LATENT, 5, CONV_PARAM) 
-        model.summary()
-        hist        = model.fit(x=x_train, y=y_train, validation_data=(x_test, y_test), batch_size=BATCH, epochs=EPOCHS, shuffle=True)
-        model.save('{}/supervised.h5'.format(out_folder))
-        enc.save('{}/encoder.h5'.format(out_folder))        
-        enc_filters(enc, CONV_PARAM[-1], "{}/filters_supervised.png".format(out_folder))        
-        plot_tensorflow_hist(hist, "{}/history_train_supervised.png".format(out_folder))        
-        neighbours_encoder(enc, x_train, y_train, x_test, y_test, label_dict, "classifier", out_folder)
+        for i in range(0, super_epochs):
+            model       = classifier(WINDOW_PARAM, enc, LATENT, 5, CONV_PARAM) 
+            model.summary()
+            hist        = model.fit(x=x_train, y=y_train, validation_data=(x_test, y_test), batch_size=BATCH, epochs=EPOCHS, shuffle=True)
+            model.save('{}/supervised.h5'.format(out_folder))
+            enc.save('{}/encoder.h5'.format(out_folder))        
+            enc_filters(enc, CONV_PARAM[-1], "{}/filters_supervised.png".format(out_folder))        
+            plot_tensorflow_hist(hist, "{}/history_train_supervised.png".format(out_folder))        
+            neighbours_encoder(enc, x_train, y_train, x_test, y_test, label_dict, "classifier", out_folder)
 
-        n = len(label_dict)        
-        label_names = ["" for i in range(n)]
-        for l, i in label_dict.items():
-            label_names[i] = l
-        prediction_test = model.predict(x_test)
-        confusion = np.zeros((n,n))
-        for i in range(len(y_test)):
-            pred = np.argmax(prediction_test[i])
-            confusion[y_test[i], pred] += 1
-        plot_result_matrix(confusion, label_names, label_names, "confusion")
-        plt.savefig('{}/confusion_type.png'.format(out_folder))
-        plt.close()
-        
-        siamese = train_triplets(enc, by_label)
-        siamese.save('{}/siam.h5'.format(out_folder))
-        enc.save('{}/encoder.h5'.format(out_folder))        
-        enc_filters(enc, CONV_PARAM[-1], "{}/filters_siam.png".format(out_folder))                
-        neighbours_encoder(enc, x_train, y_train, x_test, y_test, label_dict, "siamese", out_folder)
-        
-        ae          = auto_encoder(WINDOW_PARAM, enc, LATENT, CONV_PARAM)    
-        ae.summary()
-        hist        = ae.fit(x=x_train, y=x_train, batch_size=BATCH, epochs=EPOCHS, shuffle=True)
-        ae.save('{}/ae.h5'.format(out_folder))
-        enc.save('{}/encoder.h5'.format(out_folder))        
-        enc_filters(enc, CONV_PARAM[-1], "{}/filters_ae.png".format(out_folder))                
-        plot_tensorflow_hist(hist, "{}/history_train_ae.png".format(out_folder))
-        visualize_dataset(ae.predict(x_test, batch_size=BATCH), "{}/reconstructions.png".format(out_folder))
-        neighbours_encoder(enc, x_train, y_train, x_test, y_test, label_dict, "aute encoder", out_folder)
-        enc.save('{}/encoder.h5'.format(out_folder))                
-        
-        pkl.dump(label_dict, open('{}/labels.pkl'.format(out_folder), "wb"))
+            n = len(label_dict)        
+            label_names = ["" for i in range(n)]
+            for l, i in label_dict.items():
+                label_names[i] = l
+            prediction_test = model.predict(x_test)
+            confusion = np.zeros((n,n))
+            correct = 0
+            for i in range(len(y_test)):
+                pred = np.argmax(prediction_test[i])
+                confusion[y_test[i], pred] += 1
+            accuracy = np.sum(confusion * np.eye(n)) / len(y_test)
+            plot_result_matrix(confusion, label_names, label_names, "confusion acc {}".format(accuracy))
+            plt.savefig('{}/confusion_type.png'.format(out_folder))
+            plt.close()
+
+            siamese = train_triplets(enc, by_label)
+            siamese.save('{}/siam.h5'.format(out_folder))
+            enc.save('{}/encoder.h5'.format(out_folder))        
+            enc_filters(enc, CONV_PARAM[-1], "{}/filters_siam.png".format(out_folder))                
+            neighbours_encoder(enc, x_train, y_train, x_test, y_test, label_dict, "siamese", out_folder)
+
+            ae          = auto_encoder(WINDOW_PARAM, enc, LATENT, CONV_PARAM)    
+            ae.summary()
+            hist        = ae.fit(x=x_train, y=x_train, batch_size=BATCH, epochs=EPOCHS, shuffle=True)
+            ae.save('{}/ae.h5'.format(out_folder))
+            enc.save('{}/encoder.h5'.format(out_folder))        
+            enc_filters(enc, CONV_PARAM[-1], "{}/filters_ae.png".format(out_folder))                
+            plot_tensorflow_hist(hist, "{}/history_train_ae.png".format(out_folder))
+            visualize_dataset(ae.predict(x_test, batch_size=BATCH), "{}/reconstructions.png".format(out_folder))
+            neighbours_encoder(enc, x_train, y_train, x_test, y_test, label_dict, "aute encoder", out_folder)
+            enc.save('{}/encoder.h5'.format(out_folder))                
+
+            pkl.dump(label_dict, open('{}/labels.pkl'.format(out_folder), "wb"))
     else:
         model = load_model('{}/supervised.h5'.format(out_folder))
         enc   = load_model('{}/encoder.h5'.format(out_folder))

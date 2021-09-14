@@ -32,9 +32,9 @@ D            = FFT_WIN // 2 - FFT_LO - (FFT_WIN // 2 - FFT_HI)
 RAW_AUDIO    = 5120
 T            = int((RAW_AUDIO - FFT_WIN) / FFT_STEP)
 
-CONV_PARAM   = (8, 8, 1024)
+CONV_PARAM   = (8, 8, 256)
 WINDOW_PARAM = (T, D, 1)
-LATENT       = 64
+LATENT       = 128
 BATCH        = 25
 EPOCHS       = 10
 
@@ -118,8 +118,8 @@ def neighbours_encoder(encoder, x_train, y_train, x_test, y_test, label_dict, na
     plt.savefig('{}/confusion_nn_{}.png'.format(out_folder, name))
     plt.close()
 
-            
-def train(label_file, wav_file, out_folder="output", perc_test=0.33, retrain = True, super_epochs=5):
+    
+def train(label_file, wav_file, out_folder="output", perc_test=0.33, retrain = True, super_epochs=3, relabel=True):
     instances, ra, labels, label_dict = dataset_supervised_windows(
         label_file, wav_file, lo=FFT_LO, hi=FFT_HI, win=FFT_WIN, step=FFT_STEP, raw_size=RAW_AUDIO)    
     reverse = dict([(v, k) for k, v in label_dict.items()])
@@ -181,6 +181,10 @@ def train(label_file, wav_file, out_folder="output", perc_test=0.33, retrain = T
             plot_tensorflow_hist(hist, "{}/history_train_supervised.png".format(out_folder))        
             neighbours_encoder(enc, x_train, y_train, x_test, y_test, label_dict, "classifier", out_folder)
 
+            if relabel:            
+                prediction = model.predict(x_train)
+                y_train    = prediction.argmax(axis=1)
+                
             n = len(label_dict)        
             label_names = ["" for i in range(n)]
             for l, i in label_dict.items():

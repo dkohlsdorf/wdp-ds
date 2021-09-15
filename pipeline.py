@@ -662,8 +662,8 @@ def discrete_decoding(folder, audio, out_folder):
     label_dict = pkl.load(open("{}/labels.pkl".format(folder), "rb"))
     reverse = dict([(v,k) for k, v in label_dict.items()])
 
-    out = check_output(["rm", "-rf", outfolder])
-    out = check_output(["mkdir", outfolder])
+    out = check_output(["rm", "-rf", out_folder])
+    out = check_output(["mkdir", out_folder])
 
     cluster_labels = {}
     cur = 0

@@ -9,6 +9,7 @@ and communicate the results with domain experts.
 + The models from [IJCNN20](https://arxiv.org/abs/2005.07623), December 2019 are [here](https://github.com/dkohlsdorf/wdp-ds/tree/v4.0/). 
 + The version with DTW + HMMs is [here](https://github.com/dkohlsdorf/wdp-ds/tree/denise_semi_happy), June 2020
 + The HTK version of the Conv LSTM HMM Hybrid is [here](https://github.com/dkohlsdorf/wdp-ds/releases/tag/v15), Aug 2021
++ The version that also includes a lot of evaluastion and training [here](https://github.com/dkohlsdorf/wdp-ds/releases/tag/v16) Sep 2021
 ## Contents
 
 + 1) `lib_dolphin`: Training and Evaluation of Machine Learning Models

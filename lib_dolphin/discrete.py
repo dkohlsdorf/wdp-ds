@@ -14,7 +14,7 @@ def levenstein(x, y):
     d = np.zeros((n + 1, m + 1))
     d[:, 0] = np.arange(0, n + 1)
     d[0, :] = np.arange(0, m + 1)
-    
+    # TODO implement levenstein band 
     for i in range(1, n + 1):
         for j in range(1, m + 1):
             error = 0

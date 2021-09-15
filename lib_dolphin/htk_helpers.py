@@ -8,8 +8,8 @@ import pickle as pkl
 import random
 import matplotlib.pyplot as plt 
 
-from numba import jit
 from lib_dolphin.eval import *
+from lib_dolphin.discrete import *
 from subprocess import check_output
 
 FLOOR       = 1.0
@@ -479,27 +479,6 @@ def video(f, prefix):
 
 def timestamp(f):
     return f.split('_')[1]
-
-
-@jit
-def levenstein(x, y):
-    n = len(x)
-    m = len(y)
-    d = np.zeros((n + 1, m + 1))
-    d[:, 0] = np.arange(0, n + 1)
-    d[0, :] = np.arange(0, m + 1)
-    
-    for i in range(1, n + 1):
-        for j in range(1, m + 1):
-            error = 0
-            if x[i - 1] != y[j - 1]:
-                error += 1
-            d[i, j] = min([
-                d[i - 1, j] + 1,
-                d[i, j - 1] + 1,
-                d[i - 1, j - 1] + error
-            ])
-    return d[n, m]
 
 
 def merge_next(i, d, closed):

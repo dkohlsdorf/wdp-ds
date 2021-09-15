@@ -50,7 +50,7 @@ def dtw(x, y):
             )
     return dp[N, M] / (N * M)
 
-
+@jit
 def dtw_distances(X):
     N = len(X)
     d = np.zeros((N, N))

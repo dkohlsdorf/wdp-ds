@@ -39,7 +39,6 @@ BATCH        = 25
 EPOCHS       = 10
 
 
-
 def cluster_model(data):
     km = KMeans(n_clusters=64)
     km.fit(data)
@@ -296,13 +295,13 @@ def clustering(regions, wav_file, folder, l2_window = None):
     pkl.dump(clusters, open(clusters_file, "wb"))
 
 
-def export(csvfile, wavfile, folder, k, out, min_c = 4):
+def export(csvfile, wavfile, folder, k, out, prefix, min_c = 4):
     print(" ... loading data")
     
     label_file       = "{}/labels.pkl".format(folder)
-    ids_file         = "{}/ids.pkl".format(folder)
-    predictions_file = "{}/predictions.pkl".format(folder)
-    clusters_file    = "{}/clusters.pkl".format(folder)
+    ids_file         = "{}/{}ids.pkl".format(folder, prefix)
+    predictions_file = "{}/{}predictions.pkl".format(folder, prefix)
+    clusters_file    = "{}/{}clusters.pkl".format(folder, prefix)
 
     ids         = pkl.load(open(ids_file, "rb"))
     clusters    = pkl.load(open(clusters_file, "rb"))[k, :]
@@ -594,6 +593,167 @@ def sequencing(audio, folder, htk, outfolder, recode=True):
     htk_sequencing_eval(filtered, outfolder)
 
 
+def discrete_clustering(folder, regions, wav_file):
+    instances_file   = "{}/discrete_instances.pkl".format(folder)
+    ids_file         = "{}/discrete_ids.pkl".format(folder)
+    predictions_file = "{}/discrete_predictions.pkl".format(folder)
+    string_file      = "{}/discrete_strings.pkl".format(folder)
+    distances_file    = "{}/discrete_distances.pkl".format(folder)
+    clusters_file    = "{}/discrete_clusters.pkl".format(folder)
+    
+    label_dict = pkl.load(open("{}/labels.pkl".format(folder), "rb"))
+    reverse = dict([(v,k) for k, v in label_dict.items()])
+    
+    if not os.path.exists(instances_file):
+        sub = load_model('{}/supervised.h5'.format(folder))
+        enc = load_model('{}/encoder.h5'.format(folder))
+        ids, instances, predictions = dataset_unsupervised_regions(
+            regions, wav_file, enc, sub, lo=FFT_LO, hi=FFT_HI, win=FFT_WIN, step=FFT_STEP, T=T)   
+        print("#Instances: {}".format(len(instances)))
+        pkl.dump(ids, open(ids_file, "wb"))
+        pkl.dump(instances, open(instances_file, "wb"))
+        pkl.dump(predictions, open(predictions_file, "wb"))
+    else:
+        instances   = pkl.load(open(instances_file, "rb"))
+        predictions = pkl.load(open(predictions_file, "rb"))
+
+    if not os.path.exists(string_file):
+        clu = pkl.load(open('{}/clusters_window.pkl'.format(folder),'rb'))    
+        strings = []
+        for i in range(0, len(predictions)):
+            label = predictions[i].argmax(axis = 1)    
+            strg  = [clu[l].predict(instances[i][j].reshape(1, LATENT))[0] for j, l in enumerate(label)]
+            symb  = symbols(strg, label) 
+            strings.append(symb)
+        pkl.dump(strings, open(string_file, "wb"))
+    else:
+        strings = pkl.load(open(string_file, "rb"))
+        
+    if not os.path.exists(distances_file):        
+        distances = levenstein_distances(strings)
+        pkl.dump(distances, open(distances_file, "wb"))    
+    else:
+        distances = pkl.load(open(distances_file, "rb"))
+        
+    n = 98
+    m = len(distances)
+    clusters = np.zeros((n, m), dtype=np.int16)    
+    for perc in range(1, 99):
+        i = perc - 1
+        if i % 10 == 0:
+            print(" ... clustering {}%".format(perc))
+        th = np.percentile(distances.flatten(), perc)
+        clustering = AgglomerativeClustering(n_clusters=None, distance_threshold=th, affinity="precomputed", linkage="complete")
+        clusters[i, :] = clustering.fit_predict(distances)
+    pkl.dump(clusters, open(clusters_file, "wb"))
+
+    
+def discrete_decoding(folder, audio, out_folder):
+    SCALER = 1.0
+    BIAS   = 0.7
+    START  = 0.2
+    STOP   = 0.9
+
+    DAMPEN_NOISE = 0.01
+    
+    sub = load_model('{}/supervised.h5'.format(folder))
+    enc = load_model('{}/encoder.h5'.format(folder))
+    clu = pkl.load(open('{}/clusters_window.pkl'.format(folder),'rb'))
+    label_dict = pkl.load(open("{}/labels.pkl".format(folder), "rb"))
+    reverse = dict([(v,k) for k, v in label_dict.items()])
+
+    out = check_output(["rm", "-rf", out_folder])
+    out = check_output(["mkdir", out_folder])
+
+    cluster_labels = {}
+    cur = 0
+    by_file = {}
+    for filename in os.listdir(audio):
+        if filename.endswith('.wav'):
+            path        = "{}/{}".format(audio, filename)
+            img_name    = filename.replace('.wav', '.png')
+            a           = spectrogram(raw(path), lo=FFT_LO, hi=FFT_HI, win=FFT_WIN, step=FFT_STEP)
+            
+            if len(a) < 50000:
+                windowed = windowing(a, T)
+                p        = sub.predict(windowed)
+
+                p[:, label_dict['NOISE']] *= DAMPEN_NOISE
+                
+                e        = enc.predict(windowed)     
+                ay       = np.argmax(p, axis = 1)
+
+                fig, ax = plt.subplots()
+                fig.set_size_inches(len(a) / 100, len(a[0]) / 100)
+                ax.imshow(BIAS - a.T * SCALER, norm=Normalize(START, STOP), cmap='gray')                  
+                annotations = []
+                strg = []
+                for i, y in enumerate(ay):       
+                    c = clu[y].predict(e[i].reshape(1, LATENT))[0]
+                    lab = reverse[y]
+                    v = ' '
+                    if lab == 'WSTL_DOWN':
+                        v = 'D' 
+                    if lab == 'WSTL_UP':
+                        v = 'U'
+                    if lab == 'ECHO':
+                        v = 'E'
+                    if lab == 'BURST':
+                        v = 'B'
+                    s = "{}{}".format(v, c)
+                    if lab != 'NOISE':
+                        strg.append(s)
+                        annotations.append([i * T // 2, (i + 1) * T // 2, s, 1.0])
+                if len(annotations) > 0:    
+                    anno = compress(annotations)
+                    anno = [(start, stop, s) for start, stop, s, _ in anno]
+
+                    for start, stop, s in anno:
+                        if s not in cluster_labels:
+                            cluster_labels[s] = cur
+                            cur += 1
+                        color =  cluster_labels[s]
+                        plt.text(start + (stop - start) // 2 - 7 , 30, s[0], size=10, color='black')
+                        rect = patches.Rectangle((start, 0), stop - start,
+                                                 256, linewidth=1, edgecolor='r', facecolor=COLORS[color])
+                        ax.add_patch(rect)
+                    path = '{}/{}'.format(out_folder, img_name)
+                    plt.savefig(path)
+                    plt.close()
+                    by_file[filename] = (anno, strg, img_name)
+                
+    with open('{}/sequenced_strings.html'.format(out_folder), 'w') as f:
+        f.write('<HTML><BODY><TABLE border="1">')
+        f.write("""
+        <TR>
+            <TH> Context </TH>
+            <TH> Video </TH>
+            <TH> Time </TH>
+            <TH> String </TH>
+            <TH> Image </TH>
+        </TR>    
+        """)
+        for file, (_, strg, p) in by_file.items():
+            f.write("""
+            <TR>
+                <TD> {} </TD>
+                <TD> {} </TD>
+                <TD> {} </TD>
+                <TD> {} </TD>
+                <TD> 
+                   <div style="width: 1024px; height: 100px; overflow: auto">
+                     <img src="{}" height=100/> </div></TD>
+            </TR>    
+            """.format(
+                context(file), 
+                video(file, context(file)), 
+                timestamp(file), 
+                strg,
+                p
+            ))
+        f.write('</TABLE></BODY></HTML>')        
+    
+
 if __name__ == '__main__':
     print("=====================================")
     print("Simplified WDP DS Pipeline")
@@ -613,8 +773,9 @@ if __name__ == '__main__':
         wav      = sys.argv[3]
         clusters = sys.argv[4]
         k        = int(sys.argv[5])
-        out      =  sys.argv[6]
-        export(labels, wav, clusters, k, out)
+        prefix   = sys.argv[6]
+        out      = sys.argv[7]
+        export(labels, wav, clusters, k, out, prefix)
     elif len(sys.argv) >= 6 and sys.argv[1] == 'htk':
         mode   = sys.argv[2]
         if mode == 'train':
@@ -644,13 +805,26 @@ if __name__ == '__main__':
         folder = sys.argv[3]
         htk    = sys.argv[4]
         out    = sys.argv[5]
-        sequencing(audio, folder, htk ,out) 
+        sequencing(audio, folder, htk ,out)
+    elif len(sys.argv) > 5 and sys.argv[1] == 'discrete':
+        if sys.argv[2] == 'clustering':
+            labels = sys.argv[3]
+            wav    = sys.argv[4]
+            out    = sys.argv[5]
+            discrete_clustering(out, labels, wav)
+        if sys.argv[2] == 'sequencing':
+            audio  = sys.argv[3]
+            folder = sys.argv[4]
+            out    = sys.argv[5]
+            discrete_decoding(folder, audio, out)
     else:
         print("""
             Usage:
                 + train:      python pipeline.py train LABEL_FILE AUDIO_FILE OUT_FOLDER
                 + clustering: python pipeline.py clustering LABEL_FILE AUDIO_FILE OUT_FOLDER
-                + export:     python pipeline.py export LABEL_FILE AUDIO_FILE FOLDER K OUT_FOLDER
+                + export:     python pipeline.py export LABEL_FILE AUDIO_FILE FOLDER K PREFIX OUT_FOLDER
+                + discrete    python pipeline.py discrete clustering LABEL_FILE AUDIO_FILE OUT_FOLDER
+                              python pipeline.py discrete sequencing AUDIO_FOLDER FOLDER OUT_FOLDER
                 + htk:        python pipeline.py htk train FOLDER OUT_HTK STATES ITER K
                               python pipeline.py htk continuous FOLDER OUT_HTK NOISE HMM
                               python pipeline.py htk convert AUDIO FOLDER OUT_FOLDER 

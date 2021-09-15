@@ -654,7 +654,7 @@ def discrete_decoding(folder, audio, out_folder):
     START  = 0.2
     STOP   = 0.9
 
-    DAMPEN_NOISE = 0.1
+    DAMPEN_NOISE = 0.01
     
     sub = load_model('{}/supervised.h5'.format(folder))
     enc = load_model('{}/encoder.h5'.format(folder))

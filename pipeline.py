@@ -660,6 +660,9 @@ def discrete_decoding(folder, audio, out_folder):
     label_dict = pkl.load(open("{}/labels.pkl".format(folder), "rb"))
     reverse = dict([(v,k) for k, v in label_dict.items()])
 
+    out = check_output(["rm", "-rf", outfolder])
+    out = check_output(["mkdir", outfolder])
+
     cluster_labels = {}
     cur = 0
     by_file = {}
@@ -677,7 +680,7 @@ def discrete_decoding(folder, audio, out_folder):
 
                 fig, ax = plt.subplots()
                 fig.set_size_inches(len(a) / 100, len(a[0]) / 100)
-                ax.imshow(BIAS - a.T * SCALER, norm=Normalize(START, STOP), cmap='gray')                        
+                ax.imshow(BIAS - a.T * SCALER, norm=Normalize(START, STOP), cmap='gray')                  
                 annotations = []
                 strg = []
                 for i, y in enumerate(ay):       
@@ -712,7 +715,7 @@ def discrete_decoding(folder, audio, out_folder):
                     path = '{}/{}'.format(out_folder, img_name)
                     plt.savefig(path)
                     plt.close()
-                    by_file[filename] = (anno, strg, path)
+                    by_file[filename] = (anno, strg, img_name)
                 
     with open('{}/sequenced_strings.html'.format(out_folder), 'w') as f:
         f.write('<HTML><BODY><TABLE border="1">')

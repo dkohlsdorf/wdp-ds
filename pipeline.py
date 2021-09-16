@@ -748,7 +748,7 @@ def discrete_decoding(folder, audio, out_folder):
                 context(file), 
                 video(file, context(file)), 
                 timestamp(file), 
-                strg,
+                " ".join(strg),
                 p
             ))
         f.write('</TABLE></BODY></HTML>')        

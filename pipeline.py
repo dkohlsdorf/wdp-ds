@@ -118,7 +118,7 @@ def neighbours_encoder(encoder, x_train, y_train, x_test, y_test, label_dict, na
     plt.close()
 
     
-def train(label_file, wav_file, out_folder="output", perc_test=0.33, retrain = True, super_epochs=3, relabel=False):
+def train(label_file, wav_file, out_folder="output", perc_test=0.33, retrain = True, super_epochs=3, relabel=False, resample=10000):
     instances, ra, labels, label_dict = dataset_supervised_windows(
         label_file, wav_file, lo=FFT_LO, hi=FFT_HI, win=FFT_WIN, step=FFT_STEP, raw_size=RAW_AUDIO)    
     reverse = dict([(v, k) for k, v in label_dict.items()])
@@ -136,7 +136,7 @@ def train(label_file, wav_file, out_folder="output", perc_test=0.33, retrain = T
         _instances = []
         _labels = []
         for k, v in by_label.items():
-            for _ in range(0, 10000):
+            for _ in range(0, resample):
                 i = np.random.randint(0, len(v))
                 if reverse[k] != 'NOISE':
                     noise = by_label[label_dict['NOISE']]
@@ -151,7 +151,7 @@ def train(label_file, wav_file, out_folder="output", perc_test=0.33, retrain = T
         y_test  = []
         x_train = []
         x_test  = []
-        for i in range(0, len(_instances)):
+        for i in range(0, len(_instances)):                    
             if np.random.uniform() < perc_test:
                 x_test.append(_instances[i])
                 y_test.append(_labels[i])

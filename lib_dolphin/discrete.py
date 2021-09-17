@@ -2,6 +2,7 @@ import numpy as np
 
 from numba import jit
 from collections import namedtuple
+from lib_dolphin.dtw import * 
 
 
 Symbol = namedtuple("Symbol", "id type")
@@ -10,13 +11,13 @@ Symbol = namedtuple("Symbol", "id type")
 @jit
 def levenstein(x, y):
     n = len(x)
-    m = len(y)
-    d = np.zeros((n + 1, m + 1))
-    d[:, 0] = np.arange(0, n + 1)
-    d[0, :] = np.arange(0, m + 1)
-    # TODO implement levenstein band 
+    m = len(y)     
+    w = int(imax(n, m) * BAND)
+    w = imax(w, abs(n - m)) + 2
+    d = np.ones((n + 1, m + 1)) * np.Infinity
+    d[0, 0] = 0.0
     for i in range(1, n + 1):
-        for j in range(1, m + 1):
+        for j in range(imax(1, i - w), imin(m + 1, i + w)):
             error = 0
             if x[i - 1] != y[j - 1]:
                 error += 1
@@ -25,7 +26,7 @@ def levenstein(x, y):
                 d[i, j - 1] + 1,
                 d[i - 1, j - 1] + error
             ])
-    return d[n, m]
+    return d[n, m] / (n * m)
 
 
 @jit

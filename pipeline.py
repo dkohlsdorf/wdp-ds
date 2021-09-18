@@ -752,8 +752,31 @@ def discrete_decoding(folder, audio, out_folder):
                 p
             ))
         f.write('</TABLE></BODY></HTML>')        
-    
 
+        
+def join_wav(folder, out_wav, out_csv):
+    raw_file = []
+    offest = [] 
+    starts = []
+    stops  = []
+    total = 0
+    for file in os.listdir(folder):        
+        if file.endswith('.wav'):
+            path = "{}/{}".format(folder, file)
+            x = raw(path)
+            raw_file.append(x)
+            starts.append(total)
+            total += len(x)
+            stops.append(total)
+    raw_file = np.hstack(raw_file)   
+    df = pd.DataFrame({
+        'starts': starts,
+        'stops': stops
+    })
+    df.to_csv(out_csv)
+    write(out_wav, 44100, raw_file)
+
+    
 if __name__ == '__main__':
     print("=====================================")
     print("Simplified WDP DS Pipeline")
@@ -763,6 +786,11 @@ if __name__ == '__main__':
         wav    = sys.argv[3]
         out    = sys.argv[4]        
         train(labels, wav, out)
+    elif len(sys.argv) >= 5 and sys.argv[1] == 'join':
+        folder  = sys.argv[2]
+        wav_out = sys.argv[3]
+        csv_out = sys.argv[4]
+        join_wav(folder, wav_out, csv_out)
     elif len(sys.argv) >= 5 and sys.argv[1] == 'clustering':
         labels = sys.argv[2]
         wav    = sys.argv[3]
@@ -821,6 +849,7 @@ if __name__ == '__main__':
         print("""
             Usage:
                 + train:      python pipeline.py train LABEL_FILE AUDIO_FILE OUT_FOLDER
+                + join:       python pipeline.py join FOLDER_2_JOIN WAV_OUT CSV_OUT
                 + clustering: python pipeline.py clustering LABEL_FILE AUDIO_FILE OUT_FOLDER
                 + export:     python pipeline.py export LABEL_FILE AUDIO_FILE FOLDER K PREFIX OUT_FOLDER
                 + discrete    python pipeline.py discrete clustering LABEL_FILE AUDIO_FILE OUT_FOLDER

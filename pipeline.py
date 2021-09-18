@@ -252,7 +252,7 @@ def train(label_file, wav_file, out_folder="output", perc_test=0.33, retrain = T
             write(path, 44100, np.concatenate(audio))
             
             
-def clustering(regions, wav_file, folder, l2_window = None):
+def clustering(regions, wav_file, folder, l2_window = 10):
     instances_file   = "{}/instances.pkl".format(folder)
     ids_file         = "{}/ids.pkl".format(folder)
     predictions_file = "{}/predictions.pkl".format(folder)
@@ -266,7 +266,7 @@ def clustering(regions, wav_file, folder, l2_window = None):
         enc = load_model('{}/encoder.h5'.format(folder))
         if l2_window is not None:
             ids, instances, predictions = dataset_unsupervised_regions_windowed(
-                regions, wav_file, enc, cls, reverse, lo=FFT_LO, hi=FFT_HI, win=FFT_WIN, step=FFT_STEP, T=T, l2_window=l2_window, dont_window_whistle=False)
+                regions, wav_file, enc, cls, reverse, lo=FFT_LO, hi=FFT_HI, win=FFT_WIN, step=FFT_STEP, T=T, l2_window=l2_window, dont_window_whistle=True)
         else:
             ids, instances, predictions = dataset_unsupervised_regions(
                 regions, wav_file, enc, cls, lo=FFT_LO, hi=FFT_HI, win=FFT_WIN, step=FFT_STEP, T=T)   

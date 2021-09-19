@@ -167,8 +167,9 @@ def train(label_file, wav_file, out_folder="output", perc_test=0.33, retrain = T
         print("Train: {} / {}".format(x_train.shape, Counter(y_train)))
         print("Test:  {} / {}".format(x_test.shape, Counter(y_test)))
         
-        enc         = encoder(WINDOW_PARAM, LATENT, CONV_PARAM)    
-        enc.summary()
+        base_encoder = encoder(WINDOW_PARAM, LATENT, CONV_PARAM)    
+        base_encoder.summary()
+        enc = window_encoder(WINDOW_PARAM, base_encoder, LATENT)
 
         for i in range(0, super_epochs):
             model       = classifier(WINDOW_PARAM, enc, LATENT, 5, CONV_PARAM) 

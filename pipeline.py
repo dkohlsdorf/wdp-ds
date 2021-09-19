@@ -252,7 +252,7 @@ def train(label_file, wav_file, out_folder="output", perc_test=0.33, retrain = T
             write(path, 44100, np.concatenate(audio))
             
             
-def clustering(regions, wav_file, folder, l2_window = 10):
+def clustering(regions, wav_file, folder, l2_window = None): # 10):
     instances_file   = "{}/instances.pkl".format(folder)
     ids_file         = "{}/ids.pkl".format(folder)
     predictions_file = "{}/predictions.pkl".format(folder)
@@ -295,7 +295,7 @@ def clustering(regions, wav_file, folder, l2_window = 10):
     pkl.dump(clusters, open(clusters_file, "wb"))
 
 
-def export(csvfile, wavfile, folder, k, out, prefix, min_c = 4):
+def export(csvfile, wavfile, folder, k, out, prefix, min_c = 2):
     print(" ... loading data")
     
     label_file       = "{}/labels.pkl".format(folder)
@@ -539,7 +539,7 @@ def htk_continuous(folder, htk, noise, hmm, components=10):
     out = check_output("HParse {}/gram_continuous {}/wdnet_continuous".format(htk, htk).split(" "))
                 
 
-def sequencing(audio, folder, htk, outfolder, recode=True):
+def sequencing(audio, folder, htk, outfolder, recode=False):
     print("SEQUENCING")
     if recode:        
         out = check_output(["rm", "-rf", outfolder])

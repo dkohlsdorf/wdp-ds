@@ -13,6 +13,8 @@ from lib_dolphin.features import *
 from lib_dolphin.eval import *
 from lib_dolphin.dtw import *
 from lib_dolphin.htk_helpers import *
+from lib_dolphin.neural_decoding import *
+
 from collections import namedtuple, Counter
 
 from scipy.io.wavfile import read, write
@@ -176,7 +178,8 @@ def train(label_file, wav_file, out_folder="output", perc_test=0.33, retrain = T
             model.summary()
             hist        = model.fit(x=x_train, y=y_train, validation_data=(x_test, y_test), batch_size=BATCH, epochs=EPOCHS, shuffle=True)
             model.save('{}/supervised.h5'.format(out_folder))
-            enc.save('{}/encoder.h5'.format(out_folder))        
+            enc.save('{}/encoder.h5'.format(out_folder))     
+            base_encoder.save('{}/base_encoder.h5'.format(out_folder))
             enc_filters(enc, CONV_PARAM[-1], "{}/filters_supervised.png".format(out_folder))        
             plot_tensorflow_hist(hist, "{}/history_train_supervised.png".format(out_folder))        
             neighbours_encoder(enc, x_train, y_train, x_test, y_test, label_dict, "classifier", out_folder)
@@ -202,7 +205,8 @@ def train(label_file, wav_file, out_folder="output", perc_test=0.33, retrain = T
 
             siamese = train_triplets(enc, by_label)
             siamese.save('{}/siam.h5'.format(out_folder))
-            enc.save('{}/encoder.h5'.format(out_folder))        
+            enc.save('{}/encoder.h5'.format(out_folder))    
+            base_encoder.save('{}/base_encoder.h5'.format(out_folder))            
             enc_filters(enc, CONV_PARAM[-1], "{}/filters_siam.png".format(out_folder))                
             neighbours_encoder(enc, x_train, y_train, x_test, y_test, label_dict, "siamese", out_folder)
 
@@ -211,6 +215,7 @@ def train(label_file, wav_file, out_folder="output", perc_test=0.33, retrain = T
             hist        = ae.fit(x=x_train, y=x_train, batch_size=BATCH, epochs=EPOCHS, shuffle=True)
             ae.save('{}/ae.h5'.format(out_folder))
             enc.save('{}/encoder.h5'.format(out_folder))        
+            base_encoder.save('{}/base_encoder.h5'.format(out_folder))
             enc_filters(enc, CONV_PARAM[-1], "{}/filters_ae.png".format(out_folder))                
             plot_tensorflow_hist(hist, "{}/history_train_ae.png".format(out_folder))
             visualize_dataset(ae.predict(x_test, batch_size=BATCH), "{}/reconstructions.png".format(out_folder))

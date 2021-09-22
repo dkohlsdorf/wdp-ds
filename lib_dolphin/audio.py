@@ -34,6 +34,10 @@ def spectrogram(audio, lo = 20, hi = 200, win = 512, step=128, normalize=True):
     return spectrogram
 
 
+def resolve_window(sample_raw, window, step):
+    return (sample_raw - window) / step
+
+
 @jit
 def windowing(region, window):
     N, D = region.shape

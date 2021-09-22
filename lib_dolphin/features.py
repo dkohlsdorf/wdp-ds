@@ -25,12 +25,14 @@ def encoder(in_shape, latent_dim, conv_params):
     return Model(inputs =[inp], outputs=[x])
 
 
-def seq2seq_classifier(in_shape, encoder, n_classes):    
+def seq2seq_classifier(in_shape, encoder, n_latent, n_classes):    
     dft_dim = in_shape[1]
     shape = (None, dft_dim, 1)
     inp   = Input(shape)
     x     = encoder(inp) 
-    x     = LSTM(n_classes, return_sequences=True, activation='softmax')(x)            
+    x     = LSTM(n_latent, return_sequences=True)(x)            
+    x     = TimeDistributed(Dropout(0.5))(x) 
+    x     = TimeDistributed(Dense(n_classes, activation='softmax'))(x)
     model = Model(inputs = [inp], outputs = [x])
     return model    
     

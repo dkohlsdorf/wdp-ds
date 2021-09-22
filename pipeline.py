@@ -13,7 +13,6 @@ from lib_dolphin.features import *
 from lib_dolphin.eval import *
 from lib_dolphin.dtw import *
 from lib_dolphin.htk_helpers import *
-from lib_dolphin.neural_decoding import *
 
 from collections import namedtuple, Counter
 

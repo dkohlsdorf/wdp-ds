@@ -782,6 +782,57 @@ def join_wav(folder, out_wav, out_csv):
     write(out_wav, 44100, raw_file)
 
     
+def neardup(query_folder, labels, wav, folder, out, k = 10, percentile=50, band=0.01, max_len_diff=5):    
+    ids         = pkl.load(open(f"{folder}/ids.pkl", "rb"))
+    inst        = pkl.load(open(f"{folder}/instances.pkl", "rb"))
+    d           = pkl.load(open(f"{folder}/distances.pkl", "rb"))
+
+    df      = pd.read_csv(labels)
+    signals = raw(wav)
+    
+    th = np.percentile(d.flatten(), percentile)
+    print(f"Threshold: {th}")
+
+    ranges = []
+    for _, row in df.iterrows():
+        ranges.append([row['starts'], row['stops']])
+
+    encoder = load_model(f'{folder}/encoder.h5')
+    
+    names = []
+    queries = []
+    for f in os.listdir(query_folder):
+        if f.endswith('.wav'):            
+            path = "{}/{}".format(query_folder, f)
+            x = raw(path)
+            if len(x) > 0:            
+                s = spectrogram(x, FFT_LO, FFT_HI, FFT_WIN, FFT_STEP)
+                w = windowing(s, T)
+                e = encoder.predict(w)
+                queries.append(e)
+                names.append(f)
+
+    distances = np.ones((len(queries), len(inst))) * float('inf')
+    for i, q in enumerate(queries):
+        for j, x in enumerate(inst):
+            if np.abs(len(x) - len(q)) < max_len_diff:
+                d = dtw(q, x, band)
+                distances[i, j] = d
+            
+    for i in range(len(queries)):
+        audio = []
+        out_wav = f"{out}/{names[i]}"
+        neighbors = [(j, d) for j, d in enumerate(distances[i])]
+        neighbors = sorted(neighbors, key=lambda x: x[1])
+        neighbors = [(j,d) for j, d in neighbors if d < th] 
+        for j, _ in neighbors[0:k]:
+            start, stop = ranges[ids[j]]
+            audio.append(signals[start:stop])
+        audio = np.hstack(audio)   
+        write(out_wav, 44100, audio)
+        print(neighbors[0:k])
+        
+    
 if __name__ == '__main__':
     print("=====================================")
     print("Simplified WDP DS Pipeline")
@@ -831,8 +882,8 @@ if __name__ == '__main__':
             htk_file = "{}/{}".format(htk, audio.split('/')[-1].replace('.wav', '.htk'))
             htk_converter(audio, folder, htk_file)
     elif len(sys.argv) >= 3 and sys.argv[1] == 'baseline':
-          folder = sys.argv[2]
-          dtw_baseline(folder)
+        folder = sys.argv[2]
+        dtw_baseline(folder)
     elif len(sys.argv) > 5 and sys.argv[1] == 'sequencing':
         audio  = sys.argv[2]
         folder = sys.argv[3]
@@ -850,10 +901,19 @@ if __name__ == '__main__':
             folder = sys.argv[4]
             out    = sys.argv[5]
             discrete_decoding(folder, audio, out)
+    elif len(sys.argv) > 6 and sys.argv[1] == 'neardup':
+        query_folder = sys.argv[2]
+        labels = sys.argv[3]        
+        wav    = sys.argv[4]
+        folder = sys.argv[5]
+        out    = sys.argv[6]
+        neardup(query_folder, labels, wav, folder, out)
     else:
+        print(sys.argv)
         print("""
             Usage:
                 + train:      python pipeline.py train LABEL_FILE AUDIO_FILE OUT_FOLDER
+                + nearest:    python pipeline.py neardup QUERY_FOLDER LAB WAV FOLDER OUT_FOLDER
                 + join:       python pipeline.py join FOLDER_2_JOIN WAV_OUT CSV_OUT
                 + clustering: python pipeline.py clustering LABEL_FILE AUDIO_FILE OUT_FOLDER
                 + export:     python pipeline.py export LABEL_FILE AUDIO_FILE FOLDER K PREFIX OUT_FOLDER

@@ -29,19 +29,20 @@ def imin(a, b):
         x = b
     return x
 
+
 BAND = 0.1
 
+
 @jit(nopython=True)        
-def dtw(x, y):
+def dtw(x, y, band=BAND):
     N = x.shape[0]
     M = y.shape[0]
-    w = int(imax(N, M) * BAND)
+    w = int(imax(N, M) * band)
     w = imax(w, abs(N - M)) + 2
-
     dp = np.ones((N + 1, M + 1)) * np.Infinity   
     dp[0, 0] = 0.0    
     for i in range(1, N + 1):    
-        for j in range(imax(1, i - w), imin(M + 1, i + w)):
+        for j in range(imax(1, i - w), imin(M + 1, i + w)):            
             dist = np.sqrt(np.sum(np.square(x[i - 1] - y[j - 1])))
             dp[i, j] = dist + min3(
                 dp[i - 1, j],
@@ -49,6 +50,7 @@ def dtw(x, y):
                 dp[i, j - 1]
             )
     return dp[N, M] / (N * M)
+
 
 @jit
 def dtw_distances(X):

@@ -33,7 +33,7 @@ D            = FFT_WIN // 2 - FFT_LO - (FFT_WIN // 2 - FFT_HI)
 RAW_AUDIO    = 5120
 T            = int((RAW_AUDIO - FFT_WIN) / FFT_STEP)
 
-CONV_PARAM   = (8, 8, 256)
+CONV_PARAM   = (8, 8, 1024)
 WINDOW_PARAM = (T, D, 1)
 LATENT       = 128
 BATCH        = 25
@@ -41,7 +41,7 @@ EPOCHS       = 10
 
 
 def cluster_model(data):
-    km = KMeans(n_clusters=64)
+    km = KMeans(n_clusters=26)
     km.fit(data)
     return km
 
@@ -117,6 +117,7 @@ def neighbours_encoder(encoder, x_train, y_train, x_test, y_test, label_dict, na
     plot_result_matrix(confusion, label_names, label_names, "confusion {} {}".format(name, accuracy))
     plt.savefig('{}/confusion_nn_{}.png'.format(out_folder, name))
     plt.close()
+    return accuracy
 
     
 def train(label_file, wav_file, out_folder="output", perc_test=0.33, retrain = True, super_epochs=3, relabel=False, resample=10000):
@@ -172,6 +173,10 @@ def train(label_file, wav_file, out_folder="output", perc_test=0.33, retrain = T
         base_encoder.summary()
         enc = window_encoder(WINDOW_PARAM, base_encoder, LATENT)
 
+        accuracy_supervised    = []
+        accuracy_nn_supervised = []
+        accuracy_siamese       = []
+        accuracy_ae            = []
         for i in range(0, super_epochs):
             model       = classifier(WINDOW_PARAM, enc, LATENT, 5, CONV_PARAM) 
             model.summary()
@@ -181,7 +186,8 @@ def train(label_file, wav_file, out_folder="output", perc_test=0.33, retrain = T
             base_encoder.save('{}/base_encoder.h5'.format(out_folder))
             enc_filters(enc, CONV_PARAM[-1], "{}/filters_supervised.png".format(out_folder))        
             plot_tensorflow_hist(hist, "{}/history_train_supervised.png".format(out_folder))        
-            neighbours_encoder(enc, x_train, y_train, x_test, y_test, label_dict, "classifier", out_folder)
+            acc_nn = neighbours_encoder(enc, x_train, y_train, x_test, y_test, label_dict, "classifier", out_folder)
+            accuracy_nn_supervised.append(acc_nn)
 
             if relabel:            
                 prediction = model.predict(x_train)
@@ -201,13 +207,15 @@ def train(label_file, wav_file, out_folder="output", perc_test=0.33, retrain = T
             plot_result_matrix(confusion, label_names, label_names, "confusion acc {}".format(accuracy))
             plt.savefig('{}/confusion_type.png'.format(out_folder))
             plt.close()
+            accuracy_supervised.append(accuracy)
 
             siamese = train_triplets(enc, by_label)
             siamese.save('{}/siam.h5'.format(out_folder))
             enc.save('{}/encoder.h5'.format(out_folder))    
             base_encoder.save('{}/base_encoder.h5'.format(out_folder))            
             enc_filters(enc, CONV_PARAM[-1], "{}/filters_siam.png".format(out_folder))                
-            neighbours_encoder(enc, x_train, y_train, x_test, y_test, label_dict, "siamese", out_folder)
+            acc_siam = neighbours_encoder(enc, x_train, y_train, x_test, y_test, label_dict, "siamese", out_folder)
+            accuracy_siamese.append(acc_siam)
 
             ae          = auto_encoder(WINDOW_PARAM, enc, LATENT, CONV_PARAM)    
             ae.summary()
@@ -218,17 +226,26 @@ def train(label_file, wav_file, out_folder="output", perc_test=0.33, retrain = T
             enc_filters(enc, CONV_PARAM[-1], "{}/filters_ae.png".format(out_folder))                
             plot_tensorflow_hist(hist, "{}/history_train_ae.png".format(out_folder))
             visualize_dataset(ae.predict(x_test, batch_size=BATCH), "{}/reconstructions.png".format(out_folder))
-            neighbours_encoder(enc, x_train, y_train, x_test, y_test, label_dict, "aute encoder", out_folder)
+            acc_ae = neighbours_encoder(enc, x_train, y_train, x_test, y_test, label_dict, "aute encoder", out_folder)
+            accuracy_ae.append(acc_ae)
             enc.save('{}/encoder.h5'.format(out_folder))                
-
             pkl.dump(label_dict, open('{}/labels.pkl'.format(out_folder), "wb"))
+
+        plt.plot(accuracy_supervised, label="supervised")
+        plt.plot(accuracy_nn_supervised, label="nn_supervised")
+        plt.plot(accuracy_siamese, label="nn_siam")
+        plt.plot(accuracy_ae, label="nn_ae")
+        plt.legend()
+        plt.title("Super Epochs")
+        plt.savefig('{}/super_epoch_acc.png'.format(out_folder))
+        plt.close()
     else:
         model = load_model('{}/supervised.h5'.format(out_folder))
-        enc   = load_model('{}/encoder.h5'.format(out_folder))
+        enc   = load_model('{}/encoder.h5'.format(out_folder))    
 
-    
+        
     by_label = dict([(k, enc.predict(np.stack(v), batch_size=10)) for k, v in by_label.items()])
-    clusters = dict([(k, cluster_model(v)) for k, v in by_label.items()])
+    clusters = dict([(k, cluster_model(v)) for k, v in by_label.items() if k != label_dict['NOISE']])
     pkl.dump(clusters, open('{}/clusters_window.pkl'.format(out_folder),'wb'))
     
     b = np.stack(instances)
@@ -238,18 +255,18 @@ def train(label_file, wav_file, out_folder="output", perc_test=0.33, retrain = T
     for n, i in enumerate(x):
         li = int(np.argmax(i))
         l = reverse[li]
-        c = int(clusters[li].predict(h[n].reshape(1, LATENT))[0])    
-
-        if l not in extracted:
-            extracted[l] = {}
-        if c not in extracted[l]:
-            extracted[l][c] = []
-        if li != labels[n]:
-            l_true = reverse[labels[n]]
-            if l_true not in extracted[l]:
-                extracted[l][l_true] = []
-            extracted[l][l_true].append(ra[n])
-        extracted[l][c].append(ra[n])
+        if l != 'NOISE':
+            c = int(clusters[li].predict(h[n].reshape(1, LATENT))[0])    
+            if l not in extracted:
+                extracted[l] = {}
+            if c not in extracted[l]:
+                extracted[l][c] = []
+            if li != labels[n]:
+                l_true = reverse[labels[n]]
+                if l_true not in extracted[l]:
+                    extracted[l][l_true] = []
+                extracted[l][l_true].append(ra[n])
+            extracted[l][c].append(ra[n])
 
     for l, clusters in extracted.items():
         for c, audio in clusters.items():

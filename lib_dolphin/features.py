@@ -25,7 +25,7 @@ def encoder(in_shape, latent_dim, conv_params):
     return Model(inputs =[inp], outputs=[x])
 
 
-def seq2seq_classifier(in_shape, encoder, n_latent, n_classes, lstm=True):    
+def seq2seq_classifier(in_shape, encoder, n_latent, n_classes, lstm=True, dropout=False):    
     dft_dim = in_shape[1]
     shape = (None, dft_dim, 1)
     inp   = Input(shape)
@@ -35,7 +35,8 @@ def seq2seq_classifier(in_shape, encoder, n_latent, n_classes, lstm=True):
     else:
         x = TimeDistributed(Dense(n_latent, activation='relu'))(x)
         x = Attention(use_scale=True)([x, x])
-    x     = TimeDistributed(Dropout(0.5))(x) 
+    if dropout:
+        x = TimeDistributed(Dropout(0.5))(x) 
     x     = TimeDistributed(Dense(n_classes, activation='softmax'))(x)
     model = Model(inputs = [inp], outputs = [x])
     return model    

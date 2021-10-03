@@ -821,6 +821,124 @@ def discrete_decoding(folder, audio, out_folder):
             ))
         f.write('</TABLE></BODY></HTML>')        
 
+
+def i2name(i, reverse):
+    if i == 0:
+        return 'NOISE'
+    else:
+        
+        c = i % 26
+        n = i // 26
+        l = reverse[n]
+        
+        if "DOWN" in l:
+            l = 'D'
+        elif "UP" in l:
+            l = 'U'
+        else:
+            l = l[0]
+            
+        return f'{l}{chr(97 + (c - 1))}'
+    
+
+def neural_decoding(folder, in_folder, out_folder, WIN=128):
+    decoder = load_model(f'{folder}/decoder_nn.h5')
+    lab     = pkl.load(open(f"{folder}/labels.pkl", "rb"))
+    reverse = {v:k for k, v in lab.items()}
+
+    images = []
+    strings = []
+    for f in os.listdir(in_folder):
+        if f.endswith('.wav'):        
+            x = raw(f'{in_folder}/{f}')
+            s = spectrogram(x, FFT_LO, FFT_HI, FFT_WIN, FFT_STEP)
+            if len(s) < 100000:
+                c = []
+                for i in range(0, len(s), 1000):
+                    x = s[i:i + 1000]
+                    a = x.reshape((1, len(x), D, 1))
+                    p = decoder.predict(a).reshape((a.shape[1],  4 * 26 + 1)) 
+                    if WIN is not None and len(p) > WIN:
+                        for i in range(0, len(p[0])):
+                            p[:, i] = np.convolve(p[:, i], np.ones(WIN) / WIN, mode='same')
+                    p[:, 0] *= 0.05
+                    local_c = p.argmax(axis=1)
+                    c += list(local_c)
+                if len([l for l in c if l > 0]) > 3:
+                    fig, ax = plt.subplots()
+                    fig.set_size_inches(len(s) / 100, len(s[0]) / 100)
+                    ax.imshow(1.0 - s.T,  cmap='gray')                  
+                    last = 0
+                    strg = []
+                    for i in range(1, len(c)):
+                        if c[i] != c[i - 1]:                       
+                            if c[i - 1] != 0:  
+                                strg.append(c[i - 1])
+                                start = last
+                                stop = i
+                                rect = patches.Rectangle((start, 0), stop - start,
+                                                 256, linewidth=1, edgecolor='r', facecolor=COLORS[c[i - 1]])
+                                ax.add_patch(rect)
+                                plt.text(start + (stop - start) // 2 , 30, i2name(c[i - 1], reverse), size=12)
+                            last = i
+                    if last != len(s) and c[-1] != 0:
+                        strg.append(c[i - 1])
+                        i = len(s) - 1
+                        start = last
+                        stop = i
+                        rect = patches.Rectangle((start, 0), stop - start,
+                                         256, linewidth=1, edgecolor='r', facecolor=COLORS[c[i - 1]])
+                        ax.add_patch(rect)
+                        plt.text(start + (stop - start) // 2 , 30, i2name(c[i - 1], reverse), size=12)
+                    p = f.replace('.wav', '.png')
+                    img_path = f'{out_folder}/{p}'
+                    plt.savefig(img_path)
+                    plt.close()
+                    strings.append(strg)
+                    images.append(p)
+
+    N = len(strings)
+    d = np.zeros((N, N))
+    for i in range(0, N):
+        for j in range(i, N):
+            l = levenstein(strings[i], strings[j])
+            d[i, j] = l
+            d[j, i] = l
+
+    j, di = merge_next(0, d, set([]))
+    closed  = set([j]) 
+
+    seq_sorted = []
+    img_sorted = []
+    while di < np.float('inf'):
+        j, di = merge_next(j, d, closed)
+        closed.add(j)
+        seq_sorted.append(" ".join([i2name(s, reverse) for s in strings[j]]))
+        img_sorted.append(images[j])
+        
+    with open(f'{out_folder}/sequenced_strings.html', 'w') as f:
+        f.write('<HTML><BODY><TABLE border="1">')
+        f.write("""
+        <TR>
+            <TH> String </TH>
+            <TH> Image </TH>
+        </TR>    
+        """)
+        for seq, img in zip(seq_sorted, img_sorted):
+            img = "/".join(img.split('/')[-2:])
+            f.write("""
+            <TR>
+                <TD> {} </TD>
+                <TD> 
+                   <div style="width: 1024px; height: 100px; overflow: auto">
+                     <img src="{}" height=100/> </div></TD>
+            </TR>    
+            """.format(
+                seq, img
+            ))
+        f.write('</TABLE></BODY> </HTML>')
+
+
         
 def join_wav(folder, out_wav, out_csv):
     raw_file = []
@@ -977,12 +1095,18 @@ if __name__ == '__main__':
         data   = sys.argv[4]
         noise  = sys.argv[5]        
         train_sequential(folder, labels, data, noise)
+    elif len(sys.argv) > 4 and sys.argv[1] == 'decode_neural':
+        folder = sys.argv[2]
+        in_folder = sys.argv[3]
+        out_folder = sys.argv[4]
+        neural_decoding(folder, in_folder, out_folder)
     else:
         print(sys.argv)
         print("""
             Usage:
                 + train:      python pipeline.py train LABEL_FILE AUDIO_FILE OUT_FOLDER
                 + seq2seq:    python pipeline.py train_sequential FOLDER LAB WAV NOISE
+                              python pipeline.py decode_neural FOLDER IN OUT
                 + nearest:    python pipeline.py neardup QUERY_FOLDER LAB WAV FOLDER OUT_FOLDER
                 + join:       python pipeline.py join FOLDER_2_JOIN WAV_OUT CSV_OUT
                 + clustering: python pipeline.py clustering LABEL_FILE AUDIO_FILE OUT_FOLDER

@@ -13,10 +13,13 @@ from lib_dolphin.features import *
 from lib_dolphin.eval import *
 from lib_dolphin.dtw import *
 from lib_dolphin.htk_helpers import *
+from lib_dolphin.sequential import *
+
 from collections import namedtuple, Counter
 
 from scipy.io.wavfile import read, write
 from tensorflow.keras.models import load_model
+from tensorflow.keras.optimizers import *
 from sklearn.cluster import AgglomerativeClustering, KMeans
 
 
@@ -40,7 +43,7 @@ EPOCHS       = 10
 
 
 def cluster_model(data):
-    km = KMeans(n_clusters=64)
+    km = KMeans(n_clusters=26)
     km.fit(data)
     return km
 
@@ -116,6 +119,7 @@ def neighbours_encoder(encoder, x_train, y_train, x_test, y_test, label_dict, na
     plot_result_matrix(confusion, label_names, label_names, "confusion {} {}".format(name, accuracy))
     plt.savefig('{}/confusion_nn_{}.png'.format(out_folder, name))
     plt.close()
+    return accuracy
 
     
 def train(label_file, wav_file, out_folder="output", perc_test=0.33, retrain = True, super_epochs=3, relabel=False, resample=10000):
@@ -167,18 +171,25 @@ def train(label_file, wav_file, out_folder="output", perc_test=0.33, retrain = T
         print("Train: {} / {}".format(x_train.shape, Counter(y_train)))
         print("Test:  {} / {}".format(x_test.shape, Counter(y_test)))
         
-        enc         = encoder(WINDOW_PARAM, LATENT, CONV_PARAM)    
-        enc.summary()
+        base_encoder = encoder(WINDOW_PARAM, LATENT, CONV_PARAM)    
+        base_encoder.summary()
+        enc = window_encoder(WINDOW_PARAM, base_encoder, LATENT)
 
+        accuracy_supervised    = []
+        accuracy_nn_supervised = []
+        accuracy_siamese       = []
+        accuracy_ae            = []
         for i in range(0, super_epochs):
             model       = classifier(WINDOW_PARAM, enc, LATENT, 5, CONV_PARAM) 
             model.summary()
             hist        = model.fit(x=x_train, y=y_train, validation_data=(x_test, y_test), batch_size=BATCH, epochs=EPOCHS, shuffle=True)
             model.save('{}/supervised.h5'.format(out_folder))
-            enc.save('{}/encoder.h5'.format(out_folder))        
+            enc.save('{}/encoder.h5'.format(out_folder))     
+            base_encoder.save('{}/base_encoder.h5'.format(out_folder))
             enc_filters(enc, CONV_PARAM[-1], "{}/filters_supervised.png".format(out_folder))        
             plot_tensorflow_hist(hist, "{}/history_train_supervised.png".format(out_folder))        
-            neighbours_encoder(enc, x_train, y_train, x_test, y_test, label_dict, "classifier", out_folder)
+            acc_nn = neighbours_encoder(enc, x_train, y_train, x_test, y_test, label_dict, "classifier", out_folder)
+            accuracy_nn_supervised.append(acc_nn)
 
             if relabel:            
                 prediction = model.predict(x_train)
@@ -198,32 +209,45 @@ def train(label_file, wav_file, out_folder="output", perc_test=0.33, retrain = T
             plot_result_matrix(confusion, label_names, label_names, "confusion acc {}".format(accuracy))
             plt.savefig('{}/confusion_type.png'.format(out_folder))
             plt.close()
+            accuracy_supervised.append(accuracy)
 
             siamese = train_triplets(enc, by_label)
             siamese.save('{}/siam.h5'.format(out_folder))
-            enc.save('{}/encoder.h5'.format(out_folder))        
+            enc.save('{}/encoder.h5'.format(out_folder))    
+            base_encoder.save('{}/base_encoder.h5'.format(out_folder))            
             enc_filters(enc, CONV_PARAM[-1], "{}/filters_siam.png".format(out_folder))                
-            neighbours_encoder(enc, x_train, y_train, x_test, y_test, label_dict, "siamese", out_folder)
+            acc_siam = neighbours_encoder(enc, x_train, y_train, x_test, y_test, label_dict, "siamese", out_folder)
+            accuracy_siamese.append(acc_siam)
 
             ae          = auto_encoder(WINDOW_PARAM, enc, LATENT, CONV_PARAM)    
             ae.summary()
             hist        = ae.fit(x=x_train, y=x_train, batch_size=BATCH, epochs=EPOCHS, shuffle=True)
             ae.save('{}/ae.h5'.format(out_folder))
             enc.save('{}/encoder.h5'.format(out_folder))        
+            base_encoder.save('{}/base_encoder.h5'.format(out_folder))
             enc_filters(enc, CONV_PARAM[-1], "{}/filters_ae.png".format(out_folder))                
             plot_tensorflow_hist(hist, "{}/history_train_ae.png".format(out_folder))
             visualize_dataset(ae.predict(x_test, batch_size=BATCH), "{}/reconstructions.png".format(out_folder))
-            neighbours_encoder(enc, x_train, y_train, x_test, y_test, label_dict, "aute encoder", out_folder)
+            acc_ae = neighbours_encoder(enc, x_train, y_train, x_test, y_test, label_dict, "aute encoder", out_folder)
+            accuracy_ae.append(acc_ae)
             enc.save('{}/encoder.h5'.format(out_folder))                
-
             pkl.dump(label_dict, open('{}/labels.pkl'.format(out_folder), "wb"))
+
+        plt.plot(accuracy_supervised, label="supervised")
+        plt.plot(accuracy_nn_supervised, label="nn_supervised")
+        plt.plot(accuracy_siamese, label="nn_siam")
+        plt.plot(accuracy_ae, label="nn_ae")
+        plt.legend()
+        plt.title("Super Epochs")
+        plt.savefig('{}/super_epoch_acc.png'.format(out_folder))
+        plt.close()
     else:
         model = load_model('{}/supervised.h5'.format(out_folder))
-        enc   = load_model('{}/encoder.h5'.format(out_folder))
+        enc   = load_model('{}/encoder.h5'.format(out_folder))    
 
-    
+        
     by_label = dict([(k, enc.predict(np.stack(v), batch_size=10)) for k, v in by_label.items()])
-    clusters = dict([(k, cluster_model(v)) for k, v in by_label.items()])
+    clusters = dict([(k, cluster_model(v)) for k, v in by_label.items() if k != label_dict['NOISE']])
     pkl.dump(clusters, open('{}/clusters_window.pkl'.format(out_folder),'wb'))
     
     b = np.stack(instances)
@@ -233,25 +257,69 @@ def train(label_file, wav_file, out_folder="output", perc_test=0.33, retrain = T
     for n, i in enumerate(x):
         li = int(np.argmax(i))
         l = reverse[li]
-        c = int(clusters[li].predict(h[n].reshape(1, LATENT))[0])    
-
-        if l not in extracted:
-            extracted[l] = {}
-        if c not in extracted[l]:
-            extracted[l][c] = []
-        if li != labels[n]:
-            l_true = reverse[labels[n]]
-            if l_true not in extracted[l]:
-                extracted[l][l_true] = []
-            extracted[l][l_true].append(ra[n])
-        extracted[l][c].append(ra[n])
+        if l != 'NOISE':
+            c = int(clusters[li].predict(h[n].reshape(1, LATENT))[0])    
+            if l not in extracted:
+                extracted[l] = {}
+            if c not in extracted[l]:
+                extracted[l][c] = []
+            if li != labels[n]:
+                l_true = reverse[labels[n]]
+                if l_true not in extracted[l]:
+                    extracted[l][l_true] = []
+                extracted[l][l_true].append(ra[n])
+            extracted[l][c].append(ra[n])
 
     for l, clusters in extracted.items():
         for c, audio in clusters.items():
             path = "{}/{}_{}.wav".format(out_folder, l, c)
             write(path, 44100, np.concatenate(audio))
+
             
-            
+def train_sequential(folder, labels, data, noise):
+    ids         = pkl.load(open(f"{folder}/ids.pkl", "rb"))
+    inst        = pkl.load(open(f"{folder}/instances.pkl", "rb"))
+    predictions = [x for x in pkl.load(open(f"{folder}/predictions.pkl", "rb"))]
+    lab         = pkl.load(open(f"{folder}/labels.pkl", "rb"))
+    
+    df      = pd.read_csv(labels)
+    signals = raw(data)
+    noise   = raw(noise)
+
+    reverse = {v:k for k, v in lab.items()}
+    
+    ranges = []
+    for _, row in df.iterrows():
+        ranges.append([row['starts'], row['stops']])
+
+    encoder = load_model(f'{folder}/base_encoder.h5')
+    clst    = pkl.load(open(f"{folder}/clusters_window.pkl", "rb"))
+        
+    dim = np.sum([c.n_clusters for c in clst.values()]) + 1
+    opt = SGD(learning_rate=0.01, momentum=0.9)
+    decoder = seq2seq_classifier(WINDOW_PARAM, encoder, LATENT, dim)
+    decoder.compile(optimizer=opt, loss='categorical_crossentropy', metrics=['accuracy'])
+    decoder.summary()
+    
+    TOTAL = len(predictions)
+    accuracies = []
+    for i in range(0, TOTAL * 5):
+        if i % 100 == 0 and i > 0:
+            print(f'Epoch: {i} {np.mean(accuracies[-100:])} ')
+        batch_x, batch_y, y = get_batch(signals, noise, inst, ranges, ids, predictions, dim, clst,\
+                                        FFT_LO, FFT_HI, FFT_WIN, FFT_STEP, T, batch = 3)    
+        loss, acc = decoder.train_on_batch(x=batch_x, y=batch_y)
+        accuracies.append(acc)
+    decoder.save(f'{folder}/decoder_nn.h5')
+    enc_filters(encoder, CONV_PARAM[-1], f'{folder}/decoder_nn_filters.png')
+    accuracies = np.convolve(accuracies, np.ones(TOTAL), 'valid') / TOTAL
+    plt.plot(moving_average(accuracies, TOTAL))
+    plt.xlabel('iter')
+    plt.ylabel('acc')
+    plt.savefig(f'{folder}/acc_seq2seq.png')
+    plt.close()
+    
+    
 def clustering(regions, wav_file, folder, l2_window = None): # 10):
     instances_file   = "{}/instances.pkl".format(folder)
     ids_file         = "{}/ids.pkl".format(folder)
@@ -753,6 +821,124 @@ def discrete_decoding(folder, audio, out_folder):
             ))
         f.write('</TABLE></BODY></HTML>')        
 
+
+def i2name(i, reverse):
+    if i == 0:
+        return 'NOISE'
+    else:
+        
+        c = i % 26
+        n = i // 26
+        l = reverse[n]
+        
+        if "DOWN" in l:
+            l = 'D'
+        elif "UP" in l:
+            l = 'U'
+        else:
+            l = l[0]
+            
+        return f'{l}{chr(97 + (c - 1))}'
+    
+
+def neural_decoding(folder, in_folder, out_folder, WIN=128):
+    decoder = load_model(f'{folder}/decoder_nn.h5')
+    lab     = pkl.load(open(f"{folder}/labels.pkl", "rb"))
+    reverse = {v:k for k, v in lab.items()}
+
+    images = []
+    strings = []
+    for f in os.listdir(in_folder):
+        if f.endswith('.wav'):        
+            x = raw(f'{in_folder}/{f}')
+            s = spectrogram(x, FFT_LO, FFT_HI, FFT_WIN, FFT_STEP)
+            if len(s) < 100000:
+                c = []
+                for i in range(0, len(s), 1000):
+                    x = s[i:i + 1000]
+                    a = x.reshape((1, len(x), D, 1))
+                    p = decoder.predict(a).reshape((a.shape[1],  4 * 26 + 1)) 
+                    if WIN is not None and len(p) > WIN:
+                        for i in range(0, len(p[0])):
+                            p[:, i] = np.convolve(p[:, i], np.ones(WIN) / WIN, mode='same')
+                    p[:, 0] *= 0.05
+                    local_c = p.argmax(axis=1)
+                    c += list(local_c)
+                if len([l for l in c if l > 0]) > 3:
+                    fig, ax = plt.subplots()
+                    fig.set_size_inches(len(s) / 100, len(s[0]) / 100)
+                    ax.imshow(1.0 - s.T,  cmap='gray')                  
+                    last = 0
+                    strg = []
+                    for i in range(1, len(c)):
+                        if c[i] != c[i - 1]:                       
+                            if c[i - 1] != 0:  
+                                strg.append(c[i - 1])
+                                start = last
+                                stop = i
+                                rect = patches.Rectangle((start, 0), stop - start,
+                                                 256, linewidth=1, edgecolor='r', facecolor=COLORS[c[i - 1]])
+                                ax.add_patch(rect)
+                                plt.text(start + (stop - start) // 2 , 30, i2name(c[i - 1], reverse), size=12)
+                            last = i
+                    if last != len(s) and c[-1] != 0:
+                        strg.append(c[i - 1])
+                        i = len(s) - 1
+                        start = last
+                        stop = i
+                        rect = patches.Rectangle((start, 0), stop - start,
+                                         256, linewidth=1, edgecolor='r', facecolor=COLORS[c[i - 1]])
+                        ax.add_patch(rect)
+                        plt.text(start + (stop - start) // 2 , 30, i2name(c[i - 1], reverse), size=12)
+                    p = f.replace('.wav', '.png')
+                    img_path = f'{out_folder}/{p}'
+                    plt.savefig(img_path)
+                    plt.close()
+                    strings.append(strg)
+                    images.append(p)
+
+    N = len(strings)
+    d = np.zeros((N, N))
+    for i in range(0, N):
+        for j in range(i, N):
+            l = levenstein(strings[i], strings[j])
+            d[i, j] = l
+            d[j, i] = l
+
+    j, di = merge_next(0, d, set([]))
+    closed  = set([j]) 
+
+    seq_sorted = []
+    img_sorted = []
+    while di < np.float('inf'):
+        j, di = merge_next(j, d, closed)
+        closed.add(j)
+        seq_sorted.append(" ".join([i2name(s, reverse) for s in strings[j]]))
+        img_sorted.append(images[j])
+        
+    with open(f'{out_folder}/sequenced_strings.html', 'w') as f:
+        f.write('<HTML><BODY><TABLE border="1">')
+        f.write("""
+        <TR>
+            <TH> String </TH>
+            <TH> Image </TH>
+        </TR>    
+        """)
+        for seq, img in zip(seq_sorted, img_sorted):
+            img = "/".join(img.split('/')[-2:])
+            f.write("""
+            <TR>
+                <TD> {} </TD>
+                <TD> 
+                   <div style="width: 1024px; height: 100px; overflow: auto">
+                     <img src="{}" height=100/> </div></TD>
+            </TR>    
+            """.format(
+                seq, img
+            ))
+        f.write('</TABLE></BODY> </HTML>')
+
+
         
 def join_wav(folder, out_wav, out_csv):
     raw_file = []
@@ -903,11 +1089,24 @@ if __name__ == '__main__':
         folder = sys.argv[5]
         out    = sys.argv[6]
         neardup(query_folder, labels, wav, folder, out)
+    elif len(sys.argv) > 5 and sys.argv[1] == 'train_sequential':
+        folder = sys.argv[2]
+        labels = sys.argv[3]        
+        data   = sys.argv[4]
+        noise  = sys.argv[5]        
+        train_sequential(folder, labels, data, noise)
+    elif len(sys.argv) > 4 and sys.argv[1] == 'decode_neural':
+        folder = sys.argv[2]
+        in_folder = sys.argv[3]
+        out_folder = sys.argv[4]
+        neural_decoding(folder, in_folder, out_folder)
     else:
         print(sys.argv)
         print("""
             Usage:
                 + train:      python pipeline.py train LABEL_FILE AUDIO_FILE OUT_FOLDER
+                + seq2seq:    python pipeline.py train_sequential FOLDER LAB WAV NOISE
+                              python pipeline.py decode_neural FOLDER IN OUT
                 + nearest:    python pipeline.py neardup QUERY_FOLDER LAB WAV FOLDER OUT_FOLDER
                 + join:       python pipeline.py join FOLDER_2_JOIN WAV_OUT CSV_OUT
                 + clustering: python pipeline.py clustering LABEL_FILE AUDIO_FILE OUT_FOLDER

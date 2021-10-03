@@ -279,7 +279,6 @@ def train(label_file, wav_file, out_folder="output", perc_test=0.33, retrain = T
 def train_sequential(folder, labels, data, noise):
     ids         = pkl.load(open(f"{folder}/ids.pkl", "rb"))
     inst        = pkl.load(open(f"{folder}/instances.pkl", "rb"))
-    clusters    = pkl.load(open(f"{folder}/clusters.pkl", "rb"))[K]
     predictions = [x for x in pkl.load(open(f"{folder}/predictions.pkl", "rb"))]
     lab         = pkl.load(open(f"{folder}/labels.pkl", "rb"))
     
@@ -293,22 +292,22 @@ def train_sequential(folder, labels, data, noise):
     for _, row in df.iterrows():
         ranges.append([row['starts'], row['stops']])
 
-    encoder = load_model(f'{results}/base_encoder.h5')
-    clst    = pkl.load(open(f"{results}/clusters_window.pkl", "rb"))
+    encoder = load_model(f'{folder}/base_encoder.h5')
+    clst    = pkl.load(open(f"{folder}/clusters_window.pkl", "rb"))
         
     dim = np.sum([c.n_clusters for c in clst.values()]) + 1
     opt = SGD(learning_rate=0.01, momentum=0.9)
-    decoder = seq2seq_classifier(WINDOW_PARAM, encoder, LATENT, )
+    decoder = seq2seq_classifier(WINDOW_PARAM, encoder, LATENT, dim)
     decoder.compile(optimizer=opt, loss='categorical_crossentropy', metrics=['accuracy'])
     decoder.summary()
     
-    TOTAL = len(filtered_predictions)
+    TOTAL = len(predictions)
     accuracies = []
     for i in range(0, TOTAL * 5):
         if i % 100 == 0 and i > 0:
             print(f'Epoch: {i} {np.mean(accuracies[-100:])} ')
-        batch_x, batch_y, y = get_batch(signals, noise, df, inst, ranges, ids, predictions, dim,\
-                                        FFT_LO, FFT_HI, FFT_WIN, FFT_STEP, batch = 3)    
+        batch_x, batch_y, y = get_batch(signals, noise, inst, ranges, ids, predictions, dim, clst,\
+                                        FFT_LO, FFT_HI, FFT_WIN, FFT_STEP, T, batch = 3)    
         loss, acc = decoder.train_on_batch(x=batch_x, y=batch_y)
         accuracies.append(acc)
     decoder.save(f'{folder}/decoder_nn.h5')
@@ -319,7 +318,6 @@ def train_sequential(folder, labels, data, noise):
     plt.ylabel('acc')
     plt.savefig(f'{folder}/acc_seq2seq.png')
     plt.close()
-
     
     
 def clustering(regions, wav_file, folder, l2_window = None): # 10):
@@ -973,11 +971,18 @@ if __name__ == '__main__':
         folder = sys.argv[5]
         out    = sys.argv[6]
         neardup(query_folder, labels, wav, folder, out)
+    elif len(sys.argv) > 5 and sys.argv[1] == 'train_sequential':
+        folder = sys.argv[2]
+        labels = sys.argv[3]        
+        data   = sys.argv[4]
+        noise  = sys.argv[5]        
+        train_sequential(folder, labels, data, noise)
     else:
         print(sys.argv)
         print("""
             Usage:
                 + train:      python pipeline.py train LABEL_FILE AUDIO_FILE OUT_FOLDER
+                + seq2seq:    python pipeline.py train_sequential FOLDER LAB WAV NOISE
                 + nearest:    python pipeline.py neardup QUERY_FOLDER LAB WAV FOLDER OUT_FOLDER
                 + join:       python pipeline.py join FOLDER_2_JOIN WAV_OUT CSV_OUT
                 + clustering: python pipeline.py clustering LABEL_FILE AUDIO_FILE OUT_FOLDER

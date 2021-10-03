@@ -1,6 +1,7 @@
 import numpy as np
 from lib_dolphin.audio import *
 
+
 MIN_LEN = 44100 // 10
 MAX_LEN = 44100 // 2
 
@@ -12,10 +13,10 @@ def draw_noise(length, noise):
     return sample
 
 
-def draw_signal(ranges, signals, filtered_ids, filtered_predictions, filtered_instances, WIN = None):    
-    i = np.random.randint(0, len(filtered_ids))
-    start, stop = ranges[filtered_ids[i]]
-    c = filtered_predictions[i]
+def draw_signal(ranges, signals, ids, predictions, instances, WIN = None):    
+    i = np.random.randint(0, len(ids))
+    start, stop = ranges[ids[i]]
+    c = predictions[i]
     
     if WIN is not None and len(c) > WIN:
         for d in range(0, len(c[0])):
@@ -28,16 +29,16 @@ def draw_signal(ranges, signals, filtered_ids, filtered_predictions, filtered_in
             ci = 0
             labeling.append(0)
         else:
-            ii = filtered_instances[i][j]
+            ii = instances[i][j]
             ci = 1 + (l * 26 + clst[l].predict(ii.reshape(1, ii.shape[0]))[0])
             labeling.append(ci)
     return signals[start:stop], labeling
 
 
-def combined(length, df, signals, noise, ranges, filtered_ids, filtered_predictions, filtered_instances, n = 10):
+def combined(length, signals, noise, ranges, ids, predictions, instances, n = 10):
     noise = np.concatenate([draw_noise(length, noise) for i in range(n)])
     N = len(noise)        
-    signal, c = draw_signal(ranges, signals, filtered_ids, filtered_predictions, filtered_instances)
+    signal, c = draw_signal(ranges, signals, ids, predictions, instances)
     n = len(signal)
     
     if N-n > n:
@@ -71,13 +72,13 @@ def labels(start, stop, length, label):
     return y
 
 
-def get_batch(signals, noise, df, filtered_instances, ranges, filtered_ids, filtered_predictions, n_clusters, fft_lo, fft_hi, win, step, batch = 1):
+def get_batch(signals, noise, instances, ranges, ids, predictions, n_clusters, fft_lo, fft_hi, win, step, batch = 1):
     batch_x = []
     batch_y = []
     y_discrete = []
     length = np.random.randint(MIN_LEN, MAX_LEN)
     for i in range(0, batch):
-        x, start, stop, c = combined(length, df, signals, noise, ranges, filtered_ids, filtered_predictions, filtered_instances)
+        x, start, stop, c = combined(length, df, signals, noise, ranges, ids, predictions, instances)
         spec              = spectrogram(x, fft_lo, fft_hi, win, step)
         
         N = length

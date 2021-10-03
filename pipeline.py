@@ -13,11 +13,13 @@ from lib_dolphin.features import *
 from lib_dolphin.eval import *
 from lib_dolphin.dtw import *
 from lib_dolphin.htk_helpers import *
+from lib_dolphin.sequential import *
 
 from collections import namedtuple, Counter
 
 from scipy.io.wavfile import read, write
 from tensorflow.keras.models import load_model
+from tensorflow.keras.optimizers import *
 from sklearn.cluster import AgglomerativeClustering, KMeans
 
 
@@ -272,8 +274,54 @@ def train(label_file, wav_file, out_folder="output", perc_test=0.33, retrain = T
         for c, audio in clusters.items():
             path = "{}/{}_{}.wav".format(out_folder, l, c)
             write(path, 44100, np.concatenate(audio))
+
             
-            
+def train_sequential(folder, labels, data, noise):
+    ids         = pkl.load(open(f"{folder}/ids.pkl", "rb"))
+    inst        = pkl.load(open(f"{folder}/instances.pkl", "rb"))
+    clusters    = pkl.load(open(f"{folder}/clusters.pkl", "rb"))[K]
+    predictions = [x for x in pkl.load(open(f"{folder}/predictions.pkl", "rb"))]
+    lab         = pkl.load(open(f"{folder}/labels.pkl", "rb"))
+    
+    df      = pd.read_csv(labels)
+    signals = raw(data)
+    noise   = raw(noise)
+
+    reverse = {v:k for k, v in lab.items()}
+    
+    ranges = []
+    for _, row in df.iterrows():
+        ranges.append([row['starts'], row['stops']])
+
+    encoder = load_model(f'{results}/base_encoder.h5')
+    clst    = pkl.load(open(f"{results}/clusters_window.pkl", "rb"))
+        
+    dim = np.sum([c.n_clusters for c in clst.values()]) + 1
+    opt = SGD(learning_rate=0.01, momentum=0.9)
+    decoder = seq2seq_classifier(WINDOW_PARAM, encoder, LATENT, )
+    decoder.compile(optimizer=opt, loss='categorical_crossentropy', metrics=['accuracy'])
+    decoder.summary()
+    
+    TOTAL = len(filtered_predictions)
+    accuracies = []
+    for i in range(0, TOTAL * 5):
+        if i % 100 == 0 and i > 0:
+            print(f'Epoch: {i} {np.mean(accuracies[-100:])} ')
+        batch_x, batch_y, y = get_batch(signals, noise, df, inst, ranges, ids, predictions, dim,\
+                                        FFT_LO, FFT_HI, FFT_WIN, FFT_STEP, batch = 3)    
+        loss, acc = decoder.train_on_batch(x=batch_x, y=batch_y)
+        accuracies.append(acc)
+    decoder.save(f'{folder}/decoder_nn.h5')
+    enc_filters(encoder, CONV_PARAM[-1], f'{folder}/decoder_nn_filters.png')
+    accuracies = np.convolve(accuracies, np.ones(TOTAL), 'valid') / TOTAL
+    plt.plot(moving_average(accuracies, TOTAL))
+    plt.xlabel('iter')
+    plt.ylabel('acc')
+    plt.savefig(f'{folder}/acc_seq2seq.png')
+    plt.close()
+
+    
+    
 def clustering(regions, wav_file, folder, l2_window = None): # 10):
     instances_file   = "{}/instances.pkl".format(folder)
     ids_file         = "{}/ids.pkl".format(folder)

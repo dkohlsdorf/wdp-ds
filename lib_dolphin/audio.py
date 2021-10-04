@@ -40,6 +40,7 @@ def resolve_window(sample_raw, window, step, fwd = True):
     else:
         return int(sample_raw * step + window)
 
+    
 @jit
 def windowing(region, window):
     N, D = region.shape

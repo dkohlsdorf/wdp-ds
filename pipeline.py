@@ -966,7 +966,6 @@ def join_wav(folder, out_wav, out_csv):
 def neardup(query_folder, labels, wav, folder, out, k = 10, percentile=50, band=0.01, max_len_diff=5):    
     ids         = pkl.load(open(f"{folder}/ids.pkl", "rb"))
     inst        = pkl.load(open(f"{folder}/instances.pkl", "rb"))
-    d           = pkl.load(open(f"{folder}/distances.pkl", "rb"))
 
     df      = pd.read_csv(labels)
     signals = raw(wav)

@@ -30,11 +30,6 @@ class DensityBasedDiscovery:
 
     def fit(self, X):
         densities, neighbors = knn(X, X, self.k)
-
-        plt.plot(sorted(densities))
-        plt.savefig('dense.png')
-        plt.close()
-
         max_densities = []
         for i, density in enumerate(densities):
             max_density = True

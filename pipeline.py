@@ -14,14 +14,13 @@ from lib_dolphin.eval import *
 from lib_dolphin.dtw import *
 from lib_dolphin.htk_helpers import *
 from lib_dolphin.sequential import *
-from lib_dolphin.density import *
 
 from collections import namedtuple, Counter
 
 from scipy.io.wavfile import read, write
 from tensorflow.keras.models import load_model
 from tensorflow.keras.optimizers import *
-from sklearn.cluster import AgglomerativeClustering, KMeans
+from sklearn.cluster import AgglomerativeClustering, KMeans, MeanShift
 
 
 from subprocess import check_output
@@ -43,11 +42,8 @@ BATCH        = 25
 EPOCHS       = 10
 
 
-def cluster_model(data, kmeans=False):
-    if kmeans:
-        km = KMeans(n_clusters=26)
-    else:
-        km = DensityBasedDiscovery(k=128)       
+def cluster_model(data, k=8):
+    km = KMeans(n_clusters=k)
     km.fit(data)
     return km
 
@@ -253,21 +249,20 @@ def train(label_file, wav_file, out_folder="output", perc_test=0.33, retrain = F
     by_label = dict([(k, enc.predict(np.stack(v), batch_size=10)) for k, v in by_label.items()])
     clusters = dict([(k, cluster_model(v)) for k, v in by_label.items() if k != label_dict['NOISE']])
     pkl.dump(clusters, open('{}/clusters_window.pkl'.format(out_folder),'wb'))
-    print(f'Done Clustering: {[(k, len(v.centroids)) for k, v in clusters.items()]}')
+    print(f'Done Clustering: {[(k, v.cluster_centers_.shape) for k, v in clusters.items()]}')
     
     b = np.stack(instances)
     h = enc.predict(b, batch_size=10)
     x = model.predict(b, batch_size=10)
     extracted = {}
     for n, i in enumerate(x):
-        if n % 100 == 0:
+        if n % 1000 == 0:
             print(f"{n} of {len(x)}")
         li = int(np.argmax(i))
         l = reverse[li]
         if l != 'NOISE':
             hn      = h[n].reshape(1, LATENT)
             pred_hn = clusters[li].predict(hn)
-            print(pred_hn)
             c = int(pred_hn[0])    
             if l not in extracted:
                 extracted[l] = {}

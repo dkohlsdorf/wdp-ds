@@ -14,6 +14,7 @@ from lib_dolphin.eval import *
 from lib_dolphin.dtw import *
 from lib_dolphin.htk_helpers import *
 from lib_dolphin.sequential import *
+from lib_dolphin.density import *
 
 from collections import namedtuple, Counter
 
@@ -42,8 +43,11 @@ BATCH        = 25
 EPOCHS       = 10
 
 
-def cluster_model(data):
-    km = KMeans(n_clusters=26)
+def cluster_model(data, kmeans=False):
+    if kmeans:
+        km = KMeans(n_clusters=26)
+    else:
+        km = DensityBasedDiscovery(k=128)       
     km.fit(data)
     return km
 
@@ -122,7 +126,7 @@ def neighbours_encoder(encoder, x_train, y_train, x_test, y_test, label_dict, na
     return accuracy
 
     
-def train(label_file, wav_file, out_folder="output", perc_test=0.33, retrain = True, super_epochs=3, relabel=False, resample=10000):
+def train(label_file, wav_file, out_folder="output", perc_test=0.33, retrain = False, super_epochs=3, relabel=False, resample=10000):
     instances, ra, labels, label_dict = dataset_supervised_windows(
         label_file, wav_file, lo=FFT_LO, hi=FFT_HI, win=FFT_WIN, step=FFT_STEP, raw_size=RAW_AUDIO)    
     reverse = dict([(v, k) for k, v in label_dict.items()])
@@ -249,16 +253,22 @@ def train(label_file, wav_file, out_folder="output", perc_test=0.33, retrain = T
     by_label = dict([(k, enc.predict(np.stack(v), batch_size=10)) for k, v in by_label.items()])
     clusters = dict([(k, cluster_model(v)) for k, v in by_label.items() if k != label_dict['NOISE']])
     pkl.dump(clusters, open('{}/clusters_window.pkl'.format(out_folder),'wb'))
+    print(f'Done Clustering: {[(k, len(v.centroids)) for k, v in clusters.items()]}')
     
     b = np.stack(instances)
     h = enc.predict(b, batch_size=10)
     x = model.predict(b, batch_size=10)
     extracted = {}
     for n, i in enumerate(x):
+        if n % 100 == 0:
+            print(f"{n} of {len(x)}")
         li = int(np.argmax(i))
         l = reverse[li]
         if l != 'NOISE':
-            c = int(clusters[li].predict(h[n].reshape(1, LATENT))[0])    
+            hn      = h[n].reshape(1, LATENT)
+            pred_hn = clusters[li].predict(hn)
+            print(pred_hn)
+            c = int(pred_hn[0])    
             if l not in extracted:
                 extracted[l] = {}
             if c not in extracted[l]:
@@ -937,7 +947,6 @@ def neural_decoding(folder, in_folder, out_folder, WIN=128):
                 seq, img
             ))
         f.write('</TABLE></BODY> </HTML>')
-
 
         
 def join_wav(folder, out_wav, out_csv):

@@ -8,18 +8,20 @@ def distances(X, Y):
 
 
 def knn(X, Y, k):
-    d = distances(X, Y)
+    d = distances(X, Y)    
     n = d.shape[0]
     densities = []
     neighbors = []
     for i, x in enumerate(d):
         x = [(j, dist) for j, dist in enumerate(x)]
-        x = sorted(x, key=lambda x: x[-1])[:self.k]                
-        x_density = 1. / (x[-2][0] + 1e-8)
+        x = sorted(x, key=lambda x: x[-1])[:k]                
+        x_density = 1. / (x[-1][1] + 1e-8)
         densities.append(x_density)
         neighbors.append([i for i, _ in x])
     return densities, neighbors
 
+
+import matplotlib.pyplot as plt
         
 class DensityBasedDiscovery:
 
@@ -28,6 +30,11 @@ class DensityBasedDiscovery:
 
     def fit(self, X):
         densities, neighbors = knn(X, X, self.k)
+
+        plt.plot(sorted(densities))
+        plt.savefig('dense.png')
+        plt.close()
+
         max_densities = []
         for i, density in enumerate(densities):
             max_density = True
@@ -42,7 +49,7 @@ class DensityBasedDiscovery:
 
     def predict(self, X):
         _, neighbors = knn(X, self.centroids, 1)
-        return [nn[0] for nn in neighbors]
+        return [[nn[0]] for nn in neighbors]
 
         
 

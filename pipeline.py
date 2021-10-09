@@ -18,10 +18,11 @@ from lib_dolphin.sequential import *
 from collections import namedtuple, Counter
 
 from scipy.io.wavfile import read, write
+from scipy.spatial import distance
 from tensorflow.keras.models import load_model
 from tensorflow.keras.optimizers import *
 from sklearn.cluster import AgglomerativeClustering, KMeans, MeanShift
-
+from sklearn.metrics import silhouette_score
 
 from subprocess import check_output
 
@@ -42,10 +43,44 @@ BATCH        = 25
 EPOCHS       = 10
 
 
-def cluster_model(data, k=8):
-    km = KMeans(n_clusters=k)
-    km.fit(data)
-    return km
+def compute_bic(kmeans, X):
+    centers = [kmeans.cluster_centers_]
+    labels  = kmeans.labels_
+    m = kmeans.n_clusters
+    n = np.bincount(labels)
+    N, d = X.shape    
+    cl_var = (1.0 / (N - m) / d) * sum([sum(distance.cdist(X[np.where(labels == i)], [centers[0][i]], 
+             'euclidean')**2) for i in range(m)])
+    const_term = 0.5 * m * np.log(N) * (d+1)
+    BIC = np.sum([n[i] * np.log(n[i]) -
+               n[i] * np.log(N) -
+             ((n[i] * d) / 2) * np.log(2*np.pi*cl_var) -
+             ((n[i] - 1) * d/ 2) for i in range(m)]) - const_term
+    return(BIC)
+
+
+def score(kmeans, X, method='silhouette'):
+    if method == 'BIC':
+        return compute_bic(kmeans, X)
+    else:
+        cluster_labels = kmeans.predict(X)
+        return silhouette_score(X, cluster_labels)
+    
+    
+def cluster_model(data, min_k=2, max_k=128):    
+    max_bic  = float('-inf')
+    max_km   = None
+    chosen_k = -1
+    for k in range(min_k, max_k):
+        km = KMeans(n_clusters=k)
+        km.fit(data)
+        bic = score(km, data)
+        if bic > max_bic:
+            max_bic = bic
+            max_km  = km
+            chosen_k   = k
+    print(f"Pick: {chosen_k} clusters with score {max_bic}")
+    return max_km
 
 
 def triplets(by_label, n = 50000):

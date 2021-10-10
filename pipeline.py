@@ -23,6 +23,7 @@ from tensorflow.keras.models import load_model
 from tensorflow.keras.optimizers import *
 from sklearn.cluster import AgglomerativeClustering, KMeans, MeanShift
 from sklearn.metrics import silhouette_score
+from kneed import KneeLocator
 
 from subprocess import check_output
 

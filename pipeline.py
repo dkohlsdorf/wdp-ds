@@ -58,29 +58,24 @@ def compute_bic(kmeans, X):
              ((n[i] - 1) * d/ 2) for i in range(m)]) - const_term
     return(BIC)
 
-
-def score(kmeans, X, method='silhouette'):
-    if method == 'BIC':
-        return compute_bic(kmeans, X)
-    else:
-        cluster_labels = kmeans.predict(X)
-        return silhouette_score(X, cluster_labels)
     
-    
-def cluster_model(data, min_k=2, max_k=128):    
-    max_bic  = float('-inf')
-    max_km   = None
-    chosen_k = -1
+def cluster_model(data, out_folder, label, min_k=2, max_k=26): 
+    scores = []
+    models = []
     for k in range(min_k, max_k):
         km = KMeans(n_clusters=k)
         km.fit(data)
-        bic = score(km, data)
-        if bic > max_bic:
-            max_bic = bic
-            max_km  = km
-            chosen_k   = k
-    print(f"Pick: {chosen_k} clusters with score {max_bic}")
-    return max_km
+        bic = compute_bic(km, data)
+        scores.append(bic)
+        models.append(km)
+    kn = KneeLocator(np.arange(len(scores)), scores, curve='concave', direction='increasing')
+    model = models[kn.knee]
+    plt.plot([km.n_clusters for km in models], scores)
+    plt.vlines(model.n_clusters, plt.ylim()[0], plt.ylim()[1], linestyles='dashed')
+    plt.title(f'Knee at {model.n_clusters}')
+    plt.savefig(f'{out_folder}/{label}_cluster_knee.png')
+    plt.close()
+    return model
 
 
 def triplets(by_label, n = 50000):
@@ -279,10 +274,9 @@ def train(label_file, wav_file, out_folder="output", perc_test=0.33, retrain = F
     else:
         model = load_model('{}/supervised.h5'.format(out_folder))
         enc   = load_model('{}/encoder.h5'.format(out_folder))    
-
-        
+      
     by_label = dict([(k, enc.predict(np.stack(v), batch_size=10)) for k, v in by_label.items()])
-    clusters = dict([(k, cluster_model(v)) for k, v in by_label.items() if k != label_dict['NOISE']])
+    clusters = dict([(k, cluster_model(v, out_folder, reverse[k])) for k, v in by_label.items() if k != label_dict['NOISE']])
     pkl.dump(clusters, open('{}/clusters_window.pkl'.format(out_folder),'wb'))
     print(f'Done Clustering: {[(k, v.cluster_centers_.shape) for k, v in clusters.items()]}')
     

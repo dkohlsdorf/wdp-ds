@@ -21,8 +21,7 @@ from scipy.io.wavfile import read, write
 from scipy.spatial import distance
 from tensorflow.keras.models import load_model
 from tensorflow.keras.optimizers import *
-from sklearn.cluster import AgglomerativeClustering, KMeans, MeanShift
-from sklearn.metrics import silhouette_score
+from sklearn.cluster import AgglomerativeClustering, KMeans
 from kneed import KneeLocator
 
 from subprocess import check_output

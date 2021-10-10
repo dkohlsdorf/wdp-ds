@@ -19,6 +19,7 @@ and communicate the results with domain experts.
 + sklearn
 + tensorflow 2.0
 + numpy / scipy
-+ numba
++ numba 
 + matplotlib
-+ htk [Optional]
++ [htk](https://htk.eng.cam.ac.uk/)
++ [kneed](https://pypi.org/project/kneed/)

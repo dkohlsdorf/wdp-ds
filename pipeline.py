@@ -18,10 +18,11 @@ from lib_dolphin.sequential import *
 from collections import namedtuple, Counter
 
 from scipy.io.wavfile import read, write
+from scipy.spatial import distance
 from tensorflow.keras.models import load_model
 from tensorflow.keras.optimizers import *
 from sklearn.cluster import AgglomerativeClustering, KMeans
-
+from kneed import KneeLocator
 
 from subprocess import check_output
 
@@ -42,10 +43,39 @@ BATCH        = 25
 EPOCHS       = 10
 
 
-def cluster_model(data):
-    km = KMeans(n_clusters=26)
-    km.fit(data)
-    return km
+def compute_bic(kmeans, X):
+    centers = [kmeans.cluster_centers_]
+    labels  = kmeans.labels_
+    m = kmeans.n_clusters
+    n = np.bincount(labels)
+    N, d = X.shape    
+    cl_var = (1.0 / (N - m) / d) * sum([sum(distance.cdist(X[np.where(labels == i)], [centers[0][i]], 
+             'euclidean')**2) for i in range(m)])
+    const_term = 0.5 * m * np.log(N) * (d+1)
+    BIC = np.sum([n[i] * np.log(n[i]) -
+               n[i] * np.log(N) -
+             ((n[i] * d) / 2) * np.log(2*np.pi*cl_var) -
+             ((n[i] - 1) * d/ 2) for i in range(m)]) - const_term
+    return(BIC)
+
+    
+def cluster_model(data, out_folder, label, min_k=2, max_k=26): 
+    scores = []
+    models = []
+    for k in range(min_k, max_k):
+        km = KMeans(n_clusters=k)
+        km.fit(data)
+        bic = compute_bic(km, data)
+        scores.append(bic)
+        models.append(km)
+    kn = KneeLocator(np.arange(len(scores)), scores, curve='concave', direction='increasing')
+    model = models[kn.knee]
+    plt.plot([km.n_clusters for km in models], scores)
+    plt.vlines(model.n_clusters, plt.ylim()[0], plt.ylim()[1], linestyles='dashed')
+    plt.title(f'Knee at {model.n_clusters}')
+    plt.savefig(f'{out_folder}/{label}_cluster_knee.png')
+    plt.close()
+    return model
 
 
 def triplets(by_label, n = 50000):
@@ -122,7 +152,7 @@ def neighbours_encoder(encoder, x_train, y_train, x_test, y_test, label_dict, na
     return accuracy
 
     
-def train(label_file, wav_file, out_folder="output", perc_test=0.33, retrain = True, super_epochs=3, relabel=False, resample=10000):
+def train(label_file, wav_file, out_folder="output", perc_test=0.33, retrain = False, super_epochs=3, relabel=False, resample=10000):
     instances, ra, labels, label_dict = dataset_supervised_windows(
         label_file, wav_file, lo=FFT_LO, hi=FFT_HI, win=FFT_WIN, step=FFT_STEP, raw_size=RAW_AUDIO)    
     reverse = dict([(v, k) for k, v in label_dict.items()])
@@ -244,21 +274,25 @@ def train(label_file, wav_file, out_folder="output", perc_test=0.33, retrain = T
     else:
         model = load_model('{}/supervised.h5'.format(out_folder))
         enc   = load_model('{}/encoder.h5'.format(out_folder))    
-
-        
+      
     by_label = dict([(k, enc.predict(np.stack(v), batch_size=10)) for k, v in by_label.items()])
-    clusters = dict([(k, cluster_model(v)) for k, v in by_label.items() if k != label_dict['NOISE']])
+    clusters = dict([(k, cluster_model(v, out_folder, reverse[k])) for k, v in by_label.items() if k != label_dict['NOISE']])
     pkl.dump(clusters, open('{}/clusters_window.pkl'.format(out_folder),'wb'))
+    print(f'Done Clustering: {[(k, v.cluster_centers_.shape) for k, v in clusters.items()]}')
     
     b = np.stack(instances)
     h = enc.predict(b, batch_size=10)
     x = model.predict(b, batch_size=10)
     extracted = {}
     for n, i in enumerate(x):
+        if n % 1000 == 0:
+            print(f"{n} of {len(x)}")
         li = int(np.argmax(i))
         l = reverse[li]
         if l != 'NOISE':
-            c = int(clusters[li].predict(h[n].reshape(1, LATENT))[0])    
+            hn      = h[n].reshape(1, LATENT)
+            pred_hn = clusters[li].predict(hn)
+            c = int(pred_hn[0])    
             if l not in extracted:
                 extracted[l] = {}
             if c not in extracted[l]:
@@ -937,7 +971,6 @@ def neural_decoding(folder, in_folder, out_folder, WIN=128):
                 seq, img
             ))
         f.write('</TABLE></BODY> </HTML>')
-
 
         
 def join_wav(folder, out_wav, out_csv):

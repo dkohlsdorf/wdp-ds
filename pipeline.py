@@ -326,9 +326,11 @@ def train_sequential(folder, labels, data, noise):
     for _, row in df.iterrows():
         ranges.append([row['starts'], row['stops']])
 
-    encoder = load_model(f'{folder}/base_encoder.h5')
-    clst    = pkl.load(open(f"{folder}/clusters_window.pkl", "rb"))
-        
+    encoder       = load_model(f'{folder}/base_encoder.h5')
+    clst          = pkl.load(open(f"{folder}/clusters_window.pkl", "rb"))
+    label_mapping = LabelMapping.mapping(clst)
+    pkl.dump(label_mapping, open(f'{folder}/label_mapping.pkl', 'wb'))
+
     dim = np.sum([c.n_clusters for c in clst.values()]) + 1
     opt = SGD(learning_rate=0.01, momentum=0.9)
     decoder = seq2seq_classifier(WINDOW_PARAM, encoder, LATENT, dim)
@@ -340,7 +342,7 @@ def train_sequential(folder, labels, data, noise):
     for i in range(0, TOTAL * 5):
         if i % 100 == 0 and i > 0:
             print(f'Epoch: {i} {np.mean(accuracies[-100:])} ')
-        batch_x, batch_y, y = get_batch(signals, noise, inst, ranges, ids, predictions, dim, clst,\
+        batch_x, batch_y, y = get_batch(signals, noise, inst, ranges, ids, predictions, dim, clst, label_mapping\
                                         FFT_LO, FFT_HI, FFT_WIN, FFT_STEP, T, batch = 3)    
         loss, acc = decoder.train_on_batch(x=batch_x, y=batch_y)
         accuracies.append(acc)
@@ -856,15 +858,12 @@ def discrete_decoding(folder, audio, out_folder):
         f.write('</TABLE></BODY></HTML>')        
 
 
-def i2name(i, reverse):
+def i2name(i, reverse, label_mapping):    
     if i == 0:
         return 'NOISE'
     else:
-        
-        c = i % 26
-        n = i // 26
-        l = reverse[n]
-        
+        c, n = label_mapping.bwd(i)
+        l = reverse[n]        
         if "DOWN" in l:
             l = 'D'
         elif "UP" in l:
@@ -879,6 +878,7 @@ def neural_decoding(folder, in_folder, out_folder, WIN=128):
     decoder = load_model(f'{folder}/decoder_nn.h5')
     lab     = pkl.load(open(f"{folder}/labels.pkl", "rb"))
     reverse = {v:k for k, v in lab.items()}
+    label_mapping = pkl.load(open(f'{folder}/label_mapping.pkl', 'rb'))
 
     images = []
     strings = []
@@ -891,7 +891,7 @@ def neural_decoding(folder, in_folder, out_folder, WIN=128):
                 for i in range(0, len(s), 1000):
                     x = s[i:i + 1000]
                     a = x.reshape((1, len(x), D, 1))
-                    p = decoder.predict(a).reshape((a.shape[1],  4 * 26 + 1)) 
+                    p = decoder.predict(a).reshape((a.shape[1], label_mapping.n + 1)) 
                     if WIN is not None and len(p) > WIN:
                         for i in range(0, len(p[0])):
                             p[:, i] = np.convolve(p[:, i], np.ones(WIN) / WIN, mode='same')
@@ -913,7 +913,7 @@ def neural_decoding(folder, in_folder, out_folder, WIN=128):
                                 rect = patches.Rectangle((start, 0), stop - start,
                                                  256, linewidth=1, edgecolor='r', facecolor=COLORS[c[i - 1]])
                                 ax.add_patch(rect)
-                                plt.text(start + (stop - start) // 2 , 30, i2name(c[i - 1], reverse), size=12)
+                                plt.text(start + (stop - start) // 2 , 30, i2name(c[i - 1], reverse, label_mapping), size=12)
                             last = i
                     if last != len(s) and c[-1] != 0:
                         strg.append(c[i - 1])
@@ -923,7 +923,7 @@ def neural_decoding(folder, in_folder, out_folder, WIN=128):
                         rect = patches.Rectangle((start, 0), stop - start,
                                          256, linewidth=1, edgecolor='r', facecolor=COLORS[c[i - 1]])
                         ax.add_patch(rect)
-                        plt.text(start + (stop - start) // 2 , 30, i2name(c[i - 1], reverse), size=12)
+                        plt.text(start + (stop - start) // 2 , 30, i2name(c[i - 1], reverse, label_mapping), size=12)
                     p = f.replace('.wav', '.png')
                     img_path = f'{out_folder}/{p}'
                     plt.savefig(img_path)
@@ -947,7 +947,7 @@ def neural_decoding(folder, in_folder, out_folder, WIN=128):
     while di < np.float('inf'):
         j, di = merge_next(j, d, closed)
         closed.add(j)
-        seq_sorted.append(" ".join([i2name(s, reverse) for s in strings[j]]))
+        seq_sorted.append(" ".join([i2name(s, reverse, label_mapping) for s in strings[j]]))
         img_sorted.append(images[j])
         
     with open(f'{out_folder}/sequenced_strings.html', 'w') as f:

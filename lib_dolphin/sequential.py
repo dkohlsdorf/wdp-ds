@@ -13,11 +13,10 @@ class LabelMapping(namedtuple('LabelMapping', 'prefix')):
     
     @classmethod
     def mapping(cls, clusters):
-        N = len(clst)
+        N = len(clusters)
         sizes = np.zeros(N + 1, dtype=np.int32)
-        for i, kmeans in clst.items():
+        for i, kmeans in clusters.items():
             sizes[i + 1] = kmeans.n_clusters
-        print(sizes)
         prefixes = np.cumsum(sizes)    
         return LabelMapping(prefixes)
     

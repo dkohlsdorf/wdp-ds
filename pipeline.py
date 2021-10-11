@@ -342,7 +342,7 @@ def train_sequential(folder, labels, data, noise):
     for i in range(0, TOTAL * 5):
         if i % 100 == 0 and i > 0:
             print(f'Epoch: {i} {np.mean(accuracies[-100:])} ')
-        batch_x, batch_y, y = get_batch(signals, noise, inst, ranges, ids, predictions, dim, clst, label_mapping\
+        batch_x, batch_y, y = get_batch(signals, noise, inst, ranges, ids, predictions, dim, clst, label_mapping,\
                                         FFT_LO, FFT_HI, FFT_WIN, FFT_STEP, T, batch = 3)    
         loss, acc = decoder.train_on_batch(x=batch_x, y=batch_y)
         accuracies.append(acc)

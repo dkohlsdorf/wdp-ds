@@ -309,7 +309,11 @@ def train(label_file, wav_file, out_folder="output", perc_test=0.33, retrain=Tru
             path = "{}/{}_{}.wav".format(out_folder, l, c)
             write(path, 44100, np.concatenate(audio))
 
-            
+
+def moving_average(x, w):
+    return np.convolve(x, np.ones(w), 'valid') / w
+
+
 def train_sequential(folder, labels, data, noise):
     ids         = pkl.load(open(f"{folder}/ids.pkl", "rb"))
     inst        = pkl.load(open(f"{folder}/instances.pkl", "rb"))
@@ -863,7 +867,7 @@ def i2name(i, reverse, label_mapping):
         return 'NOISE'
     else:
         c, n = label_mapping.bwd(i)
-        l = reverse[n]        
+        l = reverse[c]        
         if "DOWN" in l:
             l = 'D'
         elif "UP" in l:
@@ -871,10 +875,10 @@ def i2name(i, reverse, label_mapping):
         else:
             l = l[0]
             
-        return f'{l}{chr(97 + (c - 1))}'
+        return f'{l}{chr(97 + (n - 1))}'
     
 
-def neural_decoding(folder, in_folder, out_folder, WIN=128):
+def neural_decoding(folder, in_folder, out_folder, noise_scaler=0.5, WIN=128):
     decoder = load_model(f'{folder}/decoder_nn.h5')
     lab     = pkl.load(open(f"{folder}/labels.pkl", "rb"))
     reverse = {v:k for k, v in lab.items()}
@@ -895,7 +899,7 @@ def neural_decoding(folder, in_folder, out_folder, WIN=128):
                     if WIN is not None and len(p) > WIN:
                         for i in range(0, len(p[0])):
                             p[:, i] = np.convolve(p[:, i], np.ones(WIN) / WIN, mode='same')
-                    p[:, 0] *= 0.05
+                    p[:, 0] *= noise_scaler
                     local_c = p.argmax(axis=1)
                     c += list(local_c)
                 if len([l for l in c if l > 0]) > 3:

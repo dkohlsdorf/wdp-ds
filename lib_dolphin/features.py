@@ -13,14 +13,18 @@ from tensorflow.keras.regularizers import *
 
 
 def encoder(in_shape, latent_dim, conv_params):
-    kernel_size = (conv_params[0], conv_params[1])
-    n_filters = conv_params[2]
     dft_dim = in_shape[1]
     shape = (None, dft_dim, 1)
     inp = Input(shape)
-    loc = Conv2D(n_filters, strides = (1, 1), kernel_size=kernel_size, activation='relu', padding='same')(inp) 
-    loc = MaxPool2D(pool_size=(1, dft_dim))(loc) 
-    loc = Reshape((-1, n_filters))(loc) 
+
+    convolutions = []
+    for w, h, n_filters in conv_params:
+        kernel_size = (w, h)
+        loc = Conv2D(n_filters, strides = (1, 1), kernel_size=kernel_size, activation='relu', padding='same')(inp) 
+        loc = MaxPool2D(pool_size=(1, dft_dim))(loc)
+        loc = Reshape((-1, n_filters))(loc) 
+        convolutions.append(loc)  
+    loc = Concatenate(axis=2)(convolutions)
     x   = Bidirectional(LSTM(latent_dim, return_sequences=True))(loc)
     return Model(inputs =[inp], outputs=[x])
 
@@ -51,21 +55,25 @@ def window_encoder(in_shape, encoder, latent_dim):
 
 
 def decoder(length, latent_dim, output_dim, conv_params):
-    kernel_size = (conv_params[0], conv_params[1])
-    n_filters = conv_params[2]
     inp = Input((latent_dim))
     x   = Reshape((1, latent_dim))(inp)
     x   = ZeroPadding1D((0, length - 1))(x)
     x   = LSTM(latent_dim, return_sequences=True)(x)    
     x   = Bidirectional(LSTM(output_dim // 2, return_sequences=True))(x)
     x   = Reshape((length, output_dim, 1))(x)
-    x   = Conv2DTranspose(n_filters, kernel_size=kernel_size, activation='relu', padding='same')(x) 
+    convolutions = []
+    for w, h, n_filters in conv_params:
+        kernel_size = (w, h)
+        loc = Conv2DTranspose(n_filters, strides = (1, 1), kernel_size=kernel_size, activation='relu', padding='same')(x) 
+        convolutions.append(loc)
+    x   = Concatenate(axis=3)(convolutions)
     x   = Conv2DTranspose(1, kernel_size=(1, 1), activation='linear', padding='same')(x) 
     return Model(inputs = [inp], outputs = [x])
 
 
 def auto_encoder(in_shape, encoder, latent_dim, conv_params):
     dec = decoder(in_shape[0], latent_dim, in_shape[1], conv_params)
+    dec.summary()
     inp = Input(in_shape)
     x   = encoder(inp) 
     x   = dec(x) 

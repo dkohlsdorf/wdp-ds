@@ -146,12 +146,21 @@ def visualize_dataset(instances, output):
     plt.clf()
 
     
-def enc_filters(enc, n_filters, output):
-    plt.figure(figsize=(50, 50))
-    w = enc.weights[0].numpy()
-    for i in range(w.shape[-1]):
-        weight = w[:, :, 0, i]
-        plt.subplot(n_filters / 8, 8, i + 1)
-        plt.imshow(weight.T, cmap='gray')
+def enc_filters(enc, n_filters, n_banks, output):    
+    d = 1
+    plt.figure(figsize=(10, 10))
+    for s in range(0, 2 * n_banks, 2):
+        w = enc.weights[s].numpy()
+        for i in range(w.shape[-1]):
+            weight = w[:, :, 0, i]
+            x, y = weight.shape
+            plt.subplot(n_filters / 8, 8, d)
+            if x > y:
+                fig = plt.imshow(weight.T, cmap='gray')
+            else: 
+                fig = plt.imshow(weight, cmap='gray')
+            fig.axes.get_xaxis().set_visible(False)
+            fig.axes.get_yaxis().set_visible(False)
+            d += 1
     plt.savefig(output)
     plt.clf()

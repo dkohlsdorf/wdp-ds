@@ -74,6 +74,11 @@ def compute_bic(kmeans, X):
 
     
 def cluster_model(data, out_folder, label, min_k=2, max_k=26): 
+    if max_k is None:
+        km = KMeans(n_clusters=min_k)
+        km.fit(data)
+        return km
+    
     scores = []
     models = []
     for k in range(min_k, max_k):
@@ -166,7 +171,7 @@ def neighbours_encoder(encoder, x_train, y_train, x_test, y_test, label_dict, na
     return accuracy
 
     
-def train(label_file, wav_file, out_folder="output", perc_test=0.33, retrain=True, super_epochs=3, relabel=False, resample=10000):
+def train(label_file, wav_file, out_folder="output", perc_test=0.33, retrain=False, super_epochs=3, relabel=False, resample=10000):
     instances, ra, labels, label_dict = dataset_supervised_windows(
         label_file, wav_file, lo=FFT_LO, hi=FFT_HI, win=FFT_WIN, step=FFT_STEP, raw_size=RAW_AUDIO)    
     reverse = dict([(v, k) for k, v in label_dict.items()])
@@ -289,9 +294,9 @@ def train(label_file, wav_file, out_folder="output", perc_test=0.33, retrain=Tru
     else:
         model = load_model('{}/supervised.h5'.format(out_folder))
         enc   = load_model('{}/encoder.h5'.format(out_folder))    
-      
+
     by_label = dict([(k, enc.predict(np.stack(v), batch_size=10)) for k, v in by_label.items()])
-    clusters = dict([(k, cluster_model(v, out_folder, reverse[k])) for k, v in by_label.items() if k != label_dict['NOISE']])
+    clusters = dict([(k, cluster_model(v, out_folder, reverse[k], min_k = 5, max_k=None)) for k, v in by_label.items() if k != label_dict['NOISE']])
     pkl.dump(clusters, open('{}/clusters_window.pkl'.format(out_folder),'wb'))
     print(f'Done Clustering: {[(k, v.cluster_centers_.shape) for k, v in clusters.items()]}')
     

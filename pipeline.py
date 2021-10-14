@@ -26,6 +26,9 @@ from kneed import KneeLocator
 
 from subprocess import check_output
 
+NEURAL_NOISE_DAMPENING=0.25
+NEURAL_SMOOTH_WIN=32
+NEURAL_SIZE_TH=16
 
 FFT_STEP     = 128
 FFT_WIN      = 512
@@ -36,7 +39,18 @@ D            = FFT_WIN // 2 - FFT_LO - (FFT_WIN // 2 - FFT_HI)
 RAW_AUDIO    = 5120
 T            = int((RAW_AUDIO - FFT_WIN) / FFT_STEP)
 
-CONV_PARAM   = (8, 8, 256)
+CONV_PARAM   = [
+    (8, 8,  32),
+    (4, 16, 32),
+    (2, 32, 32),
+    (1, 64, 32),
+    (8,  4, 32),
+    (16, 4, 32),
+    (32, 4, 32)
+]
+N_BANKS = len(CONV_PARAM)
+N_FILTERS = np.sum([i for _, _, i in CONV_PARAM])
+
 WINDOW_PARAM = (T, D, 1)
 LATENT       = 128
 BATCH        = 25
@@ -209,14 +223,15 @@ def train(label_file, wav_file, out_folder="output", perc_test=0.33, retrain=Tru
         accuracy_nn_supervised = []
         accuracy_siamese       = []
         accuracy_ae            = []
-        for i in range(0, super_epochs):
+        for i in range(0, super_epochs):            
             model       = classifier(WINDOW_PARAM, enc, LATENT, 5, CONV_PARAM) 
             model.summary()
             hist        = model.fit(x=x_train, y=y_train, validation_data=(x_test, y_test), batch_size=BATCH, epochs=EPOCHS, shuffle=True)
+            
             model.save('{}/supervised.h5'.format(out_folder))
             enc.save('{}/encoder.h5'.format(out_folder))     
             base_encoder.save('{}/base_encoder.h5'.format(out_folder))
-            enc_filters(enc, CONV_PARAM[-1], "{}/filters_supervised.png".format(out_folder))        
+            enc_filters(enc, N_FILTERS, N_BANKS, "{}/filters_supervised.png".format(out_folder))        
             plot_tensorflow_hist(hist, "{}/history_train_supervised.png".format(out_folder))        
             acc_nn = neighbours_encoder(enc, x_train, y_train, x_test, y_test, label_dict, "classifier", out_folder)
             accuracy_nn_supervised.append(acc_nn)
@@ -240,22 +255,22 @@ def train(label_file, wav_file, out_folder="output", perc_test=0.33, retrain=Tru
             plt.savefig('{}/confusion_type.png'.format(out_folder))
             plt.close()
             accuracy_supervised.append(accuracy)
-
+            
             siamese = train_triplets(enc, by_label)
             siamese.save('{}/siam.h5'.format(out_folder))
             enc.save('{}/encoder.h5'.format(out_folder))    
             base_encoder.save('{}/base_encoder.h5'.format(out_folder))            
-            enc_filters(enc, CONV_PARAM[-1], "{}/filters_siam.png".format(out_folder))                
+            enc_filters(enc, N_FILTERS, N_BANKS, "{}/filters_siam.png".format(out_folder))                
             acc_siam = neighbours_encoder(enc, x_train, y_train, x_test, y_test, label_dict, "siamese", out_folder)
             accuracy_siamese.append(acc_siam)
-
+            
             ae          = auto_encoder(WINDOW_PARAM, enc, LATENT, CONV_PARAM)    
             ae.summary()
             hist        = ae.fit(x=x_train, y=x_train, batch_size=BATCH, epochs=EPOCHS, shuffle=True)
             ae.save('{}/ae.h5'.format(out_folder))
             enc.save('{}/encoder.h5'.format(out_folder))        
             base_encoder.save('{}/base_encoder.h5'.format(out_folder))
-            enc_filters(enc, CONV_PARAM[-1], "{}/filters_ae.png".format(out_folder))                
+            enc_filters(enc, N_FILTERS, N_BANKS, "{}/filters_ae.png".format(out_folder))                
             plot_tensorflow_hist(hist, "{}/history_train_ae.png".format(out_folder))
             visualize_dataset(ae.predict(x_test, batch_size=BATCH), "{}/reconstructions.png".format(out_folder))
             acc_ae = neighbours_encoder(enc, x_train, y_train, x_test, y_test, label_dict, "aute encoder", out_folder)
@@ -343,7 +358,7 @@ def train_sequential(folder, labels, data, noise):
     
     TOTAL = len(predictions)
     accuracies = []
-    for i in range(0, TOTAL * 5):
+    for i in range(0, TOTAL * 25):
         if i % 100 == 0 and i > 0:
             print(f'Epoch: {i} {np.mean(accuracies[-100:])} ')
         batch_x, batch_y, y = get_batch(signals, noise, inst, ranges, ids, predictions, dim, clst, label_mapping,\
@@ -351,7 +366,7 @@ def train_sequential(folder, labels, data, noise):
         loss, acc = decoder.train_on_batch(x=batch_x, y=batch_y)
         accuracies.append(acc)
     decoder.save(f'{folder}/decoder_nn.h5')
-    enc_filters(encoder, CONV_PARAM[-1], f'{folder}/decoder_nn_filters.png')
+    enc_filters(encoder, N_FILTERS, N_BANKS, f'{folder}/decoder_nn_filters.png')
     accuracies = np.convolve(accuracies, np.ones(TOTAL), 'valid') / TOTAL
     plt.plot(moving_average(accuracies, TOTAL))
     plt.xlabel('iter')
@@ -878,7 +893,7 @@ def i2name(i, reverse, label_mapping):
         return f'{l}{chr(97 + (n - 1))}'
     
 
-def neural_decoding(folder, in_folder, out_folder, noise_scaler=0.5, WIN=128):
+def neural_decoding(folder, in_folder, out_folder):
     decoder = load_model(f'{folder}/decoder_nn.h5')
     lab     = pkl.load(open(f"{folder}/labels.pkl", "rb"))
     reverse = {v:k for k, v in lab.items()}
@@ -896,10 +911,10 @@ def neural_decoding(folder, in_folder, out_folder, noise_scaler=0.5, WIN=128):
                     x = s[i:i + 1000]
                     a = x.reshape((1, len(x), D, 1))
                     p = decoder.predict(a).reshape((a.shape[1], label_mapping.n + 1)) 
-                    if WIN is not None and len(p) > WIN:
+                    if len(p) > NEURAL_SMOOTH_WIN:
                         for i in range(0, len(p[0])):
-                            p[:, i] = np.convolve(p[:, i], np.ones(WIN) / WIN, mode='same')
-                    p[:, 0] *= noise_scaler
+                            p[:, i] = np.convolve(p[:, i], np.ones(NEURAL_SMOOTH_WIN) / NEURAL_SMOOTH_WIN, mode='same')
+                    p[:, 0] *= NEURAL_NOISE_DAMPENING
                     local_c = p.argmax(axis=1)
                     c += list(local_c)
                 if len([l for l in c if l > 0]) > 3:
@@ -911,13 +926,14 @@ def neural_decoding(folder, in_folder, out_folder, noise_scaler=0.5, WIN=128):
                     for i in range(1, len(c)):
                         if c[i] != c[i - 1]:                       
                             if c[i - 1] != 0:  
-                                strg.append(c[i - 1])
                                 start = last
                                 stop = i
-                                rect = patches.Rectangle((start, 0), stop - start,
-                                                 256, linewidth=1, edgecolor='r', facecolor=COLORS[c[i - 1]])
-                                ax.add_patch(rect)
-                                plt.text(start + (stop - start) // 2 , 30, i2name(c[i - 1], reverse, label_mapping), size=12)
+                                if stop - start > NEURAL_SIZE_TH:
+                                    strg.append(c[i - 1])
+                                    rect = patches.Rectangle((start, 0), stop - start,
+                                                             256, linewidth=1, edgecolor='r', facecolor=COLORS[c[i - 1]])
+                                    ax.add_patch(rect)
+                                    plt.text(start + (stop - start) // 2 , 30, i2name(c[i - 1], reverse, label_mapping), size=12)
                             last = i
                     if last != len(s) and c[-1] != 0:
                         strg.append(c[i - 1])

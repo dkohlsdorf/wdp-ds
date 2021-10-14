@@ -171,7 +171,7 @@ def neighbours_encoder(encoder, x_train, y_train, x_test, y_test, label_dict, na
     return accuracy
 
     
-def train(label_file, wav_file, out_folder="output", perc_test=0.33, retrain=False, super_epochs=3, relabel=False, resample=10000):
+def train(label_file, wav_file, label_file_l2, wav_file_l2, out_folder="output", perc_test=0.33, retrain=True, super_epochs=3, relabel=False, resample=10000):
     instances, ra, labels, label_dict = dataset_supervised_windows(
         label_file, wav_file, lo=FFT_LO, hi=FFT_HI, win=FFT_WIN, step=FFT_STEP, raw_size=RAW_AUDIO)    
     reverse = dict([(v, k) for k, v in label_dict.items()])
@@ -217,6 +217,8 @@ def train(label_file, wav_file, out_folder="output", perc_test=0.33, retrain=Fal
         y_train = np.array(y_train)
         y_test  = np.array(y_test)
 
+        x_unsup = dataset_unsupervised_windows(label_file_l2, wav_file_l2, lo=FFT_LO, hi=FFT_HI, win=FFT_WIN, step=FFT_STEP, raw_size=RAW_AUDIO, T=T, n=10000)
+        
         print("Train: {} / {}".format(x_train.shape, Counter(y_train)))
         print("Test:  {} / {}".format(x_test.shape, Counter(y_test)))
         
@@ -272,6 +274,7 @@ def train(label_file, wav_file, out_folder="output", perc_test=0.33, retrain=Fal
             ae          = auto_encoder(WINDOW_PARAM, enc, LATENT, CONV_PARAM)    
             ae.summary()
             hist        = ae.fit(x=x_train, y=x_train, batch_size=BATCH, epochs=EPOCHS, shuffle=True)
+            hist        = ae.fit(x=x_unsup, y=x_unsup, batch_size=BATCH, epochs=EPOCHS, shuffle=True)
             ae.save('{}/ae.h5'.format(out_folder))
             enc.save('{}/encoder.h5'.format(out_folder))        
             base_encoder.save('{}/base_encoder.h5'.format(out_folder))
@@ -1075,11 +1078,13 @@ if __name__ == '__main__':
     print("=====================================")
     print("Simplified WDP DS Pipeline")
     print("by Daniel Kyu Hwa Kohlsdorf")
-    if len(sys.argv) >= 5 and sys.argv[1] == 'train':            
-        labels = sys.argv[2]
-        wav    = sys.argv[3]
-        out    = sys.argv[4]        
-        train(labels, wav, out)
+    if len(sys.argv) >= 7 and sys.argv[1] == 'train':            
+        l1_labels = sys.argv[2]
+        l1_wav    = sys.argv[3]
+        l2_labels = sys.argv[4]
+        l2_wav    = sys.argv[5]
+        out       = sys.argv[6]        
+        train(l1_labels, l1_wav, l2_labels, l2_wav, out)
     elif len(sys.argv) >= 5 and sys.argv[1] == 'join':
         folder  = sys.argv[2]
         wav_out = sys.argv[3]
@@ -1161,7 +1166,7 @@ if __name__ == '__main__':
         print(sys.argv)
         print("""
             Usage:
-                + train:      python pipeline.py train LABEL_FILE AUDIO_FILE OUT_FOLDER
+                + train:      python pipeline.py train L1_CSV L1_AUDIO L2_CSV L2_AUDIO OUT_FOLDER
                 + seq2seq:    python pipeline.py train_sequential FOLDER LAB WAV NOISE
                               python pipeline.py decode_neural FOLDER IN OUT
                 + nearest:    python pipeline.py neardup QUERY_FOLDER LAB WAV FOLDER OUT_FOLDER

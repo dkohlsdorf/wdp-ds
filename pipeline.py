@@ -26,6 +26,9 @@ from kneed import KneeLocator
 
 from subprocess import check_output
 
+NEURAL_NOISE_DAMPENING=0.25
+NEURAL_SMOOTH_WIN=32
+NEURAL_SIZE_TH=16
 
 FFT_STEP     = 128
 FFT_WIN      = 512
@@ -355,7 +358,7 @@ def train_sequential(folder, labels, data, noise):
     
     TOTAL = len(predictions)
     accuracies = []
-    for i in range(0, TOTAL * 5):
+    for i in range(0, TOTAL * 25):
         if i % 100 == 0 and i > 0:
             print(f'Epoch: {i} {np.mean(accuracies[-100:])} ')
         batch_x, batch_y, y = get_batch(signals, noise, inst, ranges, ids, predictions, dim, clst, label_mapping,\
@@ -890,7 +893,7 @@ def i2name(i, reverse, label_mapping):
         return f'{l}{chr(97 + (n - 1))}'
     
 
-def neural_decoding(folder, in_folder, out_folder, noise_scaler=0.01, WIN=64):
+def neural_decoding(folder, in_folder, out_folder):
     decoder = load_model(f'{folder}/decoder_nn.h5')
     lab     = pkl.load(open(f"{folder}/labels.pkl", "rb"))
     reverse = {v:k for k, v in lab.items()}
@@ -908,10 +911,10 @@ def neural_decoding(folder, in_folder, out_folder, noise_scaler=0.01, WIN=64):
                     x = s[i:i + 1000]
                     a = x.reshape((1, len(x), D, 1))
                     p = decoder.predict(a).reshape((a.shape[1], label_mapping.n + 1)) 
-                    if WIN is not None and len(p) > WIN:
+                    if len(p) > NEURAL_SMOOTH_WIN:
                         for i in range(0, len(p[0])):
-                            p[:, i] = np.convolve(p[:, i], np.ones(WIN) / WIN, mode='same')
-                    p[:, 0] *= noise_scaler
+                            p[:, i] = np.convolve(p[:, i], np.ones(NEURAL_SMOOTH_WIN) / NEURAL_SMOOTH_WIN, mode='same')
+                    p[:, 0] *= NEURAL_NOISE_DAMPENING
                     local_c = p.argmax(axis=1)
                     c += list(local_c)
                 if len([l for l in c if l > 0]) > 3:
@@ -923,13 +926,14 @@ def neural_decoding(folder, in_folder, out_folder, noise_scaler=0.01, WIN=64):
                     for i in range(1, len(c)):
                         if c[i] != c[i - 1]:                       
                             if c[i - 1] != 0:  
-                                strg.append(c[i - 1])
                                 start = last
                                 stop = i
-                                rect = patches.Rectangle((start, 0), stop - start,
-                                                 256, linewidth=1, edgecolor='r', facecolor=COLORS[c[i - 1]])
-                                ax.add_patch(rect)
-                                plt.text(start + (stop - start) // 2 , 30, i2name(c[i - 1], reverse, label_mapping), size=12)
+                                if stop - start > NEURAL_SIZE_TH:
+                                    strg.append(c[i - 1])
+                                    rect = patches.Rectangle((start, 0), stop - start,
+                                                             256, linewidth=1, edgecolor='r', facecolor=COLORS[c[i - 1]])
+                                    ax.add_patch(rect)
+                                    plt.text(start + (stop - start) // 2 , 30, i2name(c[i - 1], reverse, label_mapping), size=12)
                             last = i
                     if last != len(s) and c[-1] != 0:
                         strg.append(c[i - 1])

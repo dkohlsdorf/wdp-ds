@@ -218,9 +218,10 @@ def train(label_file, wav_file, label_file_l2, wav_file_l2, out_folder="output",
         y_test  = np.array(y_test)
 
         x_unsup = dataset_unsupervised_windows(label_file_l2, wav_file_l2, lo=FFT_LO, hi=FFT_HI, win=FFT_WIN, step=FFT_STEP, raw_size=RAW_AUDIO, T=T, n=10000)
-        
-        print("Train: {} / {}".format(x_train.shape, Counter(y_train)))
-        print("Test:  {} / {}".format(x_test.shape, Counter(y_test)))
+        x_unsup = np.stack(x_unsup).reshape(len(x_unsup), T, D, 1)
+        print(f"Unsupervised: {x_unsup.shape}")
+        print(f"Train: {x_train.shape} / {Counter(y_train)}")
+        print(f"Test:  {x_test.shape} / {Counter(y_test)}")
         
         base_encoder = encoder(WINDOW_PARAM, LATENT, CONV_PARAM)    
         base_encoder.summary()

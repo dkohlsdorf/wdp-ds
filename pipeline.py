@@ -26,9 +26,9 @@ from kneed import KneeLocator
 
 from subprocess import check_output
 
-NEURAL_NOISE_DAMPENING=0.25
-NEURAL_SMOOTH_WIN=32
-NEURAL_SIZE_TH=16
+NEURAL_NOISE_DAMPENING=0.1
+NEURAL_SMOOTH_WIN=16
+NEURAL_SIZE_TH=8
 
 FFT_STEP     = 128
 FFT_WIN      = 512
@@ -433,7 +433,7 @@ def clustering(regions, wav_file, folder, l2_window = None): # 10):
     pkl.dump(clusters, open(clusters_file, "wb"))
 
 
-def export(csvfile, wavfile, folder, k, out, prefix, min_c = 2):
+def export(csvfile, wavfile, folder, k, out, prefix="", min_c = 2):
     print(" ... loading data")
     
     label_file       = "{}/labels.pkl".format(folder)
@@ -677,7 +677,7 @@ def htk_continuous(folder, htk, noise, hmm, components=10):
     out = check_output("HParse {}/gram_continuous {}/wdnet_continuous".format(htk, htk).split(" "))
                 
 
-def sequencing(audio, folder, htk, outfolder, recode=False):
+def sequencing(audio, folder, htk, outfolder, recode=True):
     print("SEQUENCING")
     if recode:        
         out = check_output(["rm", "-rf", outfolder])
@@ -1107,9 +1107,8 @@ if __name__ == '__main__':
         wav      = sys.argv[3]
         clusters = sys.argv[4]
         k        = int(sys.argv[5])
-        prefix   = sys.argv[6]
-        out      = sys.argv[7]
-        export(labels, wav, clusters, k, out, prefix)
+        out      = sys.argv[6]
+        export(labels, wav, clusters, k, out)
     elif len(sys.argv) >= 6 and sys.argv[1] == 'htk':
         mode   = sys.argv[2]
         if mode == 'train':
@@ -1179,7 +1178,7 @@ if __name__ == '__main__':
                 + nearest:    python pipeline.py neardup QUERY_FOLDER LAB WAV FOLDER OUT_FOLDER
                 + join:       python pipeline.py join FOLDER_2_JOIN WAV_OUT CSV_OUT
                 + clustering: python pipeline.py clustering LABEL_FILE AUDIO_FILE OUT_FOLDER
-                + export:     python pipeline.py export LABEL_FILE AUDIO_FILE FOLDER K PREFIX OUT_FOLDER
+                + export:     python pipeline.py export LABEL_FILE AUDIO_FILE FOLDER K OUT_FOLDER
                 + discrete    python pipeline.py discrete clustering LABEL_FILE AUDIO_FILE OUT_FOLDER
                               python pipeline.py discrete sequencing AUDIO_FOLDER FOLDER OUT_FOLDER
                 + htk:        python pipeline.py htk train FOLDER OUT_HTK STATES ITER K

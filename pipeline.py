@@ -171,7 +171,7 @@ def neighbours_encoder(encoder, x_train, y_train, x_test, y_test, label_dict, na
     return accuracy
 
     
-def train(label_file, wav_file, label_file_l2, wav_file_l2, out_folder="output", perc_test=0.33, retrain=True, super_epochs=3, relabel=False, resample=10000):
+def train(label_file, wav_file, label_file_l2, wav_file_l2, out_folder="output", perc_test=0.33, retrain=False, super_epochs=3, relabel=False, resample=10000, export_truth=True):
     instances, ra, labels, label_dict = dataset_supervised_windows(
         label_file, wav_file, lo=FFT_LO, hi=FFT_HI, win=FFT_WIN, step=FFT_STEP, raw_size=RAW_AUDIO)    
     reverse = dict([(v, k) for k, v in label_dict.items()])
@@ -231,7 +231,30 @@ def train(label_file, wav_file, label_file_l2, wav_file_l2, out_folder="output",
         accuracy_nn_supervised = []
         accuracy_siamese       = []
         accuracy_ae            = []
-        for i in range(0, super_epochs):            
+        for i in range(0, super_epochs):                        
+            siamese = train_triplets(enc, by_label)
+            siamese.save('{}/siam.h5'.format(out_folder))
+            enc.save('{}/encoder.h5'.format(out_folder))    
+            base_encoder.save('{}/base_encoder.h5'.format(out_folder))            
+            enc_filters(enc, N_FILTERS, N_BANKS, "{}/filters_siam.png".format(out_folder))                
+            acc_siam = neighbours_encoder(enc, x_train, y_train, x_test, y_test, label_dict, "siamese", out_folder)
+            accuracy_siamese.append(acc_siam)
+            
+            ae          = auto_encoder(WINDOW_PARAM, enc, LATENT, CONV_PARAM)    
+            ae.summary()
+            hist        = ae.fit(x=x_unsup, y=x_unsup, batch_size=BATCH, epochs=EPOCHS, shuffle=True)
+            hist        = ae.fit(x=x_train, y=x_train, batch_size=BATCH, epochs=EPOCHS, shuffle=True)
+            ae.save('{}/ae.h5'.format(out_folder))
+            enc.save('{}/encoder.h5'.format(out_folder))        
+            base_encoder.save('{}/base_encoder.h5'.format(out_folder))
+            enc_filters(enc, N_FILTERS, N_BANKS, "{}/filters_ae.png".format(out_folder))                
+            plot_tensorflow_hist(hist, "{}/history_train_ae.png".format(out_folder))
+            visualize_dataset(ae.predict(x_test, batch_size=BATCH), "{}/reconstructions.png".format(out_folder))
+            acc_ae = neighbours_encoder(enc, x_train, y_train, x_test, y_test, label_dict, "aute encoder", out_folder)
+            accuracy_ae.append(acc_ae)
+            enc.save('{}/encoder.h5'.format(out_folder))                
+            pkl.dump(label_dict, open('{}/labels.pkl'.format(out_folder), "wb"))
+
             model       = classifier(WINDOW_PARAM, enc, LATENT, 5, CONV_PARAM) 
             model.summary()
             hist        = model.fit(x=x_train, y=y_train, validation_data=(x_test, y_test), batch_size=BATCH, epochs=EPOCHS, shuffle=True)
@@ -263,29 +286,6 @@ def train(label_file, wav_file, label_file_l2, wav_file_l2, out_folder="output",
             plt.savefig('{}/confusion_type.png'.format(out_folder))
             plt.close()
             accuracy_supervised.append(accuracy)
-            
-            siamese = train_triplets(enc, by_label)
-            siamese.save('{}/siam.h5'.format(out_folder))
-            enc.save('{}/encoder.h5'.format(out_folder))    
-            base_encoder.save('{}/base_encoder.h5'.format(out_folder))            
-            enc_filters(enc, N_FILTERS, N_BANKS, "{}/filters_siam.png".format(out_folder))                
-            acc_siam = neighbours_encoder(enc, x_train, y_train, x_test, y_test, label_dict, "siamese", out_folder)
-            accuracy_siamese.append(acc_siam)
-            
-            ae          = auto_encoder(WINDOW_PARAM, enc, LATENT, CONV_PARAM)    
-            ae.summary()
-            hist        = ae.fit(x=x_train, y=x_train, batch_size=BATCH, epochs=EPOCHS, shuffle=True)
-            hist        = ae.fit(x=x_unsup, y=x_unsup, batch_size=BATCH, epochs=EPOCHS, shuffle=True)
-            ae.save('{}/ae.h5'.format(out_folder))
-            enc.save('{}/encoder.h5'.format(out_folder))        
-            base_encoder.save('{}/base_encoder.h5'.format(out_folder))
-            enc_filters(enc, N_FILTERS, N_BANKS, "{}/filters_ae.png".format(out_folder))                
-            plot_tensorflow_hist(hist, "{}/history_train_ae.png".format(out_folder))
-            visualize_dataset(ae.predict(x_test, batch_size=BATCH), "{}/reconstructions.png".format(out_folder))
-            acc_ae = neighbours_encoder(enc, x_train, y_train, x_test, y_test, label_dict, "aute encoder", out_folder)
-            accuracy_ae.append(acc_ae)
-            enc.save('{}/encoder.h5'.format(out_folder))                
-            pkl.dump(label_dict, open('{}/labels.pkl'.format(out_folder), "wb"))
 
         plt.plot(accuracy_supervised, label="supervised")
         plt.plot(accuracy_nn_supervised, label="nn_supervised")
@@ -306,12 +306,18 @@ def train(label_file, wav_file, label_file_l2, wav_file_l2, out_folder="output",
     
     b = np.stack(instances)
     h = enc.predict(b, batch_size=10)
-    x = model.predict(b, batch_size=10)
+    if export_truth:
+        x = labels
+    else:
+        x = model.predict(b, batch_size=10)
     extracted = {}
     for n, i in enumerate(x):
         if n % 1000 == 0:
             print(f"{n} of {len(x)}")
-        li = int(np.argmax(i))
+        if export_truth:
+            li = i
+        else:
+            li = int(np.argmax(i))
         l = reverse[li]
         if l != 'NOISE':
             hn      = h[n].reshape(1, LATENT)

@@ -26,9 +26,9 @@ from kneed import KneeLocator
 
 from subprocess import check_output
 
-NEURAL_NOISE_DAMPENING=0.1
-NEURAL_SMOOTH_WIN=16
-NEURAL_SIZE_TH=8
+NEURAL_NOISE_DAMPENING=0.
+NEURAL_SMOOTH_WIN=64
+NEURAL_SIZE_TH=32
 
 FFT_STEP     = 128
 FFT_WIN      = 512
@@ -48,13 +48,14 @@ CONV_PARAM   = [
     (16, 4, 32),
     (32, 4, 32)
 ]
+
 N_BANKS = len(CONV_PARAM)
 N_FILTERS = np.sum([i for _, _, i in CONV_PARAM])
 
 WINDOW_PARAM = (T, D, 1)
 LATENT       = 128
-BATCH        = 25
 EPOCHS       = 10
+BATCH        = 25
 
 
 def compute_bic(kmeans, X):
@@ -171,7 +172,7 @@ def neighbours_encoder(encoder, x_train, y_train, x_test, y_test, label_dict, na
     return accuracy
 
     
-def train(label_file, wav_file, label_file_l2, wav_file_l2, out_folder="output", perc_test=0.33, retrain=False, super_epochs=3, relabel=False, resample=10000, export_truth=True):
+def train(label_file, wav_file, label_file_l2, wav_file_l2, out_folder="output", perc_test=0.33, retrain=True, super_epochs=3, relabel=False, resample=10000, export_truth=True):
     instances, ra, labels, label_dict = dataset_supervised_windows(
         label_file, wav_file, lo=FFT_LO, hi=FFT_HI, win=FFT_WIN, step=FFT_STEP, raw_size=RAW_AUDIO)    
     reverse = dict([(v, k) for k, v in label_dict.items()])

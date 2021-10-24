@@ -914,7 +914,7 @@ def neural_decoding(folder, in_folder, out_folder):
     lab     = pkl.load(open(f"{folder}/labels.pkl", "rb"))
     reverse = {v:k for k, v in lab.items()}
     label_mapping = pkl.load(open(f'{folder}/label_mapping.pkl', 'rb'))
-
+    
     images  = []
     strings = []
     files   = []
@@ -991,7 +991,7 @@ def neural_decoding(folder, in_folder, out_folder):
         files_sorted.append(files[j])
         
     df = pd.DataFrame({
-        'files': fs_sorted,
+        'files': files_sorted,
         'strg':  seq_sorted,
         'img':   img_sorted
     })
@@ -1006,7 +1006,7 @@ def neural_decoding(folder, in_folder, out_folder):
             <TH> Image </TH>
         </TR>    
         """)
-        for seq, img, f in zip(seq_sorted, img_sorted, files_sorted):
+        for seq, img, filename in zip(seq_sorted, img_sorted, files_sorted):
             img = "/".join(img.split('/')[-2:])
             f.write("""
             <TR>
@@ -1017,7 +1017,7 @@ def neural_decoding(folder, in_folder, out_folder):
                      <img src="{}" height=100/> </div></TD>
             </TR>    
             """.format(
-                f, seq, img
+                filename, seq, img
             ))
         f.write('</TABLE></BODY> </HTML>')
 

@@ -915,8 +915,9 @@ def neural_decoding(folder, in_folder, out_folder):
     reverse = {v:k for k, v in lab.items()}
     label_mapping = pkl.load(open(f'{folder}/label_mapping.pkl', 'rb'))
 
-    images = []
+    images  = []
     strings = []
+    files   = []
     for f in os.listdir(in_folder):
         if f.endswith('.wav'):        
             x = raw(f'{in_folder}/{f}')
@@ -966,6 +967,7 @@ def neural_decoding(folder, in_folder, out_folder):
                     plt.close()
                     strings.append(strg)
                     images.append(p)
+                    files.append(f)
 
     N = len(strings)
     d = np.zeros((N, N))
@@ -978,33 +980,44 @@ def neural_decoding(folder, in_folder, out_folder):
     j, di = merge_next(0, d, set([]))
     closed  = set([j]) 
 
-    seq_sorted = []
-    img_sorted = []
+    seq_sorted   = []
+    img_sorted   = []
+    files_sorted = []
     while di < np.float('inf'):
         j, di = merge_next(j, d, closed)
         closed.add(j)
         seq_sorted.append(" ".join([i2name(s, reverse, label_mapping) for s in strings[j]]))
         img_sorted.append(images[j])
+        files_sorted.append(files[j])
         
+    df = pd.DataFrame({
+        'files': fs_sorted,
+        'strg':  seq_sorted,
+        'img':   img_sorted
+    })
+    df[['files', 'strg']].to_csv(f'{out_folder}/sequenced_strings.csv', index=None)
+
     with open(f'{out_folder}/sequenced_strings.html', 'w') as f:
         f.write('<HTML><BODY><TABLE border="1">')
         f.write("""
         <TR>
+            <TH> Filename </TH>
             <TH> String </TH>
             <TH> Image </TH>
         </TR>    
         """)
-        for seq, img in zip(seq_sorted, img_sorted):
+        for seq, img, f in zip(seq_sorted, img_sorted, files_sorted):
             img = "/".join(img.split('/')[-2:])
             f.write("""
             <TR>
+                <TD> {} </TD>
                 <TD> {} </TD>
                 <TD> 
                    <div style="width: 1024px; height: 100px; overflow: auto">
                      <img src="{}" height=100/> </div></TD>
             </TR>    
             """.format(
-                seq, img
+                f, seq, img
             ))
         f.write('</TABLE></BODY> </HTML>')
 

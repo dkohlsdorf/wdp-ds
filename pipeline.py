@@ -1014,6 +1014,7 @@ def join_wav(folder, out_wav, out_csv):
     offest = [] 
     starts = []
     stops  = []
+    names = []
     total = 0
     for file in os.listdir(folder):        
         if file.endswith('.wav'):
@@ -1023,10 +1024,12 @@ def join_wav(folder, out_wav, out_csv):
             starts.append(total)
             total += len(x)
             stops.append(total)
+            names.append(file.split('.')[0])
     raw_file = np.hstack(raw_file)   
     df = pd.DataFrame({
         'starts': starts,
-        'stops': stops
+        'stops': stops,
+        'names': names
     })
     df.to_csv(out_csv)
     write(out_wav, 44100, raw_file)

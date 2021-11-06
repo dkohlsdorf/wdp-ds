@@ -455,6 +455,7 @@ def export(csvfile, wavfile, folder, k, out, prefix="", min_c = 2):
     for _, row in df.iterrows():
         start = row['starts']
         stop  = row['stops']
+        name = row['names']
         ranges.append((start, stop))
     
     by_cluster  = {}
@@ -1014,6 +1015,7 @@ def join_wav(folder, out_wav, out_csv):
     offest = [] 
     starts = []
     stops  = []
+    names = []
     total = 0
     for file in os.listdir(folder):        
         if file.endswith('.wav'):
@@ -1023,10 +1025,12 @@ def join_wav(folder, out_wav, out_csv):
             starts.append(total)
             total += len(x)
             stops.append(total)
+            names.append(file.split('.')[0])
     raw_file = np.hstack(raw_file)   
     df = pd.DataFrame({
         'starts': starts,
-        'stops': stops
+        'stops': stops,
+        'names': names
     })
     df.to_csv(out_csv)
     write(out_wav, 44100, raw_file)
@@ -1080,7 +1084,64 @@ def neardup(query_folder, labels, wav, folder, out, k = 10, percentile=50, band=
         audio = np.hstack(audio)   
         write(out_wav, 44100, audio)
         print(neighbors[0:k])
-        
+
+def export_csv(csvfile, wavfile, folder, k, out, prefix="", min_c = 2):
+    print(" ... loading data")
+
+    label_file       = "{}/labels.pkl".format(folder)
+    ids_file         = "{}/{}ids.pkl".format(folder, prefix)
+    predictions_file = "{}/{}predictions.pkl".format(folder, prefix)
+    clusters_file    = "{}/{}clusters.pkl".format(folder, prefix)
+
+    ids         = pkl.load(open(ids_file, "rb"))
+    clusters    = pkl.load(open(clusters_file, "rb"))[k, :]
+    predictions = pkl.load(open(predictions_file, "rb")) 
+    label_dict  = pkl.load(open(label_file, "rb"))
+    reverse     = dict([(v,k) for k, v in label_dict.items()])
+    
+    df       = pd.read_csv(csvfile)
+    x        = raw(wavfile)
+    print(" ... grouping clusters {}".format(np.max(clusters)))
+    ranges = []
+    names = []
+    for _, row in df.iterrows():
+        start = row['starts']
+        stop  = row['stops']
+        name = row['names']
+        ranges.append((start, stop))
+        names.append(name)
+    
+    by_cluster  = {}
+    ids_cluster = {}
+    by_names = {}
+    for i, j in enumerate(ids):
+        cluster = clusters[i]
+        if cluster not in ids_cluster:
+            ids_cluster[cluster] = []
+            by_cluster[cluster]  = []
+        ids_cluster[cluster].append(i)
+        by_cluster[cluster].append(ranges[j])
+        by_names[cluster].append(names[j])
+            
+    print(" ... export {} / {}".format(i, len(clusters)))
+    unmerged = []
+    counts   = []
+    cluster_names = []
+    cluster_files = []
+    for c, rng in by_cluster.items():
+        label = label_cluster(predictions, ids_cluster[c], reverse)
+        if label != "ECHO":
+            if len(rng) >= min_c:
+                print(" ... export cluster {} {} {} {}".format(c, htk_name(c), len(rng), label))
+                counts.append(len(rng))
+                cluster_names.append(c)
+                cluster_files.append(by_names[c])
+    print("Done Export")
+    df = pd.DataFrame({
+        'filename': cluster_files,
+        'cluster': cluster_names
+    })
+    df.to_csv("{}/cluster_files.csv".format(out), index=False) 
     
 if __name__ == '__main__':
     print("=====================================")

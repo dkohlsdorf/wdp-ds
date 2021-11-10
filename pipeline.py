@@ -14,6 +14,7 @@ from lib_dolphin.eval import *
 from lib_dolphin.dtw import *
 from lib_dolphin.htk_helpers import *
 from lib_dolphin.sequential import *
+from lib_dolphin.statistics import * 
 
 from collections import namedtuple, Counter
 
@@ -918,6 +919,7 @@ def neural_decoding(folder, in_folder, out_folder):
     images  = []
     strings = []
     files   = []
+    classifications = []
     for f in os.listdir(in_folder):
         if f.endswith('.wav'):        
             x = raw(f'{in_folder}/{f}')
@@ -946,6 +948,7 @@ def neural_decoding(folder, in_folder, out_folder):
                                 start = last
                                 stop = i
                                 if stop - start > NEURAL_SIZE_TH:
+                                    classifications.append([f, start, stop, i2name(c[i - 1], reverse, label_mapping)])
                                     strg.append(c[i - 1])
                                     rect = patches.Rectangle((start, 0), stop - start,
                                                              256, linewidth=1, edgecolor='r', facecolor=COLORS[c[i - 1]])
@@ -953,6 +956,7 @@ def neural_decoding(folder, in_folder, out_folder):
                                     plt.text(start + (stop - start) // 2 , 30, i2name(c[i - 1], reverse, label_mapping), size=12)
                             last = i
                     if last != len(s) and c[-1] != 0:
+                        classifications.append([f, start, stop, i2name(c[i - 1], reverse, label_mapping)])                        
                         strg.append(c[i - 1])
                         i = len(s) - 1
                         start = last
@@ -968,7 +972,14 @@ def neural_decoding(folder, in_folder, out_folder):
                     strings.append(strg)
                     images.append(p)
                     files.append(f)
-
+    
+    df = pd.DataFrame({
+        "filenames": [filename for filename, _, _, _, in classifications],
+        "start":     [start for _, start, _, _, in classifications],
+        "stop":      [stop for _, _, stop, _, in classifications],
+        "label":     [label for _, _, _, label in classifications]
+    })
+    df.to_csv(f"{out_folder}/sequenced.csv", index=False)
     N = len(strings)
     d = np.zeros((N, N))
     for i in range(0, N):
@@ -1045,6 +1056,10 @@ def join_wav(folder, out_wav, out_csv):
     write(out_wav, 44100, raw_file)
 
     
+def statistics(l1, l2, folder):    
+    ngram_statistics(l1, l2, lambda x: x[0], T, FFT_STEP)       
+
+    
 def neardup(query_folder, labels, wav, folder, out, k = 10, percentile=50, band=0.01, max_len_diff=5):    
     ids         = pkl.load(open(f"{folder}/ids.pkl", "rb"))
     inst        = pkl.load(open(f"{folder}/instances.pkl", "rb"))
@@ -1094,7 +1109,7 @@ def neardup(query_folder, labels, wav, folder, out, k = 10, percentile=50, band=
         write(out_wav, 44100, audio)
         print(neighbors[0:k])
         
-    
+
 if __name__ == '__main__':
     print("=====================================")
     print("Simplified WDP DS Pipeline")
@@ -1182,6 +1197,11 @@ if __name__ == '__main__':
         in_folder = sys.argv[3]
         out_folder = sys.argv[4]
         neural_decoding(folder, in_folder, out_folder)
+    elif len(sys.argv) > 4 and sys.argv[1] == 'statistics':
+        l1 = sys.argv[2]
+        l2 = sys.argv[3]
+        folder = sys.argv[4]
+        statistics(l1, l2, folder)
     else:
         print(sys.argv)
         print("""
@@ -1200,5 +1220,6 @@ if __name__ == '__main__':
                               python pipeline.py htk convert AUDIO FOLDER OUT_FOLDER 
                 + sequencing: python pipeline.py sequencing AUDIO FOLDER HTK OUT
                 + baseline:   python pipeline.py baseline FOLDER
+                + statistics: python pipeline.py statistics L1 L2 FOLDERS
         """)
     print("\n=====================================")

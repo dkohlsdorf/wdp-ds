@@ -1056,10 +1056,27 @@ def join_wav(folder, out_wav, out_csv):
     write(out_wav, 44100, raw_file)
 
     
-def statistics(l1, l2, folder):    
-    ngram_statistics(l1, l2, lambda x: x[0], T, FFT_STEP)       
-
-    
+def statistics(l1, l2, folder, out):    
+    by_pattern = ngram_statistics(l1, l2, lambda x: x[0], out, T, FFT_STEP)       
+        
+    for pattern, positions in by_pattern.items():
+        audio = []
+        pattern = pattern.replace(' ', '_')
+        for pos in positions:
+            start, stop, f, label = pos
+            wav = f"{folder}/{f}.wav"
+            x   = raw(wav)
+            if len(x) < stop:
+                print(len(x), start, stop)
+            for i in x[start:stop]:
+                audio.append(i)
+            for i in range(0, 10000):
+                audio.append(0.0)
+        audio = np.array(audio)
+        filename = f"{out}/{pattern}__{label}.wav"
+        write(filename, 44100, audio.astype(np.int16)) 
+        
+            
 def neardup(query_folder, labels, wav, folder, out, k = 10, percentile=50, band=0.01, max_len_diff=5):    
     ids         = pkl.load(open(f"{folder}/ids.pkl", "rb"))
     inst        = pkl.load(open(f"{folder}/instances.pkl", "rb"))
@@ -1197,11 +1214,12 @@ if __name__ == '__main__':
         in_folder = sys.argv[3]
         out_folder = sys.argv[4]
         neural_decoding(folder, in_folder, out_folder)
-    elif len(sys.argv) > 4 and sys.argv[1] == 'statistics':
+    elif len(sys.argv) > 5 and sys.argv[1] == 'statistics':
         l1 = sys.argv[2]
-        l2 = sys.argv[3]
+        l2 = sys.argv[3]        
         folder = sys.argv[4]
-        statistics(l1, l2, folder)
+        out = sys.argv[5]
+        statistics(l1, l2, folder, out)
     else:
         print(sys.argv)
         print("""
@@ -1220,6 +1238,6 @@ if __name__ == '__main__':
                               python pipeline.py htk convert AUDIO FOLDER OUT_FOLDER 
                 + sequencing: python pipeline.py sequencing AUDIO FOLDER HTK OUT
                 + baseline:   python pipeline.py baseline FOLDER
-                + statistics: python pipeline.py statistics L1 L2 FOLDERS
+                + statistics: python pipeline.py statistics L1 L2 FOLDERS OUT
         """)
     print("\n=====================================")

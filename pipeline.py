@@ -1073,7 +1073,7 @@ def statistics(l1, l2, folder, out):
             for i in range(0, 10000):
                 audio.append(0.0)
         audio = np.array(audio)
-        filename = f"{out}/{pattern}__{label}.wav"
+        filename = f"{out}/{label}_{pattern}.wav"
         write(filename, 44100, audio.astype(np.int16)) 
         
             

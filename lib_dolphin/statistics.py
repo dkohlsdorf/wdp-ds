@@ -119,10 +119,13 @@ def vectorize(keys, counters, n, normalize=True):
     return vectors
 
 
-def highest_difference(vx, vy, kx, ky, labels, k = 25):
+def highest_difference(vx, vy, kx, ky, labels, k = 2, entropic=True):
     if k is None:
         k == len(labels)
-    diff =  vx - vy
+    if entropic:
+        diff = -vx * np.log(vx/vy)
+    else:
+        diff =  vx - vy
     diff = [(labels[i], diff[i]) for i in range(len(diff))]
     diff.sort(key = lambda x: -np.abs(x[1]))
     diff = [(diff[i][0], kx if diff[i][1] > 0 else ky) for i in range(0, k)]

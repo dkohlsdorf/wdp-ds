@@ -18,6 +18,7 @@ class Strings(namedtuple('Strings', 'l1 l2 label file start_l1 stop_l1 start_l2 
     def ngrams_l2(self, n):
         if len(self.l2) >= n:
             strg  = [(" ".join(self.l2[i-n:i]), self.start_l2[i-n], self.stop_l2[i], self.file) for i in range(n, len(self.l2))]
+            return strg
         return []
 
     
@@ -87,7 +88,7 @@ def by_file(files, symbols, starts, stops):
     return f
 
 
-def stats_key(counters):
+def stats_key(counters, th=3):
     total = Counter([]) 
     for c in counters.values():
         total += c
@@ -95,7 +96,7 @@ def stats_key(counters):
     key_dict = {}
     cur = 0
     for i, k in enumerate(list(total.keys())):
-        if total[k] >= 5 and k not in key_dict:
+        if total[k] >= th and k not in key_dict:
             key_dict[k]= cur
             cur += 1
     n = max(key_dict.values()) + 1
@@ -165,7 +166,7 @@ def ngram_statistics(l1, l2, label_f, output, T, FFT_STEP, N = 10):
                         
                     img = f'{output}/feature_count_{kx}_{ky}.png'
                     print(f"... writing image {img}")
-                    plt.figure(figsize=(40, 10))
+                    plt.figure(figsize=(90, 10))
                     plt.bar(np.arange(n), vx, label=kx, alpha=0.5)
                     plt.bar(np.arange(n), vy, label=ky,  alpha=0.5)
                     plt.legend()

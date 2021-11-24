@@ -468,19 +468,6 @@ def string(x):
     return " ".join(sequence(x))
 
 
-def context(f):
-    p = re.compile('[a-z]+')
-    return p.search(f).group()
-
-
-def video(f, prefix):
-    return f.replace(prefix, '').split('_')[0]
-
-
-def timestamp(f):
-    return f.split('_')[1]
-
-
 def merge_next(i, d, closed):
     min_val = [0, np.float('inf')]
     for j in range(0, len(d)):
@@ -493,16 +480,12 @@ def merge_next(i, d, closed):
 
 def htk_sequencing_eval(anno, out):
     sequences = []
-    cs  = []
-    vs  = []
-    ts  = []
-    img = [] 
+    fs        = []
+    img       = [] 
     for f, x in anno.items():
         if len(x) > 1 and len(x) < 100:
+            fs.append(f)
             sequences.append(sequence(x))
-            cs.append(context(f))
-            vs.append(video(f, context(f)))
-            ts.append(timestamp(f))
             img.append("images/{}.png".format(f))
 
     N = len(sequences)
@@ -516,36 +499,28 @@ def htk_sequencing_eval(anno, out):
     j, di = merge_next(0, d, set([]))
     closed  = set([j]) 
 
-    cs_sorted  = []
-    vs_sorted  = []
-    ts_sorted  = []
+    fs_sorted  = []
     seq_sorted = []
     img_sorted = []
     while di < np.float('inf'):
         j, di = merge_next(j, d, closed)
         closed.add(j)
-        cs_sorted.append(cs[j])
-        vs_sorted.append(vs[j])
-        ts_sorted.append(ts[j])
+        fs_sorted.append(fs[j])
         seq_sorted.append(" ".join(sequences[j]))
         img_sorted.append(img[j])
         
     df = pd.DataFrame({
-        'context': cs_sorted,
-        'video': vs_sorted,
-        'time': ts_sorted,
-        'strg': seq_sorted,
-        'img': img_sorted
+        'files': fs_sorted,
+        'strg':  seq_sorted,
+        'img':   img_sorted
     })
 
-    df[['context', 'video', 'time', 'strg']].to_csv('{}/sequenced_strings.csv'.format(out), index=None)
+    df[['files', 'strg']].to_csv('{}/sequenced_strings.csv'.format(out), index=None)
     with open('{}/sequenced_strings.html'.format(out), 'w') as f:
         f.write('<HTML><BODY><TABLE border="1">')
         f.write("""
         <TR>
-            <TH> Context </TH>
-            <TH> Video </TH>
-            <TH> Time </TH>
+            <TH> Filename </TH>
             <TH> String </TH>
             <TH> Image </TH>
         </TR>    
@@ -555,16 +530,12 @@ def htk_sequencing_eval(anno, out):
             <TR>
                 <TD> {} </TD>
                 <TD> {} </TD>
-                <TD> {} </TD>
-                <TD> {} </TD>
                 <TD> 
                    <div style="width: 1024px; height: 100px; overflow: auto">
                      <img src="{}" height=100/> </div></TD>
             </TR>    
             """.format(
-                row['context'], 
-                row['video'], 
-                row['time'], 
+                row['files'], 
                 row['strg'],
                 row['img']
             ))

@@ -106,14 +106,16 @@ def stats_key(counters):
     return key_dict, labels, n
 
 
-def vectorize(keys, counters, n):
+def vectorize(keys, counters, n, normalize=True):
     vectors = {}
     for label, counter in counters.items():
         v = np.zeros(n)
         for k, c in counter.items():    
             if k in keys:
                 v[keys[k]] += c
-        vectors[label] = v
+        if normalize:
+            v = v / np.sum(v)
+        vectors[label] = v    
     return vectors
 
 

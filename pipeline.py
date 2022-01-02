@@ -896,7 +896,11 @@ def discrete_decoding(folder, audio, out_folder):
 
 def i2name(i, reverse, label_mapping):    
     if i == 0:
-        return 'NOISE'
+        return '_'
+    elif i == -1:
+        return '__'
+    elif i == -2:
+        return '___'
     else:
         c, n = label_mapping.bwd(i)
         l = reverse[c]        
@@ -908,7 +912,13 @@ def i2name(i, reverse, label_mapping):
             l = l[0]
             
         return f'{l}{chr(97 + (n - 1))}'
-    
+
+def sil_label(leng):
+    if leng < 35:
+        return 0
+    if leng < 80:
+        return -1
+    return -2
 
 def neural_decoding(folder, in_folder, out_folder):
     decoder = load_model(f'{folder}/decoder_nn.h5')
@@ -947,13 +957,23 @@ def neural_decoding(folder, in_folder, out_folder):
                             if c[i - 1] != 0:  
                                 start = last
                                 stop = i
-                                if stop - start > NEURAL_SIZE_TH:
+                                leng = stop - start
+                                if leng > NEURAL_SIZE_TH:
                                     classifications.append([f, start, stop, i2name(c[i - 1], reverse, label_mapping)])
                                     strg.append(c[i - 1])
                                     rect = patches.Rectangle((start, 0), stop - start,
                                                              256, linewidth=1, edgecolor='r', facecolor=COLORS[c[i - 1]])
                                     ax.add_patch(rect)
                                     plt.text(start + (stop - start) // 2 , 30, i2name(c[i - 1], reverse, label_mapping), size=12)
+                                else:
+                                    sil_lab = sil_label(leng)
+                                    strg.append(sil_lab)
+                            else:
+                                start = last
+                                stop  = i
+                                leng  = stop - start
+                                sil_lab = sil_label(leng)
+                                strg.append(sil_lab)
                             last = i
                     if last != len(s) and c[-1] != 0:
                         classifications.append([f, start, stop, i2name(c[i - 1], reverse, label_mapping)])                        
@@ -984,7 +1004,9 @@ def neural_decoding(folder, in_folder, out_folder):
     d = np.zeros((N, N))
     for i in range(0, N):
         for j in range(i, N):
-            l = levenstein(strings[i], strings[j])
+            s1 = strings[i] 
+            s2 = strings[j] 
+            l = levenstein(s1, s2)
             d[i, j] = l
             d[j, i] = l
 

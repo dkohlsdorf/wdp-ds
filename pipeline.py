@@ -908,7 +908,13 @@ def i2name(i, reverse, label_mapping):
             l = l[0]
             
         return f'{l}{chr(97 + (n - 1))}'
-    
+
+def sil_label(leng):
+    if leng < 35:
+        return '_'
+    if leng < 80:
+        return '__'
+    return '___'
 
 def neural_decoding(folder, in_folder, out_folder):
     decoder = load_model(f'{folder}/decoder_nn.h5')
@@ -947,13 +953,23 @@ def neural_decoding(folder, in_folder, out_folder):
                             if c[i - 1] != 0:  
                                 start = last
                                 stop = i
-                                if stop - start > NEURAL_SIZE_TH:
+                                leng = stop - start
+                                if leng > NEURAL_SIZE_TH:
                                     classifications.append([f, start, stop, i2name(c[i - 1], reverse, label_mapping)])
                                     strg.append(c[i - 1])
                                     rect = patches.Rectangle((start, 0), stop - start,
                                                              256, linewidth=1, edgecolor='r', facecolor=COLORS[c[i - 1]])
                                     ax.add_patch(rect)
                                     plt.text(start + (stop - start) // 2 , 30, i2name(c[i - 1], reverse, label_mapping), size=12)
+                                else:
+                                    sil_lab = sil_label(leng)
+                                    strg.append(sil_lab)
+                            else:
+                                start = last
+                                stop  = i
+                                leng  = stop - start
+                                sil_lab = sil_label(leng)
+                                strg.append(sil_lab)
                             last = i
                     if last != len(s) and c[-1] != 0:
                         classifications.append([f, start, stop, i2name(c[i - 1], reverse, label_mapping)])                        

@@ -896,7 +896,11 @@ def discrete_decoding(folder, audio, out_folder):
 
 def i2name(i, reverse, label_mapping):    
     if i == 0:
-        return 'NOISE'
+        return '_'
+    elif i == -1:
+        return '__'
+    elif i == -2:
+        return '___'
     else:
         c, n = label_mapping.bwd(i)
         l = reverse[c]        
@@ -911,10 +915,10 @@ def i2name(i, reverse, label_mapping):
 
 def sil_label(leng):
     if leng < 35:
-        return '_'
+        return 0
     if leng < 80:
-        return '__'
-    return '___'
+        return -1
+    return -2
 
 def neural_decoding(folder, in_folder, out_folder):
     decoder = load_model(f'{folder}/decoder_nn.h5')
@@ -1000,7 +1004,9 @@ def neural_decoding(folder, in_folder, out_folder):
     d = np.zeros((N, N))
     for i in range(0, N):
         for j in range(i, N):
-            l = levenstein(strings[i], strings[j])
+            s1 = strings[i] 
+            s2 = strings[j] 
+            l = levenstein(s1, s2)
             d[i, j] = l
             d[j, i] = l
 

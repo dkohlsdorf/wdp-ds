@@ -1,5 +1,7 @@
 import pickle as pkl
 import sys
+import time
+
 
 from collections import namedtuple
 from lib_dolphin.audio import *
@@ -50,6 +52,10 @@ def decode(x, decoder, label_mapping):
     return local_c
 
 
+def sequence_building(decoded):
+    pass
+
+
 if __name__ == '__main__':
     print("Decoder")    
     decoder  = load_model('../data/decoder_nn.h5')
@@ -57,11 +63,17 @@ if __name__ == '__main__':
     reverse  = {v:k for k, v in lab.items()}
     label_mapping = pkl.load(open('../data/label_mapping.pkl', 'rb'))
 
-    # FOR EACH FILE
+    start = time.time()
     filename = "../data/dolphin.wav"
     x = split(filename)
     for i in range(len(x)):
-        s = spec(x[i])
-        p = decode(s, decoder, label_mapping)
-        print("".join([str(x) for x in p]))
+        spec = spec(x[i])
+        dec  = decode(s, decoder, label_mapping)
+        seq  = sequence_building(dec)
+        
+        if i % 10 == 0 and i > 0:
+            stop = time.time()
+            secs = stop - start
+            print("Execute 10 minutes {} [seconds]".format(int(secs)))
+            start = time.time()
     

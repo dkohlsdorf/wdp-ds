@@ -42,7 +42,9 @@ def spec(x):
 
 
 def decode(x, decoder, label_mapping):
-    a = x.reshape((1, len(x), D, 1))
+    t, d = x.shape
+    print(x.shape)
+    a = x.reshape((1,t,d,1))
     p = decoder.predict(a).reshape((a.shape[1], label_mapping.n + 1)) 
     if len(p) > NEURAL_SMOOTH_WIN:
         for i in range(0, len(p[0])):
@@ -52,25 +54,20 @@ def decode(x, decoder, label_mapping):
     return local_c
 
 
-def sequence_building(decoded):
-    pass
-
-
 if __name__ == '__main__':
     print("Decoder")    
-    decoder  = load_model('../data/decoder_nn.h5')
-    lab      = pkl.load(open("../data/labels.pkl", "rb"))
+    decoder  = load_model('../results/decoder_nn.h5')
+    lab      = pkl.load(open("../results/labels.pkl", "rb"))
     reverse  = {v:k for k, v in lab.items()}
-    label_mapping = pkl.load(open('../data/label_mapping.pkl', 'rb'))
+    label_mapping = pkl.load(open('../results/label_mapping.pkl', 'rb'))
 
     start = time.time()
     filename = "../data/dolphin.wav"
     x = split(filename)
     for i in range(len(x)):
-        spec = spec(x[i])
+        s = spec(x[i])
         dec  = decode(s, decoder, label_mapping)
-        seq  = sequence_building(dec)
-        
+        print(dec)
         if i % 10 == 0 and i > 0:
             stop = time.time()
             secs = stop - start

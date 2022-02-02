@@ -154,7 +154,7 @@ def enc_filters(enc, n_filters, n_banks, output):
         for i in range(w.shape[-1]):
             weight = w[:, :, 0, i]
             x, y = weight.shape
-            plt.subplot(n_filters / 8, 8, d)
+            plt.subplot(n_filters // 8, 8, d)
             if x > y:
                 fig = plt.imshow(weight.T, cmap='gray')
             else: 

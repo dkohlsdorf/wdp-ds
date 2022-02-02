@@ -27,7 +27,7 @@ from kneed import KneeLocator
 
 from subprocess import check_output
 
-NEURAL_NOISE_DAMPENING=0.
+NEURAL_NOISE_DAMPENING=0.5
 NEURAL_SMOOTH_WIN=64
 NEURAL_SIZE_TH=32
 
@@ -51,7 +51,7 @@ CONV_PARAM   = [
 ]
 
 N_BANKS = len(CONV_PARAM)
-N_FILTERS = np.sum([i for _, _, i in CONV_PARAM])
+N_FILTERS = int(np.sum([i for _, _, i in CONV_PARAM]))
 
 WINDOW_PARAM = (T, D, 1)
 LATENT       = 128

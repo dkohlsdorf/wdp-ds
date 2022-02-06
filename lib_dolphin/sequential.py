@@ -1,12 +1,81 @@
 import numpy as np
 import pickle as pkl
+import matplotlib.pyplot as plt
+import matplotlib.patches as patches
 
 from lib_dolphin.audio import *
 from collections import namedtuple
+from lib_dolphin.eval import *
 
 
 MIN_LEN = 44100 // 10
 MAX_LEN = 44100 // 2
+
+NEURAL_SIZE_TH = 32
+
+
+DecodedSymbol =  namedtuple('DecodedSymbol', 'start stop cls id')
+
+
+def compress_neural(decoding, n, reverse, label_mapping):
+    classifications = []
+    last = 0
+    for i in range(1, len(decoding)):
+        if decoding[i] != decoding[i - 1]:                                   
+            if decoding[i - 1] != 0:  
+                start = last
+                stop = i
+                leng = stop - start
+                if leng > NEURAL_SIZE_TH:
+                    d = DecodedSymbol(start, stop,  i2name(decoding[i - 1], reverse, label_mapping), decoding[i - 1])
+                    classifications.append(d)
+            last = i
+    if last != n and decoding[-1] != 0:
+        d = DecodedSymbol(start, stop,  i2name(decoding[i - 1], reverse, label_mapping), decoding[i - 1])        
+        classifications.append(d)                                
+    return classifications
+    
+    
+def plot_neural(spectrogram, compressed, img_path):    
+    fig, ax = plt.subplots()
+    fig.set_size_inches(len(spectrogram) / 100, len(spectrogram[0]) / 100)
+    ax.imshow(1.0 - spectrogram.T,  cmap='gray')                  
+    for region in compressed:        
+        rect = patches.Rectangle((region.start, 0), region.stop - region.start,
+                         256, linewidth=1, edgecolor='r', facecolor=COLORS[region.id])
+        ax.add_patch(rect)
+        plt.text(region.start + (region.stop - region.start) // 2 , 30, region.cls, size=12)
+    plt.savefig(img_path)
+    plt.close()
+
+    
+def i2name(i, reverse, label_mapping):    
+    if i == 0:
+        return '_'
+    elif i == -1:
+        return '__'
+    elif i == -2:
+        return '___'
+    else:
+        c, n = label_mapping.bwd(i)
+        l = reverse[c]        
+        if "DOWN" in l:
+            l = 'D'
+        elif "UP" in l:
+            l = 'U'
+        else:
+            l = l[0]
+            
+        return f'{l}{chr(97 + (n - 1))}'
+
+    
+def sil_label(leng):
+    if leng < 35:
+        return 0
+    if leng < 80:
+        return -1
+    return -2
+
 
 
 class LabelMapping(namedtuple('LabelMapping', 'prefix')):

@@ -4,6 +4,8 @@ import pickle as pkl
 import sys
 import os
 import matplotlib.pyplot as plt
+import matplotlib.patches as patches
+
 import random
 
 import nmslib
@@ -894,32 +896,6 @@ def discrete_decoding(folder, audio, out_folder):
         f.write('</TABLE></BODY></HTML>')        
 
 
-def i2name(i, reverse, label_mapping):    
-    if i == 0:
-        return '_'
-    elif i == -1:
-        return '__'
-    elif i == -2:
-        return '___'
-    else:
-        c, n = label_mapping.bwd(i)
-        l = reverse[c]        
-        if "DOWN" in l:
-            l = 'D'
-        elif "UP" in l:
-            l = 'U'
-        else:
-            l = l[0]
-            
-        return f'{l}{chr(97 + (n - 1))}'
-
-def sil_label(leng):
-    if leng < 35:
-        return 0
-    if leng < 80:
-        return -1
-    return -2
-
 def neural_decoding(folder, in_folder, out_folder):
     decoder = load_model(f'{folder}/decoder_nn.h5')
     lab     = pkl.load(open(f"{folder}/labels.pkl", "rb"))
@@ -934,7 +910,9 @@ def neural_decoding(folder, in_folder, out_folder):
         if f.endswith('.wav'):        
             x = raw(f'{in_folder}/{f}')
             s = spectrogram(x, FFT_LO, FFT_HI, FFT_WIN, FFT_STEP)
-            if len(s) < 100000:
+            print(f"LENGTH: {len(s)}")
+            s = s[0:10000] # small hack here
+            if len(s) <= 10000:
                 c = []
                 for i in range(0, len(s), 1000):
                     x = s[i:i + 1000]
@@ -946,49 +924,14 @@ def neural_decoding(folder, in_folder, out_folder):
                     p[:, 0] *= NEURAL_NOISE_DAMPENING
                     local_c = p.argmax(axis=1)
                     c += list(local_c)
-                if len([l for l in c if l > 0]) > 3:
-                    fig, ax = plt.subplots()
-                    fig.set_size_inches(len(s) / 100, len(s[0]) / 100)
-                    ax.imshow(1.0 - s.T,  cmap='gray')                  
-                    last = 0
-                    strg = []
-                    for i in range(1, len(c)):
-                        if c[i] != c[i - 1]:                       
-                            if c[i - 1] != 0:  
-                                start = last
-                                stop = i
-                                leng = stop - start
-                                if leng > NEURAL_SIZE_TH:
-                                    classifications.append([f, start, stop, i2name(c[i - 1], reverse, label_mapping)])
-                                    strg.append(c[i - 1])
-                                    rect = patches.Rectangle((start, 0), stop - start,
-                                                             256, linewidth=1, edgecolor='r', facecolor=COLORS[c[i - 1]])
-                                    ax.add_patch(rect)
-                                    plt.text(start + (stop - start) // 2 , 30, i2name(c[i - 1], reverse, label_mapping), size=12)
-                                else:
-                                    sil_lab = sil_label(leng)
-                                    strg.append(sil_lab)
-                            else:
-                                start = last
-                                stop  = i
-                                leng  = stop - start
-                                sil_lab = sil_label(leng)
-                                strg.append(sil_lab)
-                            last = i
-                    if last != len(s) and c[-1] != 0:
-                        classifications.append([f, start, stop, i2name(c[i - 1], reverse, label_mapping)])                        
-                        strg.append(c[i - 1])
-                        i = len(s) - 1
-                        start = last
-                        stop = i
-                        rect = patches.Rectangle((start, 0), stop - start,
-                                         256, linewidth=1, edgecolor='r', facecolor=COLORS[c[i - 1]])
-                        ax.add_patch(rect)
-                        plt.text(start + (stop - start) // 2 , 30, i2name(c[i - 1], reverse, label_mapping), size=12)
+                if len([l for l in c if l > 0]) > 3:                    
+                    compr = compress_neural(c, len(s), reverse, label_mapping)
+                    strg  = [d.id for d in compr]
+                    for region in compr:
+                        classifications.append([f, region.start, region.stop, region.cls])
                     p = f.replace('.wav', '.png')
                     img_path = f'{out_folder}/{p}'
-                    plt.savefig(img_path)
-                    plt.close()
+                    plot_neural(s, compr, img_path)
                     strings.append(strg)
                     images.append(p)
                     files.append(f)

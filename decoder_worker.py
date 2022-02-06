@@ -1,11 +1,15 @@
 import pickle as pkl
 import sys
 import time
-
+import matplotlib.pyplot as plt
+import matplotlib.patches as patches
 
 from collections import namedtuple
-from lib_dolphin.audio import *
 from tensorflow.keras.models import load_model
+
+from lib_dolphin.audio import *
+from lib_dolphin.sequential import *
+from lib_dolphin.eval import *
 
 
 SPLIT_SEC    = 60
@@ -20,7 +24,7 @@ FFT_LO       = 100
 D            = FFT_WIN // 2 - FFT_LO - (FFT_WIN // 2 - FFT_HI)
 
 
-NEURAL_NOISE_DAMPENING = 0.5
+NEURAL_NOISE_DAMPENING = 1.0
 NEURAL_SMOOTH_WIN      = 64
 NEURAL_SIZE_TH         = 32
 
@@ -53,7 +57,7 @@ def decode(x, decoder, label_mapping):
     local_c = p.argmax(axis=1)
     return local_c
 
-
+    
 if __name__ == '__main__':
     print("Decoder")    
     decoder  = load_model('../results/decoder_nn.h5')
@@ -65,9 +69,12 @@ if __name__ == '__main__':
     filename = "../data/dolphin.wav"
     x = split(filename)
     for i in range(len(x)):
-        s = spec(x[i])
+        s    = spec(x[i])
         dec  = decode(s, decoder, label_mapping)
-        print(dec)
+        c    = compress_neural(dec, len(s), reverse, label_mapping)
+        plot_neural(s, c, f"spec_{i}.png")
+        
+        print(c)
         if i % 10 == 0 and i > 0:
             stop = time.time()
             secs = stop - start

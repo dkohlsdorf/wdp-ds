@@ -58,6 +58,21 @@ def decode(x, decoder, label_mapping):
     return local_c
 
     
+def ngrams(sequence, n=12):
+    results = []
+    for i in range(n, len(sequence)):
+        x = [s.cls for s in sequence[i-n:i]]
+        x = " ".join(x)
+        results.append(x)
+    return results
+
+def match(sequence, db, n=12):
+    ids = []
+    for k in ngrams(sequence):
+        if k in db:
+            ids.extend(db[k])
+    return set(ids)
+
 if __name__ == '__main__':
     print("Decoder")    
     decoder  = load_model('../results/decoder_nn.h5')
@@ -68,16 +83,23 @@ if __name__ == '__main__':
     start = time.time()
     filename = "../data/dolphin.wav"
     x = split(filename)
+    db = {}
+    sequences = []
     for i in range(len(x)):
         s    = spec(x[i])
         dec  = decode(s, decoder, label_mapping)
         c    = compress_neural(dec, len(s), reverse, label_mapping)
         plot_neural(s, c, f"spec_{i}.png")
-        
-        print(c)
+        keys = ngrams(c)
+        for k in keys:
+            if k not in db:
+                db[k] = []
+            db[k].append(i)
+        sequences.append(c)
         if i % 10 == 0 and i > 0:
             stop = time.time()
             secs = stop - start
             print("Execute 10 minutes {} [seconds]".format(int(secs)))
             start = time.time()
     
+    print(match(sequences[0], db))

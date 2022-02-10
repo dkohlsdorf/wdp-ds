@@ -1,6 +1,8 @@
 import pickle as pkl
 import sys
 import time
+import heapq
+
 import matplotlib.pyplot as plt
 import matplotlib.patches as patches
 
@@ -10,6 +12,7 @@ from tensorflow.keras.models import load_model
 from lib_dolphin.audio import *
 from lib_dolphin.sequential import *
 from lib_dolphin.eval import *
+from lib_dolphin.discrete import *
 
 
 SPLIT_SEC    = 60
@@ -66,12 +69,23 @@ def ngrams(sequence, n=12):
         results.append(x)
     return results
 
+
 def match(sequence, db, n=12):
     ids = []
     for k in ngrams(sequence):
         if k in db:
             ids.extend(db[k])
     return set(ids)
+
+
+def query(sequence, db, sequences):
+    ids = match(sequence, db)
+    pq  = [] 
+    for i in ids:
+        d = levenstein(sequence, sequences[i])
+        heapq.heappush(pq, (d, i))
+    return [heapq.heappop(pq) for _ in ids]
+    
 
 if __name__ == '__main__':
     print("Decoder")    
@@ -102,4 +116,4 @@ if __name__ == '__main__':
             print("Execute 10 minutes {} [seconds]".format(int(secs)))
             start = time.time()
     
-    print(match(sequences[0], db))
+    print(len(sequences), query(sequences[0], db, sequences))

@@ -70,23 +70,54 @@ def ngrams(sequence, n=12):
     return results
 
 
-def match(sequence, db, n=12):
+def match(sequence, db, n):
     ids = []
     for k in ngrams(sequence):
         if k in db:
             ids.extend(db[k])
-    return set(ids)
+    return list(set(ids))
 
 
-def query(sequence, db, sequences):
-    ids = match(sequence, db)
+def labels(s):
+    return [c.cls for c in s]
+
+
+def query(sequence, db, sequences, n = 4):
+    ids = match(sequence, db, n)
     pq  = [] 
     for i in ids:
-        d = levenstein(sequence, sequences[i])
+        d = levenstein(labels(sequence), labels(sequences[i]))
         heapq.heappush(pq, (d, i))
     return [heapq.heappop(pq) for _ in ids]
     
+    
+def knn(sequence, sequences, ids, k):
+    pq = []
+    for i in range(0, min(k, len(ids))):
+        d = levenstein(labels(sequence), labels(sequences[ids[i]]))
+        heapq.heappush(pq, (-d, ids[i]))
+    if k < len(ids):
+        for i in range(k, len(ids)):
+            d = levenstein(labels(sequence), labels(sequences[ids[i]]))
+            if d < -pq[0][0]:
+                heapq.heappush(pq, (-d, ids[i]))
+                heapq.heappop(pq)
+    result = reversed([heapq.heappop(pq) for i in range(0, len(pq))])
+    return [(-1 * d, i) for d, i in result]
+    
+    
+def discovery(sequences, db, k=2, n=2):
+    neighbors = {}
+    densities = {}
+    for i, sequence in enumerate(sequences):
+        ids = match(sequence, db, n)
+        nn  = knn(sequence, sequences, ids, k)
+        neighbors[i] = nn
+        if len(nn) == k:
+            densities[i] = 1. / nn[-1][0]
+    return densities, neighbors
 
+        
 if __name__ == '__main__':
     print("Decoder")    
     decoder  = load_model('../results/decoder_nn.h5')
@@ -117,3 +148,4 @@ if __name__ == '__main__':
             start = time.time()
     
     print(len(sequences), query(sequences[0], db, sequences))
+    print(discovery(sequences, db))

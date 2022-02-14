@@ -6,6 +6,8 @@ import heapq
 import matplotlib.pyplot as plt
 import matplotlib.patches as patches
 
+import polling
+
 from collections import namedtuple
 from tensorflow.keras.models import load_model
 
@@ -13,6 +15,10 @@ from lib_dolphin.audio import *
 from lib_dolphin.sequential import *
 from lib_dolphin.eval import *
 from lib_dolphin.discrete import *
+
+from redis import Redis
+from datetime import datetime 
+
 
 
 SPLIT_SEC    = 60
@@ -117,35 +123,67 @@ def discovery(sequences, db, k=2, n=2):
             densities[i] = 1. / nn[-1][0]
     return densities, neighbors
 
+
+class DecodingWorker:
+    
+    KEY = 'WDP-DS'
+    
+    def __init__(self, model_path, image_path, redis):
+        self.decoder       = load_model(f'{model_path}/decoder_nn.h5')
+        self.lab           = pkl.load(open(f"{model_path}/labels.pkl", "rb"))
+        self.reverse       = {v:k for k, v in self.lab.items()}
+        self.label_mapping = pkl.load(open(f'{model_path}/label_mapping.pkl', 'rb'))
+        self.image_path    = image_path
+        self.db            = {}
+        self.sequences     = []
+        self.redis         = redis
+        
+    def work(self):
+        now = datetime.now()        
+        result = self.redis.lpop(DecodingWorker.KEY)
+        print(f'.. Check for work {now} {result}')
+        if result is not None:
+            filename = result   
+            print(f'.. Work: {filename}')
+            x = split(filename)
+            start = time.time()        
+            for i in range(len(x)):
+                s    = spec(x[i])
+                dec  = decode(s, self.decoder, self.label_mapping)
+                c    = compress_neural(dec, len(s), self.reverse, self.label_mapping)
+                plot_neural(s, c, f"{self.image_path}/spec_{i}.png")
+                keys = ngrams(c)
+                for k in keys:
+                    if k not in self.db:
+                        self.db[k] = []
+                    self.db[k].append(i)
+                self.sequences.append(c)
+
+                if i % 10 == 0 and i > 0:
+                    stop = time.time()
+                    secs = stop - start
+                    print("Execute 10 minutes {} [seconds]".format(int(secs)))
+                    start = time.time()
+
+                    
         
 if __name__ == '__main__':
-    print("Decoder")    
-    decoder  = load_model('../results/decoder_nn.h5')
-    lab      = pkl.load(open("../results/labels.pkl", "rb"))
-    reverse  = {v:k for k, v in lab.items()}
-    label_mapping = pkl.load(open('../results/label_mapping.pkl', 'rb'))
 
-    start = time.time()
-    filename = "../data/dolphin.wav"
-    x = split(filename)
-    db = {}
-    sequences = []
-    for i in range(len(x)):
-        s    = spec(x[i])
-        dec  = decode(s, decoder, label_mapping)
-        c    = compress_neural(dec, len(s), reverse, label_mapping)
-        plot_neural(s, c, f"spec_{i}.png")
-        keys = ngrams(c)
-        for k in keys:
-            if k not in db:
-                db[k] = []
-            db[k].append(i)
-        sequences.append(c)
-        if i % 10 == 0 and i > 0:
-            stop = time.time()
-            secs = stop - start
-            print("Execute 10 minutes {} [seconds]".format(int(secs)))
-            start = time.time()
+    '''
+    TODO: save and load DecodingWorker
+    TODO: rest service
+    '''
     
-    print(len(sequences), query(sequences[0], db, sequences))
-    print(discovery(sequences, db))
+    if sys.argv[1] == 'worker':
+        print("Decoding Worker")    
+        worker = DecodingWorker('../web_service/ml_models/', '../web_service/images/', Redis())
+        polling.poll(lambda: worker.work(), step=5, poll_forever=True)        
+    elif sys.argv[1] == 'enqueue':
+        print('Batch Enqueue')
+        folder = sys.argv[2]
+        r = Redis()
+        for filename in os.listdir(folder):
+            if filename.endswith('.wav'):
+                path = f'{folder}/{filename}'
+                print(f" .. Enqueue: {path}")
+                r.lpush(DecodingWorker.KEY, path)

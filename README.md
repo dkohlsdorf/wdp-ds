@@ -23,3 +23,4 @@ and communicate the results with domain experts.
 + matplotlib
 + [htk](https://htk.eng.cam.ac.uk/)
 + [kneed](https://pypi.org/project/kneed/)
++ [fastavro](https://pypi.org/project/fastavro/)

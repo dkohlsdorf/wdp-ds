@@ -19,6 +19,32 @@ from lib_dolphin.discrete import *
 from redis import Redis
 from datetime import datetime 
 
+from fastavro import writer, reader, parse_schema
+
+
+SCHEMA = {
+    "name": "WDP_Decoded",
+    "namespace": "wdp",
+    "type": "record",
+    "fields": [
+        {"name": "path",     "type": "string"},
+        {"name": "start",    "type": "int"},
+        {"name": "stop",     "type": "int"},
+        {"name": "sequence", "type": {
+            "type": "array", 
+            "items": {
+                "name": "tokens",
+                "type": "record", 
+                "fields": [
+                    {"name": "cls",      "type": "string"},                
+                    {"name": "start",    "type": "int"},
+                    {"name": "stop",     "type": "int"},
+                    {"name": "id",       "type": "int"}                
+                ]}
+            }        
+        }
+    ]
+}
 
 
 SPLIT_SEC    = 60
@@ -45,9 +71,11 @@ def split(audio_file):
     n           = len(x)
 
     regions = []
+    bounds  = []
     for i in range(window_size, n, skip):
         regions.append(x[i-window_size:i])
-    return regions
+        bounds.append((i-window_size, i))
+    return regions, bounds, audio_file
 
 
 def spec(x):
@@ -86,15 +114,6 @@ def match(sequence, db, n):
 
 def labels(s):
     return [c.cls for c in s]
-
-
-def query(sequence, db, sequences, n = 4):
-    ids = match(sequence, db, n)
-    pq  = [] 
-    for i in ids:
-        d = levenstein(labels(sequence), labels(sequences[i]))
-        heapq.heappush(pq, (d, i))
-    return [heapq.heappop(pq) for _ in ids]
     
     
 def knn(sequence, sequences, ids, k):
@@ -124,59 +143,75 @@ def discovery(sequences, db, k=2, n=2):
     return densities, neighbors
 
 
+
+
 class DecodingWorker:
     
     KEY = 'WDP-DS'
     
-    def __init__(self, model_path, image_path, redis):
+    def __init__(self, model_path, image_path, sequence_path, redis):
         self.decoder       = load_model(f'{model_path}/decoder_nn.h5')
         self.lab           = pkl.load(open(f"{model_path}/labels.pkl", "rb"))
         self.reverse       = {v:k for k, v in self.lab.items()}
         self.label_mapping = pkl.load(open(f'{model_path}/label_mapping.pkl', 'rb'))
         self.image_path    = image_path
-        self.db            = {}
-        self.sequences     = []
+        self.sequence_path = sequence_path
+        
+        self.sequences     = []        
         self.redis         = redis
+        self.schema        = parse_schema(SCHEMA)
+        
+    def discovery(self):
+        db = {}
+        for filename, start, stop, sequence in self.sequences:
+            keys = ngrams(sequence)
+            for k in keys:
+                if k not in self.db:
+                    db[k] = []
+                db[k].append([filename, start, stop])            
+        densities, neighbors = discovery(self.sequences, db)
         
     def work(self):
         now = datetime.now()        
         result = self.redis.lpop(DecodingWorker.KEY)
-        print(f'.. Check for work {now} {result}')
+        
+        print(f'.. Check for work {now} {result}')        
         if result is not None:
-            filename = result   
-            print(f'.. Work: {filename}')
-            x = split(filename)
+            records = []
+            
+            filename = result
+            file_id = str(filename).split('/')[-1].split('.')[0]             
+            print(f'.. Work: {filename} {file_id}')
+            regions, bounds, audio_file = split(filename)
             start = time.time()        
-            for i in range(len(x)):
-                s    = spec(x[i])
+            for i in range(len(regions)):
+                s                       = spec(regions[i])
+                start_bound, stop_bound = bounds[i] 
                 dec  = decode(s, self.decoder, self.label_mapping)
                 c    = compress_neural(dec, len(s), self.reverse, self.label_mapping)
-                plot_neural(s, c, f"{self.image_path}/spec_{i}.png")
-                keys = ngrams(c)
-                for k in keys:
-                    if k not in self.db:
-                        self.db[k] = []
-                    self.db[k].append(i)
-                self.sequences.append(c)
-
+                plot_neural(s, c, f"{self.image_path}/{file_id}_{start_bound}_{stop_bound}.png")
+                self.sequences.append((filename, start_bound, stop_bound, c))
+                
+                records.append({                
+                    "path":     str(filename),
+                    "start":    start_bound,
+                    "stop":     stop_bound,
+                    "sequence": [token.to_dict() for token in c]
+                })                                                
+                
                 if i % 10 == 0 and i > 0:
                     stop = time.time()
                     secs = stop - start
                     print("Execute 10 minutes {} [seconds]".format(int(secs)))
-                    start = time.time()
-
-                    
+                    start = time.time()         
+            with open(f'{self.sequence_path}/{file_id}.avro', 'wb') as out:
+                writer(out, self.schema, records)
+            
         
-if __name__ == '__main__':
-
-    '''
-    TODO: save and load DecodingWorker
-    TODO: rest service
-    '''
-    
+if __name__ == '__main__':    
     if sys.argv[1] == 'worker':
         print("Decoding Worker")    
-        worker = DecodingWorker('../web_service/ml_models/', '../web_service/images/', Redis())
+        worker = DecodingWorker('../web_service/ml_models/', '../web_service/images/', '../web_service/sequences/', Redis())
         polling.poll(lambda: worker.work(), step=5, poll_forever=True)        
     elif sys.argv[1] == 'enqueue':
         print('Batch Enqueue')
@@ -187,3 +222,4 @@ if __name__ == '__main__':
                 path = f'{folder}/{filename}'
                 print(f" .. Enqueue: {path}")
                 r.lpush(DecodingWorker.KEY, path)
+        

@@ -14,7 +14,15 @@ MAX_LEN = 44100 // 2
 NEURAL_SIZE_TH = 32
 
 
-DecodedSymbol =  namedtuple('DecodedSymbol', 'start stop cls id')
+class DecodedSymbol(namedtuple('DecodedSymbol', 'start stop cls id')):
+    
+    def to_dict(self):
+        return {
+            "cls":   self.cls,                
+            "start": self.start,
+            "stop":  self.stop,
+            "id":    self.id                        
+        }
 
 
 def compress_neural(decoding, n, reverse, label_mapping):

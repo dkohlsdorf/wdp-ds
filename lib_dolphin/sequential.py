@@ -16,6 +16,10 @@ NEURAL_SIZE_TH = 32
 
 class DecodedSymbol(namedtuple('DecodedSymbol', 'start stop cls id')):
     
+    @classmethod
+    def from_dict(cls, x):
+        return cls(x['start'], x['stop'], x['cls'], x['id'])
+    
     def to_dict(self):
         return {
             "cls":   self.cls,                

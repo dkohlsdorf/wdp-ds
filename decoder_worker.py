@@ -2,6 +2,7 @@ import pickle as pkl
 import sys
 import time
 import heapq
+import numpy as np 
 
 import matplotlib.pyplot as plt
 import matplotlib.patches as patches
@@ -95,16 +96,16 @@ def decode(x, decoder, label_mapping):
     return local_c
 
     
-def ngrams(sequence, n=12):
+def ngrams(sequence, n=4, sep=''):
     results = []
     for i in range(n, len(sequence)):
         x = [s.cls for s in sequence[i-n:i]]
-        x = " ".join(x)
+        x = sep.join(x)
         results.append(x)
     return results
 
 
-def match(sequence, db, n):
+def match(sequence, db):
     ids = []
     for k in ngrams(sequence):
         if k in db:
@@ -131,11 +132,11 @@ def knn(sequence, sequences, ids, k):
     return [(-1 * d, i) for d, i in result]
     
     
-def discovery(sequences, db, k=2, n=2):
+def discovery(sequences, db, k=4):
     neighbors = {}
     densities = {}
     for i, sequence in enumerate(sequences):
-        ids = match(sequence, db, n)
+        ids = match(sequence, db)
         nn  = knn(sequence, sequences, ids, k)
         neighbors[i] = nn
         if len(nn) == k:
@@ -143,7 +144,61 @@ def discovery(sequences, db, k=2, n=2):
     return densities, neighbors
 
 
+class DiscoveryService:
+    
+    def __init__(self, sequence_path):
+        self.sequences = []
+        self.keys      = []
+        self.samples   = []
+        self.densities = {}       
+        self.neighbors = {}
+        self.parse(sequence_path)
+        self.setup_discovery()
+        
+    def parse(self, sequence_path):        
+        for file in os.listdir(sequence_path):
+            if file.endswith('avro'):
+                with open(f'{sequence_path}/{file}', 'rb') as fo:
+                    avro_reader = reader(fo)
+                    for record in avro_reader:
+                        self.sequences.append(record)
+    
+    def setup_discovery(self):
+        db = {}
+        decodings = []
+        for key, sequence in enumerate(self.sequences):
+            decoded = [DecodedSymbol.from_dict(x) for x in sequence['sequence']]
+            decodings.append(decoded)
+            for ngram in ngrams(decoded):
+                if ngram not in db:
+                    db[ngram] = []
+                db[ngram].append(key)            
+        d, n = discovery(decodings, db) 
+        self.densities  = d        
+        self.neighbors  = n                
 
+        self.keys       = list(self.densities.keys())
+        self.samples    = np.zeros(len(self.keys))
+        scaler          = np.sum(list(self.densities.values()))
+        print(self.densities, self.samples, scaler)
+        self.samples[0] = self.densities[self.keys[0]] / scaler
+        for i in range(1, len(self.keys)):
+            self.samples[i] = self.densities[self.keys[i]] / scaler + self.samples[i - 1]         
+        
+    def sample(self):
+        start = 0
+        stop  = len(self.samples) - 1
+        x     = np.random.uniform()
+        while start < stop:
+            center = (start + stop) // 2        
+            if x > self.samples[center]:
+                start = center +  1
+            else: 
+                stop = center
+        region = start
+        nn = [self.sequences[neighbor] for _, neighbor in self.neighbors[region]]
+        return (self.sequences[region], nn)
+       
 
 class DecodingWorker:
     
@@ -157,20 +212,9 @@ class DecodingWorker:
         self.image_path    = image_path
         self.sequence_path = sequence_path
         
-        self.sequences     = []        
         self.redis         = redis
         self.schema        = parse_schema(SCHEMA)
-        
-    def discovery(self):
-        db = {}
-        for filename, start, stop, sequence in self.sequences:
-            keys = ngrams(sequence)
-            for k in keys:
-                if k not in self.db:
-                    db[k] = []
-                db[k].append([filename, start, stop])            
-        densities, neighbors = discovery(self.sequences, db)
-        
+                
     def work(self):
         now = datetime.now()        
         result = self.redis.lpop(DecodingWorker.KEY)
@@ -222,4 +266,3 @@ if __name__ == '__main__':
                 path = f'{folder}/{filename}'
                 print(f" .. Enqueue: {path}")
                 r.lpush(DecodingWorker.KEY, path)
-        

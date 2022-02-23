@@ -140,7 +140,7 @@ def discovery(sequences, db, k=4):
         nn  = knn(sequence, sequences, ids, k)
         neighbors[i] = nn
         if len(nn) == k:
-            densities[i] = 1. / nn[-1][0]
+            densities[i] = 1. / (1 + nn[-1][0])
     return densities, neighbors
 
 
@@ -180,7 +180,6 @@ class DiscoveryService:
         self.keys       = list(self.densities.keys())
         self.samples    = np.zeros(len(self.keys))
         scaler          = np.sum(list(self.densities.values()))
-        print(self.densities, self.samples, scaler)
         self.samples[0] = self.densities[self.keys[0]] / scaler
         for i in range(1, len(self.keys)):
             self.samples[i] = self.densities[self.keys[i]] / scaler + self.samples[i - 1]         
@@ -233,8 +232,7 @@ class DecodingWorker:
                 start_bound, stop_bound = bounds[i] 
                 dec  = decode(s, self.decoder, self.label_mapping)
                 c    = compress_neural(dec, len(s), self.reverse, self.label_mapping)
-                plot_neural(s, c, f"{self.image_path}/{file_id}_{start_bound}_{stop_bound}.png")
-                self.sequences.append((filename, start_bound, stop_bound, c))
+                plot_neural(s, c, f"{self.image_path}/{file_id}_{start_bound}_{stop_bound}.png")                
                 
                 records.append({                
                     "path":     str(filename),

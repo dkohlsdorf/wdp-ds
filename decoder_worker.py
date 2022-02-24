@@ -61,8 +61,7 @@ D            = FFT_WIN // 2 - FFT_LO - (FFT_WIN // 2 - FFT_HI)
 
 
 NEURAL_NOISE_DAMPENING = 1.0
-NEURAL_SMOOTH_WIN      = 64
-NEURAL_SIZE_TH         = 32
+NEURAL_SMOOTH_WIN      = 10
 
 
 def split(audio_file):

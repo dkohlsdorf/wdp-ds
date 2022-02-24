@@ -43,7 +43,7 @@ def compress_neural(decoding, n, reverse, label_mapping):
                     classifications.append(d)
             last = i
     if last != n and decoding[-1] != 0:
-        d = DecodedSymbol(start, stop,  i2name(decoding[i - 1], reverse, label_mapping), decoding[i - 1])        
+        d = DecodedSymbol(last, n,  i2name(decoding[-1], reverse, label_mapping), decoding[i-1])        
         classifications.append(d)                                
     return classifications
     
@@ -57,7 +57,8 @@ def plot_neural(spectrogram, compressed, img_path):
                          256, linewidth=1, edgecolor='r', facecolor=COLORS[region.id])
         ax.add_patch(rect)
         plt.text(region.start + (region.stop - region.start) // 2 , 30, region.cls, size=12)
-    plt.savefig(img_path)
+    #plt.axis('off')
+    plt.savefig(img_path, dpi=100, bbox_inches='tight', pad_inches=0)
     plt.close()
 
     

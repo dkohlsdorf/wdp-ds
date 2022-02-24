@@ -146,17 +146,19 @@ def discovery(sequences, db, k=4):
 
 class DiscoveryService:
     
-    def __init__(self, sequence_path):
+    def __init__(self, sequence_path, limit = None):
         self.sequences = []
         self.keys      = []
         self.samples   = []
         self.densities = {}       
         self.neighbors = {}
-        self.parse(sequence_path)
+        self.parse(sequence_path, limit)
         self.setup_discovery()
         
-    def parse(self, sequence_path):        
+    def parse(self, sequence_path, limit):        
         for file in os.listdir(sequence_path):
+            if limit is not None and len(self.sequences) >= limit:
+                break
             if file.endswith('avro'):
                 with open(f'{sequence_path}/{file}', 'rb') as fo:
                     avro_reader = reader(fo)
@@ -232,14 +234,15 @@ class DecodingWorker:
                 start_bound, stop_bound = bounds[i] 
                 dec  = decode(s, self.decoder, self.label_mapping)
                 c    = compress_neural(dec, len(s), self.reverse, self.label_mapping)
-                plot_neural(s, c, f"{self.image_path}/{file_id}_{start_bound}_{stop_bound}.png")                
-                
-                records.append({                
-                    "path":     str(filename),
-                    "start":    start_bound,
-                    "stop":     stop_bound,
-                    "sequence": [token.to_dict() for token in c]
-                })                                                
+                if len(c) > 4:
+                    plot_neural(s, c, f"{self.image_path}/{file_id}_{start_bound}_{stop_bound}.png")                
+                    
+                    records.append({                
+                        "path":     str(filename),
+                        "start":    start_bound,
+                        "stop":     stop_bound,
+                        "sequence": [token.to_dict() for token in c]
+                    })                                                
                 
                 if i % 10 == 0 and i > 0:
                     stop = time.time()

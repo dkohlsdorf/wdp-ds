@@ -1,2 +1,25 @@
 <!doctype html>
-<title>Discovery {{sequences[0].path}} {{sequences[0].start}}:{{sequences[0].stop}}</title>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Discovery</title>
+    <style>
+      .panel {
+	  width: 200px;
+	  overflow: scroll;
+      }
+      .scroll{
+	  overflow-x: scroll;
+      }
+    </style>
+</head>
+<body>
+{%for i in range(0, n)%}
+  <h4>Discovery {{sequences[i]['id']}} {{sequences[i]['start']}}:{{sequences[i]['stop']}}</h4>
+  <p>{{sequences[i]['sequence']}}</p>
+  <div class="scroll"> <img src="{{sequences[i]['img']}}" border="0"> </div>   
+{%endfor%}
+
+</body>
+</html>

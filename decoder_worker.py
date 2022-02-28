@@ -118,7 +118,7 @@ def labels(s):
     
 def knn(sequence, sequences, ids, k):
     pq = []
-    for i in range(0, min(k, len(ids))):
+    for i in range(0, min(k, len(ids))):        
         d = levenstein(labels(sequence), labels(sequences[ids[i]]))
         heapq.heappush(pq, (-d, ids[i]))
     if k < len(ids):
@@ -127,10 +127,10 @@ def knn(sequence, sequences, ids, k):
             if d < -pq[0][0]:
                 heapq.heappush(pq, (-d, ids[i]))
                 heapq.heappop(pq)
-    result = reversed([heapq.heappop(pq) for i in range(0, len(pq))])
+    result = list(reversed([heapq.heappop(pq) for i in range(0, len(pq))]))
     return [(-1 * d, i) for d, i in result]
     
-    
+
 def discovery(sequences, db, k=4):
     neighbors = {}
     densities = {}
@@ -168,7 +168,7 @@ class DiscoveryService:
         db = {}
         decodings = []
         for key, sequence in enumerate(self.sequences):
-            decoded = [DecodedSymbol.from_dict(x) for x in sequence['sequence']]
+            decoded = [DecodedSymbol.from_dict(x) for x in sequence['sequence']]            
             decodings.append(decoded)
             for ngram in ngrams(decoded):
                 if ngram not in db:
@@ -196,10 +196,16 @@ class DiscoveryService:
             else: 
                 stop = center
         region = start
-        nn = [self.sequences[neighbor] for _, neighbor in self.neighbors[region]]
-        return (self.sequences[region], nn)
+        keys = [neighbor for _, neighbor in self.neighbors[region]]
+        nn   = [self.sequences[neighbor] for neighbor in keys]
+        return self.sequences[region], nn, keys
        
-
+    def get(self, region):
+        keys = [neighbor for _, neighbor in self.neighbors[region]]
+        nn   = [self.sequences[neighbor] for neighbor in keys]
+        return self.sequences[region], nn, keys
+    
+    
 class DecodingWorker:
     
     KEY = 'WDP-DS'

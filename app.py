@@ -1,5 +1,6 @@
 import re
 import datetime
+import pickle
 
 from decoder_worker import DiscoveryService
 from flask import Flask, render_template
@@ -7,8 +8,15 @@ from flask import Flask, render_template
 
 SEQ_PATH = '../web_service/sequences/'
 IMG_PATH = '../web_service/images/'
+PKL_PATH = '../web_service/service.pkl'
 
-DISCOVERY = DiscoveryService(SEQ_PATH)
+
+try:
+    DISCOVERY = pickle.load(open(PKL_PATH, "rb"))
+except (OSError, IOError) as e:
+    DISCOVERY = DiscoveryService(SEQ_PATH)
+    pickle.dump(foo, open(PKL_PATH, "wb"))
+    
 
 app = Flask(__name__,
             static_url_path = '', 

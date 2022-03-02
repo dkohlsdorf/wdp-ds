@@ -1,0 +1,27 @@
+<!doctype html>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Discovery</title>
+    <style>
+      .panel {
+	  width: 200px;
+	  overflow: scroll;
+      }
+      .scroll{
+	  overflow-x: scroll;
+      }
+    </style>
+</head>
+<body>
+<h1> [:WDP:] Discovery Tool </h1>
+<h2><a href="/discovery"> [:next_dense:] </a> <h2>
+{%for i in range(0, n)%}
+  <h4> {{sequences[i]['id']}} {{sequences[i]['time']}} </h4>
+  <p><a href="/neighborhood/{{keys[i]}}"> {{sequences[i]['sequence']}}</a></p>
+  <div class="scroll"> <img src="/{{sequences[i]['img']}}" border="0"> </div>   
+{%endfor%}
+
+</body>
+</html>

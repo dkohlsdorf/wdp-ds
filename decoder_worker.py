@@ -22,6 +22,10 @@ from datetime import datetime
 
 from fastavro import writer, reader, parse_schema
 
+VERSION    = 'Mar2022' 
+SEQ_PATH   = f'../web_service/{VERSION}/sequences/'
+IMG_PATH   = f'../web_service/{VERSION}/images/'
+MODEL_PATH = '../web_service/ml_models/'
 
 SCHEMA = {
     "name": "WDP_Decoded",
@@ -239,15 +243,16 @@ class DecodingWorker:
                 start_bound, stop_bound = bounds[i] 
                 dec  = decode(s, self.decoder, self.label_mapping)
                 c    = compress_neural(dec, len(s), self.reverse, self.label_mapping)
-                if len(c) > 4:
-                    plot_neural(s, c, f"{self.image_path}/{file_id}_{start_bound}_{stop_bound}.png")                
-                    
-                    records.append({                
-                        "path":     str(filename),
-                        "start":    start_bound,
-                        "stop":     stop_bound,
-                        "sequence": [token.to_dict() for token in c]
-                    })                                                
+                #if len([c for region in c if region.id > 0]) > 4:
+                print(f"Region: {c}")
+                plot_neural(s, c, f"{self.image_path}/{file_id}_{start_bound}_{stop_bound}.png")                
+
+                records.append({                
+                    "path":     str(filename),
+                    "start":    start_bound,
+                    "stop":     stop_bound,
+                    "sequence": [token.to_dict() for token in c]
+                })                                                
                 
                 if i % 10 == 0 and i > 0:
                     stop = time.time()
@@ -258,10 +263,11 @@ class DecodingWorker:
                 writer(out, self.schema, records)
             
         
+
 if __name__ == '__main__':    
     if sys.argv[1] == 'worker':
         print("Decoding Worker")    
-        worker = DecodingWorker('../web_service/ml_models/', '../web_service/images/', '../web_service/sequences/', Redis())
+        worker = DecodingWorker(MODEL_PATH, IMG_PATH, SEQ_PATH, Redis())
         polling.poll(lambda: worker.work(), step=5, poll_forever=True)        
     elif sys.argv[1] == 'enqueue':
         print('Batch Enqueue')

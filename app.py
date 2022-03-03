@@ -7,10 +7,11 @@ import flask_login
 from decoder_worker import DiscoveryService
 from flask import Flask, render_template
 
+VERSION  = 'Mar2022' 
+SEQ_PATH = f'../web_service/{VERSION}/sequences/'
+IMG_PATH = f'../web_service/{VERSION}/images/'
+PKL_PATH = f'../web_service/{VERSION}/service.pkl'
 
-SEQ_PATH = '../web_service/sequences/'
-IMG_PATH = '../web_service/images/'
-PKL_PATH = '../web_service/service.pkl'
 USERS    = {'dolphin-visitor': {'password' : 'stenella_frontalis'}}
 SECRET   = 'wdp-ds-dolphin' 
 

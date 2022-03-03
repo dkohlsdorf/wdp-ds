@@ -135,7 +135,7 @@ def knn(sequence, sequences, ids, k):
     return [(-1 * d, i) for d, i in result]
     
 
-def discovery(sequences, db, k=4):
+def discovery(sequences, db, k=10):
     neighbors = {}
     densities = {}
     for i, sequence in enumerate(sequences):
@@ -243,16 +243,14 @@ class DecodingWorker:
                 start_bound, stop_bound = bounds[i] 
                 dec  = decode(s, self.decoder, self.label_mapping)
                 c    = compress_neural(dec, len(s), self.reverse, self.label_mapping)
-                #if len([c for region in c if region.id > 0]) > 4:
-                print(f"Region: {c}")
-                plot_neural(s, c, f"{self.image_path}/{file_id}_{start_bound}_{stop_bound}.png")                
-
-                records.append({                
-                    "path":     str(filename),
-                    "start":    start_bound,
-                    "stop":     stop_bound,
-                    "sequence": [token.to_dict() for token in c]
-                })                                                
+                if len([c for region in c if region.id > 0]) > 4:
+                    plot_neural(s, c, f"{self.image_path}/{file_id}_{start_bound}_{stop_bound}.png")                
+                    records.append({                
+                        "path":     str(filename),
+                        "start":    start_bound,
+                        "stop":     stop_bound,
+                        "sequence": [token.to_dict() for token in c]
+                    })                                                
                 
                 if i % 10 == 0 and i > 0:
                     stop = time.time()

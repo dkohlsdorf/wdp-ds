@@ -148,7 +148,7 @@ def discovery(sequences, db, k=10):
 
 
 def subsequences(sequence, max_len=8):
-    n = len(sequences)
+    n = len(sequence)
     for length in range(1, max_len):
         for i in range(length, n):
             substring = " ".join([s['cls'] for s in sequence[i-length:i]])

@@ -163,9 +163,10 @@ class DiscoveryService:
         self.samples   = []
         self.densities = {}       
         self.neighbors = {}
+        self.substrings = {}
         self.parse(sequence_path, limit)
         self.setup_discovery()
-        self.substrings = {}
+        self.setup_substrings()
 
     def parse(self, sequence_path, limit):        
         for file in os.listdir(sequence_path):

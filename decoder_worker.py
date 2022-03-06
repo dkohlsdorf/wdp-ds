@@ -147,6 +147,14 @@ def discovery(sequences, db, k=10):
     return densities, neighbors
 
 
+def subsequences(sequence, max_len=8):
+    n = len(sequences)
+    for length in range(1, max_len):
+        for i in range(length, n):
+            substring = " ".join([s['cls'] for s in sequence[i-length:i]])
+            yield substring
+
+
 class DiscoveryService:
     
     def __init__(self, sequence_path, limit = None):
@@ -157,7 +165,8 @@ class DiscoveryService:
         self.neighbors = {}
         self.parse(sequence_path, limit)
         self.setup_discovery()
-        
+        self.substrings = {}
+
     def parse(self, sequence_path, limit):        
         for file in os.listdir(sequence_path):
             if limit is not None and len(self.sequences) >= limit:
@@ -167,7 +176,15 @@ class DiscoveryService:
                     avro_reader = reader(fo)
                     for record in avro_reader:
                         self.sequences.append(record)
-    
+
+    def setup_substrings(self):
+        for i, sequence in enumerate(self.sequences):
+            if i % 100 == 0:
+                for sub in subsequences(sequence['sequence']):
+                    if sub not in substrings:
+                        self.substrings[sub] = []
+                    self.substrings[sub].append(i)
+                        
     def setup_discovery(self):
         db = {}
         decodings = []
@@ -208,6 +225,11 @@ class DiscoveryService:
         keys = [neighbor for _, neighbor in self.neighbors[region]]
         nn   = [self.sequences[neighbor] for neighbor in keys]
         return self.sequences[region], nn, keys
+    
+    def find(self, string):
+        keys = self.substrings[string]
+        nn   = [self.sequences[key] for key in keys]
+        return nn, keys
     
     
 class DecodingWorker:

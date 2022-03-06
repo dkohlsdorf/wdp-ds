@@ -111,3 +111,14 @@ def neighborhood(key):
     s         = DISCOVERY.get(key)
     sequences = [process_sequence(s[0])] + [process_sequence(x) for x in s[1][1:]]
     return render_template('discovery.html', sequences=sequences, n=len(sequences), keys = s[2])
+
+
+@app.route('/find', methods=['POST'])
+@flask_login.login_required
+def find():
+    string = flask.request.form['query']
+    sequences, keys = DISCOVERY.find(string)
+    return render_template('discovery.html', sequences=sequences, n=len(sequences), keys = keys)
+                       
+                       
+                       

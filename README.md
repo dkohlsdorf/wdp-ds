@@ -28,3 +28,4 @@ and communicate the results with domain experts.
 + [fastavro](https://pypi.org/project/fastavro/)
 + [redis](https://redis.io/)
 + [flask](https://flask.palletsprojects.com/en/2.0.x/)
++ [flask-login](https://flask-login.readthedocs.io/en/latest/)

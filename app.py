@@ -22,6 +22,7 @@ except (OSError, IOError) as e:
     DISCOVERY = DiscoveryService(SEQ_PATH)
     pickle.dump(DISCOVERY, open(PKL_PATH, "wb"))
     
+print(DISCOVERY.substrings.keys())
 
 app = Flask(__name__,
             static_url_path = '', 
@@ -117,7 +118,9 @@ def neighborhood(key):
 @flask_login.login_required
 def find():
     string = flask.request.form['query']
+    print(string)
     sequences, keys = DISCOVERY.find(string)
+    sequences = [process_sequence(x) for x in sequences]
     return render_template('discovery.html', sequences=sequences, n=len(sequences), keys = keys)
                        
                        

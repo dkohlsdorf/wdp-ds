@@ -180,11 +180,10 @@ class DiscoveryService:
 
     def setup_substrings(self):
         for i, sequence in enumerate(self.sequences):
-            if i % 100 == 0:
-                for sub in subsequences(sequence['sequence']):
-                    if sub not in self.substrings:
-                        self.substrings[sub] = []
-                    self.substrings[sub].append(i)
+            for sub in subsequences(sequence['sequence']):
+                if sub not in self.substrings:
+                    self.substrings[sub] = []
+                self.substrings[sub].append(i)
                         
     def setup_discovery(self):
         db = {}
@@ -228,9 +227,12 @@ class DiscoveryService:
         return self.sequences[region], nn, keys
     
     def find(self, string):
-        keys = self.substrings[string]
-        nn   = [self.sequences[key] for key in keys]
-        return nn, keys
+        if string in self.substrings:
+            keys = self.substrings[string]            
+            nn   = [self.sequences[key] for key in keys]            
+            return nn, keys
+        else:
+            return [], []
     
     
 class DecodingWorker:

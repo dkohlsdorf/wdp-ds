@@ -182,7 +182,7 @@ class DiscoveryService:
         for i, sequence in enumerate(self.sequences):
             if i % 100 == 0:
                 for sub in subsequences(sequence['sequence']):
-                    if sub not in substrings:
+                    if sub not in self.substrings:
                         self.substrings[sub] = []
                     self.substrings[sub].append(i)
                         

@@ -34,16 +34,24 @@ def compress_neural(decoding, n, reverse, label_mapping):
     last = 0
     for i in range(1, len(decoding)):
         if decoding[i] != decoding[i - 1]:                                   
-            if decoding[i - 1] != 0:  
-                start = last
-                stop = i
-                leng = stop - start
-                if leng > NEURAL_SIZE_TH:
-                    d = DecodedSymbol(start, stop,  i2name(decoding[i - 1], reverse, label_mapping), decoding[i - 1])
-                    classifications.append(d)
+                
+            start = last
+            stop = i
+            leng = stop - start
+            if decoding[i - 1] == 0:  
+                decoding[i - 1] = sil_label(leng)
+                
+            if leng > NEURAL_SIZE_TH:
+                d = DecodedSymbol(start, stop,  i2name(decoding[i - 1], reverse, label_mapping), decoding[i - 1])
+                classifications.append(d)
             last = i
-    if last != n and decoding[-1] != 0:
-        d = DecodedSymbol(last, n,  i2name(decoding[-1], reverse, label_mapping), decoding[i-1])        
+    if last != n:
+        start = last
+        stop  = n
+        leng  = stop - start        
+        if decoding[-1] == 0:  
+            decoding[-1] = sil_label(leng)
+        d = DecodedSymbol(last, n,  i2name(decoding[-1], reverse, label_mapping), decoding[-1])        
         classifications.append(d)                                
     return classifications
     
@@ -53,11 +61,11 @@ def plot_neural(spectrogram, compressed, img_path):
     fig.set_size_inches(len(spectrogram) / 100, len(spectrogram[0]) / 100)
     ax.imshow(1.0 - spectrogram.T,  cmap='gray')                  
     for region in compressed:        
-        rect = patches.Rectangle((region.start, 0), region.stop - region.start,
-                         256, linewidth=1, edgecolor='r', facecolor=COLORS[region.id])
-        ax.add_patch(rect)
-        plt.text(region.start + (region.stop - region.start) // 2 , 30, region.cls, size=12)
-    #plt.axis('off')
+        if region.id > 0:
+            rect = patches.Rectangle((region.start, 0), region.stop - region.start,
+                             256, linewidth=1, edgecolor='r', facecolor=COLORS[region.id])
+            ax.add_patch(rect)
+            plt.text(region.start + (region.stop - region.start) // 2 , 30, region.cls, size=12)
     plt.savefig(img_path, dpi=100, bbox_inches='tight', pad_inches=0)
     plt.close()
 

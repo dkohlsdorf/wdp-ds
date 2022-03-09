@@ -22,6 +22,10 @@ from datetime import datetime
 
 from fastavro import writer, reader, parse_schema
 
+VERSION    = 'Mar2022' 
+SEQ_PATH   = f'../web_service/{VERSION}/sequences/'
+IMG_PATH   = f'../web_service/{VERSION}/images/'
+MODEL_PATH = '../web_service/ml_models/'
 
 SCHEMA = {
     "name": "WDP_Decoded",
@@ -131,7 +135,7 @@ def knn(sequence, sequences, ids, k):
     return [(-1 * d, i) for d, i in result]
     
 
-def discovery(sequences, db, k=4):
+def discovery(sequences, db, k=10):
     neighbors = {}
     densities = {}
     for i, sequence in enumerate(sequences):
@@ -143,6 +147,14 @@ def discovery(sequences, db, k=4):
     return densities, neighbors
 
 
+def subsequences(sequence, max_len=8):
+    n = len(sequence)
+    for length in range(1, max_len):
+        for i in range(length, n):
+            substring = " ".join([s['cls'] for s in sequence[i-length:i]])
+            yield substring
+
+
 class DiscoveryService:
     
     def __init__(self, sequence_path, limit = None):
@@ -151,9 +163,11 @@ class DiscoveryService:
         self.samples   = []
         self.densities = {}       
         self.neighbors = {}
+        self.substrings = {}
         self.parse(sequence_path, limit)
         self.setup_discovery()
-        
+        self.setup_substrings()
+
     def parse(self, sequence_path, limit):        
         for file in os.listdir(sequence_path):
             if limit is not None and len(self.sequences) >= limit:
@@ -163,7 +177,14 @@ class DiscoveryService:
                     avro_reader = reader(fo)
                     for record in avro_reader:
                         self.sequences.append(record)
-    
+
+    def setup_substrings(self):
+        for i, sequence in enumerate(self.sequences):
+            for sub in subsequences(sequence['sequence']):
+                if sub not in self.substrings:
+                    self.substrings[sub] = []
+                self.substrings[sub].append(i)
+                        
     def setup_discovery(self):
         db = {}
         decodings = []
@@ -205,6 +226,14 @@ class DiscoveryService:
         nn   = [self.sequences[neighbor] for neighbor in keys]
         return self.sequences[region], nn, keys
     
+    def find(self, string):
+        if string in self.substrings:
+            keys = self.substrings[string]            
+            nn   = [self.sequences[key] for key in keys]            
+            return nn, keys
+        else:
+            return [], []
+    
     
 class DecodingWorker:
     
@@ -239,9 +268,8 @@ class DecodingWorker:
                 start_bound, stop_bound = bounds[i] 
                 dec  = decode(s, self.decoder, self.label_mapping)
                 c    = compress_neural(dec, len(s), self.reverse, self.label_mapping)
-                if len(c) > 4:
+                if len([c for region in c if region.id > 0]) > 4:
                     plot_neural(s, c, f"{self.image_path}/{file_id}_{start_bound}_{stop_bound}.png")                
-                    
                     records.append({                
                         "path":     str(filename),
                         "start":    start_bound,
@@ -258,10 +286,11 @@ class DecodingWorker:
                 writer(out, self.schema, records)
             
         
+
 if __name__ == '__main__':    
     if sys.argv[1] == 'worker':
         print("Decoding Worker")    
-        worker = DecodingWorker('../web_service/ml_models/', '../web_service/images/', '../web_service/sequences/', Redis())
+        worker = DecodingWorker(MODEL_PATH, IMG_PATH, SEQ_PATH, Redis())
         polling.poll(lambda: worker.work(), step=5, poll_forever=True)        
     elif sys.argv[1] == 'enqueue':
         print('Batch Enqueue')

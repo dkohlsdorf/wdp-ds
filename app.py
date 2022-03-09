@@ -7,10 +7,11 @@ import flask_login
 from decoder_worker import DiscoveryService
 from flask import Flask, render_template
 
+VERSION  = 'Mar2022' 
+SEQ_PATH = f'../web_service/{VERSION}/sequences/'
+IMG_PATH = f'../web_service/{VERSION}/images/'
+PKL_PATH = f'../web_service/{VERSION}/service.pkl'
 
-SEQ_PATH = '../web_service/sequences/'
-IMG_PATH = '../web_service/images/'
-PKL_PATH = '../web_service/service.pkl'
 USERS    = {'dolphin-visitor': {'password' : 'stenella_frontalis'}}
 SECRET   = 'wdp-ds-dolphin' 
 
@@ -21,6 +22,7 @@ except (OSError, IOError) as e:
     DISCOVERY = DiscoveryService(SEQ_PATH)
     pickle.dump(DISCOVERY, open(PKL_PATH, "wb"))
     
+print(DISCOVERY.substrings.keys())
 
 app = Flask(__name__,
             static_url_path = '', 
@@ -110,3 +112,16 @@ def neighborhood(key):
     s         = DISCOVERY.get(key)
     sequences = [process_sequence(s[0])] + [process_sequence(x) for x in s[1][1:]]
     return render_template('discovery.html', sequences=sequences, n=len(sequences), keys = s[2])
+
+
+@app.route('/find', methods=['POST'])
+@flask_login.login_required
+def find():
+    string = flask.request.form['query']
+    print(string)
+    sequences, keys = DISCOVERY.find(string)
+    sequences = [process_sequence(x) for x in sequences]
+    return render_template('discovery.html', sequences=sequences, n=len(sequences), keys = keys)
+                       
+                       
+                       

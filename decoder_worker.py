@@ -22,7 +22,7 @@ from datetime import datetime
 
 from fastavro import writer, reader, parse_schema
 
-VERSION    = 'Mar2022' 
+VERSION    = 'Mar2022v2' 
 SEQ_PATH   = f'../web_service/{VERSION}/sequences/'
 IMG_PATH   = f'../web_service/{VERSION}/images/'
 MODEL_PATH = '../web_service/ml_models/'
@@ -249,7 +249,8 @@ class DecodingWorker:
         
         self.redis         = redis
         self.schema        = parse_schema(SCHEMA)
-                
+        
+        
     def work(self):
         now = datetime.now()        
         result = self.redis.lpop(DecodingWorker.KEY)

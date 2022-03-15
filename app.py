@@ -7,7 +7,7 @@ import flask_login
 from decoder_worker import DiscoveryService
 from flask import Flask, render_template
 
-VERSION  = 'Mar2022' 
+VERSION  = 'Mar2022v2' 
 SEQ_PATH = f'../web_service/{VERSION}/sequences/'
 IMG_PATH = f'../web_service/{VERSION}/images/'
 PKL_PATH = f'../web_service/{VERSION}/service.pkl'

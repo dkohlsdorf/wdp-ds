@@ -47,7 +47,7 @@ def compress_neural(decoding, n, reverse, label_mapping):
                 decoding[i - 1] = sil_label(leng)
                 
             if leng > NEURAL_SIZE_TH:
-                d = DecodedSymbol(start, stop,  i2name(decoding[i - 1], reverse, label_mapping), decoding[i - 1])
+                d = DecodedSymbol(start, stop, i2name(decoding[i - 1], reverse, label_mapping), decoding[i - 1])
                 classifications.append(d)
             last = i
     if last != n:

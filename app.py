@@ -7,19 +7,21 @@ import flask_login
 from decoder_worker import DiscoveryService
 from flask import Flask, render_template
 
-VERSION  = 'Mar2022v2' 
-SEQ_PATH = f'../web_service/{VERSION}/sequences/'
-IMG_PATH = f'../web_service/{VERSION}/images/'
-PKL_PATH = f'../web_service/{VERSION}/service.pkl'
+VERSION    = 'Mar2022v2' 
+SEQ_PATH   = f'../web_service/{VERSION}/sequences/'
+IMG_PATH   = f'../web_service/{VERSION}/images/'
+PKL_PATH   = f'../web_service/{VERSION}/service.pkl'
+MODEL_PATH = '../web_service/ml_models/'
+
+LIMIT      = 10
 
 USERS    = {'dolphin-visitor': {'password' : 'stenella_frontalis'}}
 SECRET   = 'wdp-ds-dolphin' 
 
-
 try:
     DISCOVERY = pickle.load(open(PKL_PATH, "rb"))
 except (OSError, IOError) as e:
-    DISCOVERY = DiscoveryService(SEQ_PATH)
+    DISCOVERY = DiscoveryService(SEQ_PATH, IMG_PATH, MODEL_PATH, LIMIT)
     pickle.dump(DISCOVERY, open(PKL_PATH, "wb"))
     
 print(DISCOVERY.substrings.keys())

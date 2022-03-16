@@ -16,14 +16,31 @@
 </head>
 <body>
 <h1> [:WDP:] Discovery Tool </h1>
-<h2>
-    
-<form action='/find' method='POST'>
-    <input type='text' name='query' id='query' placeholder='symbols'/>
-    <input type='submit' name='submit'/>
-</form> 
-<a href="/discovery"> [:next_dense:] </a> <h2>
+<table>
+    <tr> 
+        <td>
+            <form action='/find' method='POST'>
+                <input type='text' name='query' id='query' placeholder='symbols'/>
+                <input type='submit' name='submit'/>
+            </form> 
+        </td> 
+    </tr>
+    <tr>         
+        <td>
+            <form action='/query' method='POST'>
+                <input type="file">
+                <input type='submit' name='upload'/>
+            </form> 
+        </td> 
+    </tr>
+    <tr>                 
+        <td>
+            <a href="/discovery"> [:next_dense:] </a> 
+        </td> 
+    </tr>
+</table>
 
+<hr/>
 {%for i in range(0, n)%}
   <h4> {{sequences[i]['id']}} {{sequences[i]['time']}} </h4>
   <p><a href="/neighborhood/{{keys[i]}}"> {{sequences[i]['sequence']}}</a></p>

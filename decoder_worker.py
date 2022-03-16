@@ -157,7 +157,7 @@ def subsequences(sequence, max_len=8):
 
 class DiscoveryService:
     
-    def __init__(self, sequence_path, model_path, limit = None):
+    def __init__(self, sequence_path, img_path, model_path, limit = None):
         self.sequences = []
         self.keys      = []
         self.samples   = []
@@ -167,12 +167,15 @@ class DiscoveryService:
         self.parse(sequence_path, limit)
         self.setup_discovery()
         self.setup_substrings()
-
+        
         self.decoder       = load_model(f'{model_path}/decoder_nn.h5')
         self.lab           = pkl.load(open(f"{model_path}/labels.pkl", "rb"))
         self.reverse       = {v:k for k, v in self.lab.items()}
         self.label_mapping = pkl.load(open(f'{model_path}/label_mapping.pkl', 'rb'))
 
+        self.sequence_path = sequence_path
+        self.img_path = img_path
+        
     def parse(self, sequence_path, limit):        
         for file in os.listdir(sequence_path):
             if limit is not None and len(self.sequences) >= limit:
@@ -226,13 +229,22 @@ class DiscoveryService:
         nn   = [self.sequences[neighbor] for neighbor in keys]
         return self.sequences[region], nn, keys
 
-    def query_by_file(self, audio):
-        s                       = spec(regions[i])
-        start_bound, stop_bound = bounds[i] 
+    def query_by_file(self, audio, name):
+        query_id = f"query_{name}"
+        s = spec(audio)
+        start_bound, stop_bound = 0, len(audio)
         dec  = decode(s, self.decoder, self.label_mapping)
         c    = compress_neural(dec, len(s), self.reverse, self.label_mapping)
+        plot_neural(s, c, f"{self.image_path}/{query_id}.png")                
+        records = [{                
+            "path":     name,
+            "start":    start_bound,
+            "stop":     stop_bound,
+            "sequence": [token.to_dict() for token in c]
+        }]                                       
         
-        pass
+        with open(f'{self.sequence_path}/{query_id}.avro', 'wb') as out:
+            writer(out, self.schema, records)        
         
     def get(self, region):
         keys = [neighbor for _, neighbor in self.neighbors[region]]

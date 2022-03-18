@@ -16,6 +16,19 @@
 </head>
 <body>
 <h1> [:WDP:] Discovery Tool </h1>
+<h3> ERRORS: <h3>
+{% with messages = get_flashed_messages() %}
+  {% if messages %}
+    <ul class=flashes>
+    {% for message in messages %}
+      <li> <font color="red"> {{ message }} </font></li>
+    {% endfor %}
+    </ul><hr/>
+    {% endif %}
+    
+{% endwith %}
+{% block body %}{% endblock %}
+
 <table>
     <tr> 
         <td>
@@ -27,9 +40,9 @@
     </tr>
     <tr>         
         <td>
-            <form action='/query' method='POST'>
-                <input type="file">
-                <input type='submit' name='upload'/>
+            <form action='/query' method='post' enctype='multipart/form-data'>
+                <input type="file" name="file">
+                <input type='submit' value='Upload'/>
             </form> 
         </td> 
     </tr>
@@ -41,6 +54,13 @@
 </table>
 
 <hr/>
+{% if query %}
+  <h4> Query </h4>
+  <p> {{query[1]}} </p>
+  <div class="scroll"> <img src="/{{query[0]}}" border="0"> </div> 
+
+{% endif %}    
+
 {%for i in range(0, n)%}
   <h4> {{sequences[i]['id']}} {{sequences[i]['time']}} </h4>
   <p><a href="/neighborhood/{{keys[i]}}"> {{sequences[i]['sequence']}}</a></p>

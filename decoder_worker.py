@@ -99,7 +99,7 @@ def decode(x, decoder, label_mapping):
     return local_c
 
     
-def ngrams(sequence, n=4, sep=''):
+def ngrams(sequence, n=2, sep=''):
     results = []
     for i in range(n, len(sequence)):
         x = [s.cls for s in sequence[i-n:i]]
@@ -135,6 +135,14 @@ def knn(sequence, sequences, ids, k):
     return [(-1 * d, i) for d, i in result]
     
 
+def query(sequence, sequences, db, k=10):
+    ids = match(sequence, db)
+    print(ids)
+    nn  = knn(sequence, sequences, ids, k)
+    print(nn)
+    return nn
+
+    
 def discovery(sequences, db, k=10):
     neighbors = {}
     densities = {}
@@ -161,9 +169,11 @@ class DiscoveryService:
         self.sequences = []
         self.keys      = []
         self.samples   = []
+        self.decodings = []
         self.densities = {}       
         self.neighbors = {}
         self.substrings = {}
+        self.db = {}
         self.parse(sequence_path, limit)
         self.setup_discovery()
         self.setup_substrings()
@@ -180,7 +190,7 @@ class DiscoveryService:
         for file in os.listdir(sequence_path):
             if limit is not None and len(self.sequences) >= limit:
                 break
-            if file.endswith('avro'):
+            if file.endswith('avro') and not file.startswith('query'):
                 with open(f'{sequence_path}/{file}', 'rb') as fo:
                     avro_reader = reader(fo)
                     for record in avro_reader:
@@ -194,16 +204,14 @@ class DiscoveryService:
                 self.substrings[sub].append(i)
                         
     def setup_discovery(self):
-        db = {}
-        decodings = []
         for key, sequence in enumerate(self.sequences):
             decoded = [DecodedSymbol.from_dict(x) for x in sequence['sequence']]            
-            decodings.append(decoded)
+            self.decodings.append(decoded)
             for ngram in ngrams(decoded):
-                if ngram not in db:
-                    db[ngram] = []
-                db[ngram].append(key)            
-        d, n = discovery(decodings, db) 
+                if ngram not in self.db:
+                    self.db[ngram] = []
+                self.db[ngram].append(key)            
+        d, n = discovery(self.decodings, self.db) 
         self.densities  = d        
         self.neighbors  = n                
 
@@ -229,23 +237,32 @@ class DiscoveryService:
         nn   = [self.sequences[neighbor] for neighbor in keys]
         return self.sequences[region], nn, keys
 
-    def query_by_file(self, audio, name):
+    def query_by_file(self, filename):
+        name = str(filename).split('/')[-1].split('.')[0]             
         query_id = f"query_{name}"
+        audio = raw(filename)
         s = spec(audio)
         start_bound, stop_bound = 0, len(audio)
         dec  = decode(s, self.decoder, self.label_mapping)
         c    = compress_neural(dec, len(s), self.reverse, self.label_mapping)
-        plot_neural(s, c, f"{self.image_path}/{query_id}.png")                
+        img_p = f"{self.img_path}/{query_id}.png"
+        plot_neural(s, c, img_p)                
         records = [{                
             "path":     name,
             "start":    start_bound,
             "stop":     stop_bound,
             "sequence": [token.to_dict() for token in c]
-        }]                                       
-        
+        }]                                               
         with open(f'{self.sequence_path}/{query_id}.avro', 'wb') as out:
-            writer(out, self.schema, records)        
+            writer(out, SCHEMA, records)
+
+        decoded = [DecodedSymbol.from_dict(x) for x in records[0]['sequence']]
+        neighbors = query(decoded, self.decodings, self.db)
+        keys = [neighbor for _, neighbor in neighbors]
+        nn   = [self.sequences[neighbor] for neighbor in keys]        
+        return f"{query_id}.png", [s.cls for s in decoded], nn, keys
         
+            
     def get(self, region):
         keys = [neighbor for _, neighbor in self.neighbors[region]]
         nn   = [self.sequences[neighbor] for neighbor in keys]
@@ -273,8 +290,7 @@ class DecodingWorker:
         self.sequence_path = sequence_path
         
         self.redis         = redis
-        self.schema        = parse_schema(SCHEMA)
-        
+        self.schema        = parse_schema(SCHEMA)                    
         
     def work(self):
         now = datetime.now()        

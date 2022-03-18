@@ -5,30 +5,34 @@ import flask
 import flask_login
 
 from decoder_worker import DiscoveryService
-from flask import Flask, render_template
+from flask import Flask, render_template, flash, redirect, request
 
-VERSION  = 'Mar2022v2' 
-SEQ_PATH = f'../web_service/{VERSION}/sequences/'
-IMG_PATH = f'../web_service/{VERSION}/images/'
-PKL_PATH = f'../web_service/{VERSION}/service.pkl'
+VERSION     = 'Mar2022v2' 
+SEQ_PATH    = f'../web_service/{VERSION}/sequences/'
+IMG_PATH    = f'../web_service/{VERSION}/images/'
+PKL_PATH    = f'../web_service/{VERSION}/service.pkl'
+UPLOAD_PATH = f'../web_service/{VERSION}/wav'
+MODEL_PATH  = '../web_service/ml_models/'
+
+
+LIMIT      = None
 
 USERS    = {'dolphin-visitor': {'password' : 'stenella_frontalis'}}
 SECRET   = 'wdp-ds-dolphin' 
 
-
 try:
     DISCOVERY = pickle.load(open(PKL_PATH, "rb"))
 except (OSError, IOError) as e:
-    DISCOVERY = DiscoveryService(SEQ_PATH)
+    DISCOVERY = DiscoveryService(SEQ_PATH, IMG_PATH, MODEL_PATH, LIMIT)
     pickle.dump(DISCOVERY, open(PKL_PATH, "wb"))
     
-print(DISCOVERY.substrings.keys())
 
 app = Flask(__name__,
             static_url_path = '', 
             static_folder   = IMG_PATH,
             template_folder = 'templates')
 app.secret_key = SECRET
+app.config['UPLOAD_FOLDER'] = UPLOAD_PATH 
 
 
 login_manager = flask_login.LoginManager()
@@ -105,6 +109,25 @@ def discovery():
     return render_template('discovery.html', sequences=sequences, n=len(sequences), keys = s[2])
 
 
+@app.route('/query', methods=['POST'])
+@flask_login.login_required
+def upload():
+    if request.method == 'POST':
+        print(request.files)
+        if 'file' not in request.files:
+            flash('No File Uploaded')
+            return redirect('/discovery')            
+        file = request.files['file']
+        if not file.filename.endswith('.wav'):
+            flash('Only wav files are allowed')
+            return redirect('/discovery')
+        path = f"{UPLOAD_PATH}/{file.filename}"
+        file.save(path)
+        img, decoding, nn, keys = DISCOVERY.query_by_file(path)
+        decoding = " ".join(decoding)
+        sequences = [process_sequence(x) for x in nn]        
+        return render_template('discovery.html', sequences=sequences, n=len(sequences), keys = keys, query=(img, decoding))
+    
 @app.route('/neighborhood/<key>')
 @flask_login.login_required
 def neighborhood(key):

@@ -99,7 +99,7 @@ def decode(x, decoder, label_mapping):
     return local_c
 
     
-def ngrams(sequence, n=2, sep=''):
+def ngrams(sequence, n=4, sep=''):
     results = []
     for i in range(n, len(sequence)):
         x = [s.cls for s in sequence[i-n:i]]
@@ -147,6 +147,7 @@ def discovery(sequences, db, k=10):
     neighbors = {}
     densities = {}
     for i, sequence in enumerate(sequences):
+        print(f" ... discovery: {i}")
         ids = match(sequence, db)
         nn  = knn(sequence, sequences, ids, k)
         neighbors[i] = nn
@@ -188,6 +189,7 @@ class DiscoveryService:
         
     def parse(self, sequence_path, limit):        
         for file in os.listdir(sequence_path):
+            print(f" ... reading: {file}")
             if limit is not None and len(self.sequences) >= limit:
                 break
             if file.endswith('avro') and not file.startswith('query'):
@@ -198,6 +200,7 @@ class DiscoveryService:
 
     def setup_substrings(self):
         for i, sequence in enumerate(self.sequences):
+            print(f" ... substrings for: {i}")
             for sub in subsequences(sequence['sequence']):
                 if sub not in self.substrings:
                     self.substrings[sub] = []

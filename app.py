@@ -23,9 +23,11 @@ SECRET   = 'wdp-ds-dolphin'
 try:
     DISCOVERY = pickle.load(open(PKL_PATH, "rb"))
 except (OSError, IOError) as e:
-    DISCOVERY = DiscoveryService(SEQ_PATH, IMG_PATH, MODEL_PATH, LIMIT)
+    DISCOVERY = DiscoveryService(SEQ_PATH, IMG_PATH, LIMIT)
     pickle.dump(DISCOVERY, open(PKL_PATH, "wb"))
-    
+
+DISCOVERY.init_model(MODEL_PATH)
+
 
 app = Flask(__name__,
             static_url_path = '', 

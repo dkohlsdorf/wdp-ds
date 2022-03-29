@@ -4,6 +4,8 @@ import time
 import heapq
 import numpy as np 
 
+import tensorflow as tf
+
 import matplotlib.pyplot as plt
 import matplotlib.patches as patches
 
@@ -166,7 +168,7 @@ def subsequences(sequence, max_len=8):
 
 class DiscoveryService:
     
-    def __init__(self, sequence_path, img_path, model_path, limit = None):
+    def __init__(self, sequence_path, img_path, limit = None):
         self.sequences = []
         self.keys      = []
         self.samples   = []
@@ -175,17 +177,22 @@ class DiscoveryService:
         self.neighbors = {}
         self.substrings = {}
         self.db = {}
+        self.decoder = None
+        self.lab     = None
+        self.reverse = None
+        self.label_mapping = None
+
         self.parse(sequence_path, limit)
         self.setup_discovery()
-        self.setup_substrings()
+        self.setup_substrings()        
+        self.sequence_path = sequence_path
+        self.img_path = img_path
         
-        self.decoder       = load_model(f'{model_path}/decoder_nn.h5')
+    def init_model(self, model_path):
+        self.decoder       = load_model(f'{model_path}/decoder_nn.h5', custom_objects = {'Functional' : tf.keras.models.Model})
         self.lab           = pkl.load(open(f"{model_path}/labels.pkl", "rb"))
         self.reverse       = {v:k for k, v in self.lab.items()}
         self.label_mapping = pkl.load(open(f'{model_path}/label_mapping.pkl', 'rb'))
-
-        self.sequence_path = sequence_path
-        self.img_path = img_path
         
     def parse(self, sequence_path, limit):        
         for file in os.listdir(sequence_path):

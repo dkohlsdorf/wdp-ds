@@ -24,7 +24,7 @@ from datetime import datetime
 
 from fastavro import writer, reader, parse_schema
 
-VERSION    = 'Mar2022v2' 
+VERSION    = 'April2022' 
 SEQ_PATH   = f'../web_service/{VERSION}/sequences/'
 IMG_PATH   = f'../web_service/{VERSION}/images/'
 MODEL_PATH = '../web_service/ml_models/'

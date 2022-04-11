@@ -304,7 +304,7 @@ def train(label_file, wav_file, label_file_l2, wav_file_l2, out_folder="output",
         enc   = load_model('{}/encoder.h5'.format(out_folder))    
 
     by_label = dict([(k, enc.predict(np.stack(v), batch_size=10)) for k, v in by_label.items()])
-    clusters = dict([(k, cluster_model(v, out_folder, reverse[k], min_k = 5, max_k=None)) for k, v in by_label.items() if k != label_dict['NOISE']])
+    clusters = dict([(k, cluster_model(v, out_folder, reverse[k], min_k = 15, max_k=None)) for k, v in by_label.items() if k != label_dict['NOISE']])
     pkl.dump(clusters, open('{}/clusters_window.pkl'.format(out_folder),'wb'))
     print(f'Done Clustering: {[(k, v.cluster_centers_.shape) for k, v in clusters.items()]}')
     
@@ -894,8 +894,8 @@ def discrete_decoding(folder, audio, out_folder):
                 p
             ))
         f.write('</TABLE></BODY></HTML>')        
-
-
+        
+        
 def neural_decoding(folder, in_folder, out_folder):
     decoder = load_model(f'{folder}/decoder_nn.h5')
     lab     = pkl.load(open(f"{folder}/labels.pkl", "rb"))

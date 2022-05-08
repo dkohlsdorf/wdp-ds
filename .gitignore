@@ -3,6 +3,7 @@ project
 *.ipynb
 *.sh
 *~
+*.db
 
 # Models
 .idea

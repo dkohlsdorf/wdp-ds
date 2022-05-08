@@ -4,18 +4,22 @@ import pickle
 import flask
 import flask_login
 
+import sqlite3
+import os.path
+
 from decoder_worker import DiscoveryService
 from flask import Flask, render_template, flash, redirect, request
 
-VERSION     = 'Mar2022v2' 
+
+VERSION     = 'Test' 
 SEQ_PATH    = f'../web_service/{VERSION}/sequences/'
 IMG_PATH    = f'../web_service/{VERSION}/images/'
 PKL_PATH    = f'../web_service/{VERSION}/service.pkl'
 UPLOAD_PATH = f'../web_service/{VERSION}/wav'
-MODEL_PATH  = '../web_service/ml_models/'
+MODEL_PATH  = '../web_service/ml_models_mai_smlr/'
 
 
-LIMIT      = None
+LIMIT      = 50
 
 USERS    = {'dolphin-visitor': {'password' : 'stenella_frontalis'}}
 SECRET   = 'wdp-ds-dolphin' 
@@ -27,6 +31,47 @@ except (OSError, IOError) as e:
     pickle.dump(DISCOVERY, open(PKL_PATH, "wb"))
 
 DISCOVERY.init_model(MODEL_PATH)
+
+class QueryHistory:
+    
+    def __init__(self, file='query.db'):
+        if not os.path.exists(file):
+            conn = sqlite3.connect('query.db')       
+            cur  = conn.cursor()             
+            cur.execute("""
+                CREATE TABLE query_history (
+                     query_string text,
+                     query_file text,
+                     date text
+                )
+            """)
+            conn.commit()
+            conn.close()
+        
+    def insert(self, query, file=None):
+        conn = sqlite3.connect('query.db')       
+        cur  = conn.cursor()             
+
+        date = datetime.datetime.now().strftime("%d-%m-%Y %H:%M:%S")
+        cur.execute("INSERT INTO query_history VALUES (?, ?, ?)", (query, file, date))
+        conn.commit()
+        conn.close()
+
+    def get(self, n=None):
+        conn = sqlite3.connect('query.db')               
+        cur  = conn.cursor()         
+        filter_n = f"LIMIT {n}" if n is not None else ""   
+        cur.execute(f"""
+            SELECT * 
+            FROM query_history
+            ORDER BY date DESC
+            {filter_n}
+        """)
+        result = cur.fetchall()
+        conn.commit()
+        conn.close()        
+        return result
+
 
 
 app = Flask(__name__,
@@ -43,8 +88,8 @@ login_manager.init_app(app)
 
 class User(flask_login.UserMixin):
     pass
-
-
+    
+    
 @login_manager.user_loader
 def user_loader(email):
     if email not in USERS:
@@ -116,6 +161,7 @@ def discovery():
 def upload():
     if request.method == 'POST':
         print(request.files)
+
         if 'file' not in request.files:
             flash('No File Uploaded')
             return redirect('/discovery')            
@@ -127,8 +173,13 @@ def upload():
         file.save(path)
         img, decoding, nn, keys = DISCOVERY.query_by_file(path)
         decoding = " ".join(decoding)
+        
+        history = QueryHistory()
+        history.insert(decoding, path.split('/')[-1])
+
         sequences = [process_sequence(x) for x in nn]        
         return render_template('discovery.html', sequences=sequences, n=len(sequences), keys = keys, query=(img, decoding))
+    
     
 @app.route('/neighborhood/<key>')
 @flask_login.login_required
@@ -139,14 +190,25 @@ def neighborhood(key):
     return render_template('discovery.html', sequences=sequences, n=len(sequences), keys = s[2])
 
 
-@app.route('/find', methods=['POST'])
+@app.route('/history')
+@flask_login.login_required
+def history():
+    history = QueryHistory()
+    h = history.get()
+    n = len(h)
+    return render_template('history.html', rows = h, n = n)
+
+
+@app.route('/find', methods=['POST', 'GET'])
 @flask_login.login_required
 def find():
-    string = flask.request.form['query']
-    print(string)
+    if request.method == 'POST':    
+        string = flask.request.form['query']
+        history = QueryHistory()
+        history.insert(string)
+    else:
+        string = request.args.get('strg', None)
     sequences, keys = DISCOVERY.find(string)
     sequences = [process_sequence(x) for x in sequences]
     return render_template('discovery.html', sequences=sequences, n=len(sequences), keys = keys)
-                       
-                       
-                       
+

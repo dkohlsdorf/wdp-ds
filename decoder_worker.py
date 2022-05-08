@@ -24,10 +24,10 @@ from datetime import datetime
 
 from fastavro import writer, reader, parse_schema
 
-VERSION    = 'April2022' 
+VERSION    = 'mai_smlr' 
 SEQ_PATH   = f'../web_service/{VERSION}/sequences/'
 IMG_PATH   = f'../web_service/{VERSION}/images/'
-MODEL_PATH = '../web_service/ml_models/'
+MODEL_PATH = '../web_service/ml_models_mai_smlr/'
 
 SCHEMA = {
     "name": "WDP_Decoded",
@@ -101,7 +101,7 @@ def decode(x, decoder, label_mapping):
     return local_c
 
     
-def ngrams(sequence, n=4, sep=''):
+def ngrams(sequence, n=2, sep=''):
     results = []
     for i in range(n, len(sequence)):
         x = [s.cls for s in sequence[i-n:i]]
@@ -121,12 +121,22 @@ def match(sequence, db):
 def labels(s):
     return [c.cls for c in s]
     
+def overlap(x1, x2, y1, y2, e1, e2):
+    return e1 == e2 and max(x1.start, y1.start) <= min(x2.stop, y2.stop)
     
-def knn(sequence, sequences, ids, k):
+def knn(sequence, sequences, ids, eids = None, k=10):
     pq = []
     for i in range(0, min(k, len(ids))):        
-        d = levenstein(labels(sequence), labels(sequences[ids[i]]))
-        heapq.heappush(pq, (-d, ids[i]))
+        if eids is not None and not overlap(sequence[0], sequence[-1], sequences[ids[i]][0], sequences[ids[i]][-1], eids[0], eids[1][ids[i]]):
+            d = levenstein(labels(sequence), labels(sequences[ids[i]]))
+            heapq.heappush(pq, (-d, ids[i]))
+        elif eids is not None:
+            print(f"Overlap Rejected {eids[0]} {eids[1][ids[i]]} [{sequence[0].start}, {sequence[-1].stop}] :: [{sequences[ids[i]][0].start}, {sequences[ids[i]][-1].stop}]")
+        else:
+            d = levenstein(labels(sequence), labels(sequences[ids[i]]))
+            heapq.heappush(pq, (-d, ids[i]))
+    if len(pq) == 0:
+        return []
     if k < len(ids):
         for i in range(k, len(ids)):
             d = levenstein(labels(sequence), labels(sequences[ids[i]]))
@@ -139,22 +149,25 @@ def knn(sequence, sequences, ids, k):
 
 def query(sequence, sequences, db, k=10):
     ids = match(sequence, db)
-    print(ids)
-    nn  = knn(sequence, sequences, ids, k)
+    nn  = knn(sequence, sequences, ids, None, k)
     print(nn)
     return nn
 
     
-def discovery(sequences, db, k=10):
+def discovery(sequences, db, eids, k=10):
     neighbors = {}
     densities = {}
     for i, sequence in enumerate(sequences):
         print(f" ... discovery: {i}")
         ids = match(sequence, db)
-        nn  = knn(sequence, sequences, ids, k)
-        neighbors[i] = nn
+        nn  = knn(sequence, sequences, ids, (eids[i], eids), k)
         if len(nn) == k:
+            neighbors[i] = nn
             densities[i] = 1. / (1 + nn[-1][0])
+        else:
+            neighbors[i] = nn
+            densities[i] = 1e-8
+            
     return densities, neighbors
 
 
@@ -169,24 +182,27 @@ def subsequences(sequence, max_len=8):
 class DiscoveryService:
     
     def __init__(self, sequence_path, img_path, limit = None):
-        self.sequences = []
-        self.keys      = []
-        self.samples   = []
-        self.decodings = []
-        self.densities = {}       
-        self.neighbors = {}
+        self.sequences     = []
+        self.keys          = []
+        self.samples       = []
+        self.decodings     = []
+        self.encounter_ids = []
+
+        self.densities  = {}       
+        self.neighbors  = {}
         self.substrings = {}
-        self.db = {}
-        self.decoder = None
-        self.lab     = None
-        self.reverse = None
+        self.db         = {}
+        
+        self.decoder       = None
+        self.lab           = None
+        self.reverse       = None
         self.label_mapping = None
 
         self.parse(sequence_path, limit)
         self.setup_discovery()
         self.setup_substrings()        
         self.sequence_path = sequence_path
-        self.img_path = img_path
+        self.img_path = img_path    
         
     def init_model(self, model_path):
         self.decoder       = load_model(f'{model_path}/decoder_nn.h5', custom_objects = {'Functional' : tf.keras.models.Model})
@@ -196,7 +212,8 @@ class DiscoveryService:
         
     def parse(self, sequence_path, limit):        
         for file in os.listdir(sequence_path):
-            print(f" ... reading: {file}")
+            eid = file.replace('.avro', '')
+            print(f" ... reading: {file} {eid}")
             if limit is not None and len(self.sequences) >= limit:
                 break
             if file.endswith('avro') and not file.startswith('query'):
@@ -204,7 +221,8 @@ class DiscoveryService:
                     avro_reader = reader(fo)
                     for record in avro_reader:
                         self.sequences.append(record)
-
+                        self.encounter_ids.append(eid)
+                        
     def setup_substrings(self):
         for i, sequence in enumerate(self.sequences):
             print(f" ... substrings for: {i}")
@@ -221,10 +239,12 @@ class DiscoveryService:
                 if ngram not in self.db:
                     self.db[ngram] = []
                 self.db[ngram].append(key)            
-        d, n = discovery(self.decodings, self.db) 
+        d, n = discovery(self.decodings, self.db, self.encounter_ids) 
+        print(f"Done discovery {len(d)} {len(n)}")
+        
         self.densities  = d        
         self.neighbors  = n                
-
+        
         self.keys       = list(self.densities.keys())
         self.samples    = np.zeros(len(self.keys))
         scaler          = np.sum(list(self.densities.values()))
@@ -252,11 +272,12 @@ class DiscoveryService:
         query_id = f"query_{name}"
         audio = raw(filename)
         s = spec(audio)
+        plottable = spectrogram(audio, 0, FFT_WIN // 2, FFT_WIN, FFT_STEP)
         start_bound, stop_bound = 0, len(audio)
         dec  = decode(s, self.decoder, self.label_mapping)
         c    = compress_neural(dec, len(s), self.reverse, self.label_mapping)
         img_p = f"{self.img_path}/{query_id}.png"
-        plot_neural(s, c, img_p)                
+        plot_neural(plottable, c, img_p)                
         records = [{                
             "path":     name,
             "start":    start_bound,
@@ -316,12 +337,13 @@ class DecodingWorker:
             regions, bounds, audio_file = split(filename)
             start = time.time()        
             for i in range(len(regions)):
-                s                       = spec(regions[i])
+                s         = spec(regions[i])
+                plottable = spectrogram(regions[i], 0, FFT_WIN // 2, FFT_WIN, FFT_STEP)
                 start_bound, stop_bound = bounds[i] 
                 dec  = decode(s, self.decoder, self.label_mapping)
                 c    = compress_neural(dec, len(s), self.reverse, self.label_mapping)
                 if len([c for region in c if region.id > 0]) > 4:
-                    plot_neural(s, c, f"{self.image_path}/{file_id}_{start_bound}_{stop_bound}.png")                
+                    plot_neural(plottable, c, f"{self.image_path}/{file_id}_{start_bound}_{stop_bound}.png")                
                     records.append({                
                         "path":     str(filename),
                         "start":    start_bound,

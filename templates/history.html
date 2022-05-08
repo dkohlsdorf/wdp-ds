@@ -1,0 +1,37 @@
+<!doctype html>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Query - History</title>
+    <style>
+      .panel {
+	  width: 200px;
+	  overflow: scroll;
+      }
+      .scroll{
+	  overflow-x: scroll;
+      }
+    </style>
+</head>
+<body>
+<h1> [:WDP:] Query - History </h1>
+<a href="/discovery"> [:discovery:] </a> 
+
+<table>
+    <tr>
+        <th> Query </th>
+        <th> Audio File </th>
+        <th> Date </th>
+    </tr>    
+    {%for i in range(0, n)%} 
+        <tr>
+            <td> <a href="/find?strg={{rows[i][0]}}">{{rows[i][0]}} </a> </td>
+            <td> {{rows[i][1]}} </td>
+            <td> {{rows[i][2]}} </td>
+        </tr>
+    {%endfor%}    
+</table>    
+</body>
+</html>
+

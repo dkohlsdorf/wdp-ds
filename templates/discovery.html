@@ -59,11 +59,15 @@
 </table>
 
 <hr/>
+    
+{% if strg %}    
+<h3> {{strg}} </h3>
+{% endif %}    
+    
 {% if query %}
   <h4> Query </h4>
   <p> {{query[1]}} </p>
   <div class="scroll"> <img src="/{{query[0]}}" border="0"> </div> 
-
 {% endif %}    
 
 {%for i in range(0, n)%}

@@ -1,7 +1,7 @@
 import random
 import numpy as np
 import pandas as pd
-from numba import jit
+#from numba import jit
 
 
 from numpy.fft        import fft
@@ -30,7 +30,8 @@ def spectrogram(audio, lo = 20, hi = 200, win = 512, step=128, normalize=True):
             spectrogram.append((dft - mu) / std)
         else:
             spectrogram.append(dft)        
-    spectrogram = np.array(spectrogram)[:, win//2:][:, lo:hi]
+    spectrogram = np.array(spectrogram)
+    spectrogram = spectrogram[:, win//2:][:, lo:hi]
     return spectrogram
 
 
@@ -41,7 +42,7 @@ def resolve_window(sample_raw, window, step, fwd = True):
         return int(sample_raw * step + window)
 
     
-@jit
+#@jit
 def windowing(region, window):
     N, D = region.shape
     windows = []

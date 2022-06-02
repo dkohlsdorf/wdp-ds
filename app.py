@@ -11,7 +11,7 @@ from decoder_worker import DiscoveryService
 from flask import Flask, render_template, flash, redirect, request
 
 
-VERSION     = 'Test' 
+VERSION     = 'mai_smlr_threshold' 
 SEQ_PATH    = f'../web_service/{VERSION}/sequences/'
 IMG_PATH    = f'../web_service/{VERSION}/images/'
 PKL_PATH    = f'../web_service/{VERSION}/service.pkl'
@@ -210,5 +210,5 @@ def find():
         string = request.args.get('strg', None)
     sequences, keys = DISCOVERY.find(string)
     sequences = [process_sequence(x) for x in sequences]
-    return render_template('discovery.html', sequences=sequences, n=len(sequences), keys = keys)
+    return render_template('discovery.html', sequences=sequences, n=len(sequences), keys = keys, strg = string)
 

@@ -1,4 +1,4 @@
-import json
+`import json
 import numpy as np
 import pickle as pkl
 import sys
@@ -18,7 +18,7 @@ from lib_dolphin.htk_helpers import *
 from lib_dolphin.sequential import *
 from lib_dolphin.statistics import * 
 
-from collections import namedtuple, Counter
+from collections import namedtuple, Counter, defaultdict
 
 from scipy.io.wavfile import read, write
 from scipy.spatial import distance
@@ -1041,7 +1041,62 @@ def statistics(l1, l2, folder, out):
         filename = f"{out}/{label}_{pattern}.wav"
         write(filename, 44100, audio.astype(np.int16)) 
         
-            
+        
+def lookalike(folder, label_file_l2, wav_file_l2, to_sort, percentile=50, th = 0.007):
+    decoder = load_model(f'{folder}/decoder_nn.h5')
+    lab     = pkl.load(open(f"{folder}/labels.pkl", "rb"))
+    reverse = {v:k for k, v in lab.items()}
+    label_mapping = pkl.load(open(f'{folder}/label_mapping.pkl', 'rb'))
+    if th is None:
+        x_unsup = dataset_unsupervised_windows(label_file_l2, wav_file_l2, lo=FFT_LO, hi=FFT_HI, win=FFT_WIN, step=FFT_STEP, raw_size=RAW_AUDIO, T=T, n=10000)
+        x_unsup = np.stack(x_unsup).reshape(len(x_unsup), T, D, 1)
+        probs = []
+        for i in range(0, len(x_unsup)):
+            if i % 1000 == 0:
+                print(f"Decoding: {i} {len(x_unsup)}")
+            p = decoder.predict(x_unsup[i].reshape(1, len(x_unsup[i]), D, 1))
+            p = p[0].max(axis=0)
+            probs += list(p.flatten())
+        th = np.percentile(probs, percentile)    
+    print(f"Using threshold: {th}")
+
+    NO_LABEL = "ERROR"
+    labeled = defaultdict(list)
+    for filename in os.listdir(to_sort):
+        if filename.endswith('.wav'):
+            path = f'{to_sort}/{filename}'
+            print(f" .. decoding: {path}")
+            regions, bounds, audio_file = split(path)
+            for x, (start, stop) in zip(regions, bounds):
+                s = spectrogram(x, FFT_LO, FFT_HI, FFT_WIN, FFT_STEP)
+                p = decoder.predict(s.reshape(1, len(s), D, 1))[0]
+                if len(p) > NEURAL_SMOOTH_WIN:
+                    for i in range(0, len(p[0])):
+                        p[:, i] = np.convolve(p[:, i], np.ones(NEURAL_SMOOTH_WIN) / NEURAL_SMOOTH_WIN, mode='same')
+                    p[:, 0] *= NEURAL_NOISE_DAMPENING
+                
+                for i in range(0, len(p)):
+                    k = 0
+                    max_val = 0
+                    for j in range(0, len(p[i])):
+                        if p[i][j] > max_val:
+                            max_val = p[i][j]
+                            k = j
+
+                    l = i2name(k, reverse, label_mapping)
+                    x_start = start + (FFT_STEP * i)
+                    x_end   = x_start + RAW_AUDIO  
+                    if not l.startswith('_'):
+                        if max_val < th:
+                            l = NO_LABEL
+                        labeled[l].append(x[x_start:x_end])
+    for l, x in labeled.items():
+        out_wav = f"{to_sort}/sorted_{l}.wav"
+        audio = np.hstack(x)
+        print(f"\t .. write: {out_wav} {sum(audio)}")
+        write(out_wav, 44100, audio.astype(np.int16)) 
+        
+
 def neardup(query_folder, labels, wav, folder, out, k = 10, percentile=50, band=0.01, max_len_diff=5):    
     ids         = pkl.load(open(f"{folder}/ids.pkl", "rb"))
     inst        = pkl.load(open(f"{folder}/instances.pkl", "rb"))
@@ -1174,7 +1229,7 @@ if __name__ == '__main__':
         data   = sys.argv[4]
         noise  = sys.argv[5]        
         train_sequential(folder, labels, data, noise)
-    elif len(sys.argv) > 4 and sys.argv[1] == 'decode_neural':
+    elif len(sys.argv) > 4 and sys.argv[1] == 'decode_neural':        
         folder = sys.argv[2]
         in_folder = sys.argv[3]
         out_folder = sys.argv[4]
@@ -1185,6 +1240,12 @@ if __name__ == '__main__':
         folder = sys.argv[4]
         out = sys.argv[5]
         statistics(l1, l2, folder, out)
+    elif len(sys.argv) > 5 and sys.argv[1] == 'lookalike':
+        l2_labels = sys.argv[2]
+        l2_wav    = sys.argv[3]
+        folder    = sys.argv[4]        
+        queries   = sys.argv[5] 
+        lookalike(folder, l2_labels, l2_wav, queries)
     else:
         print(sys.argv)
         print("""
@@ -1204,5 +1265,6 @@ if __name__ == '__main__':
                 + sequencing: python pipeline.py sequencing AUDIO FOLDER HTK OUT
                 + baseline:   python pipeline.py baseline FOLDER
                 + statistics: python pipeline.py statistics L1 L2 FOLDERS OUT
+                + lookalike:  python pipeline.py lookalile L2_CSV L2_AUDIO FOLDER QUERIES
         """)
     print("\n=====================================")

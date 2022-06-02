@@ -16,7 +16,28 @@ NEURAL_SIZE_TH = 32
 SCALER = 1.0
 BIAS   = 0.7
 START  = 0.2
-STOP   = 0.9
+STOP   = 0.
+
+SPLIT_SEC    = 60
+SPLIT_RATE   = 44100
+SPLIT_SKIP   = 0.5
+
+
+def split(audio_file):
+    window_size = SPLIT_SEC * SPLIT_RATE
+    skip        = int(window_size * SPLIT_SKIP)
+    x           = raw(audio_file)
+    n           = len(x)
+
+    regions = []
+    bounds  = []
+    if n < window_size:
+        return [x], [(0, n)], audio_file
+    
+    for i in range(window_size, n, skip):
+        regions.append(x[i-window_size:i])
+        bounds.append((i-window_size, i))
+    return regions, bounds, audio_file
 
 
 class DecodedSymbol(namedtuple('DecodedSymbol', 'start stop cls id')):
@@ -32,7 +53,7 @@ class DecodedSymbol(namedtuple('DecodedSymbol', 'start stop cls id')):
             "stop":  self.stop,
             "id":    self.id                        
         }
-
+    
 
 def compress_neural(decoding, n, reverse, label_mapping):
     classifications = []
@@ -120,7 +141,7 @@ class LabelMapping(namedtuple('LabelMapping', 'prefix')):
     
     def bwd(self, i):
         j = 0
-        while i > self.prefix[j]:
+        while j < len(self.prefix) and i > self.prefix[j]:
             j += 1
         j = j - 1
         c = i - self.prefix[j]

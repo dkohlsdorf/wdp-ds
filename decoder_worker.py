@@ -24,7 +24,7 @@ from datetime import datetime
 
 from fastavro import writer, reader, parse_schema
 
-VERSION    = 'mai_smlr' 
+VERSION    = 'mai_smlr_threshold' 
 SEQ_PATH   = f'../web_service/{VERSION}/sequences/'
 IMG_PATH   = f'../web_service/{VERSION}/images/'
 MODEL_PATH = '../web_service/ml_models_mai_smlr/'
@@ -54,9 +54,6 @@ SCHEMA = {
 }
 
 
-SPLIT_SEC    = 60
-SPLIT_RATE   = 44100
-SPLIT_SKIP   = 0.5
 
 FFT_STEP     = 128
 FFT_WIN      = 512
@@ -66,22 +63,8 @@ FFT_LO       = 100
 D            = FFT_WIN // 2 - FFT_LO - (FFT_WIN // 2 - FFT_HI)
 
 
-NEURAL_NOISE_DAMPENING = 0.01
+NEURAL_NOISE_DAMPENING = 0.05
 NEURAL_SMOOTH_WIN      = 64
-
-
-def split(audio_file):
-    window_size = SPLIT_SEC * SPLIT_RATE
-    skip        = int(window_size * SPLIT_SKIP)
-    x           = raw(audio_file)
-    n           = len(x)
-
-    regions = []
-    bounds  = []
-    for i in range(window_size, n, skip):
-        regions.append(x[i-window_size:i])
-        bounds.append((i-window_size, i))
-    return regions, bounds, audio_file
 
 
 def spec(x):

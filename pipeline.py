@@ -1,4 +1,4 @@
-`import json
+import json
 import numpy as np
 import pickle as pkl
 import sys
@@ -1042,24 +1042,13 @@ def statistics(l1, l2, folder, out):
         write(filename, 44100, audio.astype(np.int16)) 
         
         
-def lookalike(folder, label_file_l2, wav_file_l2, to_sort, percentile=50, th = 0.007):
+def lookalike(folder, label_file_l2, wav_file_l2, to_sort, percentile=50, th = 0.1, max_inst = 250, n=10):
     decoder = load_model(f'{folder}/decoder_nn.h5')
     lab     = pkl.load(open(f"{folder}/labels.pkl", "rb"))
     reverse = {v:k for k, v in lab.items()}
     label_mapping = pkl.load(open(f'{folder}/label_mapping.pkl', 'rb'))
-    if th is None:
-        x_unsup = dataset_unsupervised_windows(label_file_l2, wav_file_l2, lo=FFT_LO, hi=FFT_HI, win=FFT_WIN, step=FFT_STEP, raw_size=RAW_AUDIO, T=T, n=10000)
-        x_unsup = np.stack(x_unsup).reshape(len(x_unsup), T, D, 1)
-        probs = []
-        for i in range(0, len(x_unsup)):
-            if i % 1000 == 0:
-                print(f"Decoding: {i} {len(x_unsup)}")
-            p = decoder.predict(x_unsup[i].reshape(1, len(x_unsup[i]), D, 1))
-            p = p[0].max(axis=0)
-            probs += list(p.flatten())
-        th = np.percentile(probs, percentile)    
-    print(f"Using threshold: {th}")
 
+    NOISE_LABEL = "NOISE"
     NO_LABEL = "ERROR"
     labeled = defaultdict(list)
     for filename in os.listdir(to_sort):
@@ -1067,6 +1056,8 @@ def lookalike(folder, label_file_l2, wav_file_l2, to_sort, percentile=50, th = 0
             path = f'{to_sort}/{filename}'
             print(f" .. decoding: {path}")
             regions, bounds, audio_file = split(path)
+            
+            string = []
             for x, (start, stop) in zip(regions, bounds):
                 s = spectrogram(x, FFT_LO, FFT_HI, FFT_WIN, FFT_STEP)
                 p = decoder.predict(s.reshape(1, len(s), D, 1))[0]
@@ -1074,7 +1065,8 @@ def lookalike(folder, label_file_l2, wav_file_l2, to_sort, percentile=50, th = 0
                     for i in range(0, len(p[0])):
                         p[:, i] = np.convolve(p[:, i], np.ones(NEURAL_SMOOTH_WIN) / NEURAL_SMOOTH_WIN, mode='same')
                     p[:, 0] *= NEURAL_NOISE_DAMPENING
-                
+
+                    
                 for i in range(0, len(p)):
                     k = 0
                     max_val = 0
@@ -1088,13 +1080,38 @@ def lookalike(folder, label_file_l2, wav_file_l2, to_sort, percentile=50, th = 0
                     x_end   = x_start + RAW_AUDIO  
                     if not l.startswith('_'):
                         if max_val < th:
-                            l = NO_LABEL
+                            l = NO_LABEL   
+                        else:
+                            string.append([l, x_start, x_end, max_val])
+                    else:
+                        l = NOISE_LABEL
+                    if len(labeled[l]) < max_inst:
                         labeled[l].append(x[x_start:x_end])
+                for i in range(2, n + 2, 5):
+                    ngram = []
+                    for entry in string:
+                        overlap = len(ngram) > 0 and (entry[2] - ngram[-1][2] < 2 * RAW_AUDIO)
+                        if len(ngram) > 0 or overlap:
+                            ngram.append(entry)
+                        else:
+                            ngram = [entry]
+                        
+                        if len(ngram) == i:
+                            prob = sum([p for _, _, _, p in ngram]) / i
+                            l = "_".join([l for l, _, _, _ in ngram])
+                            start = ngram[0][1]
+                            stop  = ngram[-1][2]  
+                            if prob >= th and len(labeled[l]) < max_inst:
+                                labeled[l].append(x[start:stop])
+                            ngram = ngram[1:]
+                            
     for l, x in labeled.items():
-        out_wav = f"{to_sort}/sorted_{l}.wav"
-        audio = np.hstack(x)
-        print(f"\t .. write: {out_wav} {sum(audio)}")
-        write(out_wav, 44100, audio.astype(np.int16)) 
+        if len(x) > 10:
+            random.shuffle(x)
+            out_wav = f"{to_sort}/sorted_{l}.wav"
+            audio = np.hstack([np.pad(v, 100) for v in x[0:max_inst]])
+            print(f"\t .. write: {out_wav} {sum(audio)}")
+            write(out_wav, 44100, audio.astype(np.int16)) 
         
 
 def neardup(query_folder, labels, wav, folder, out, k = 10, percentile=50, band=0.01, max_len_diff=5):    
@@ -1265,6 +1282,6 @@ if __name__ == '__main__':
                 + sequencing: python pipeline.py sequencing AUDIO FOLDER HTK OUT
                 + baseline:   python pipeline.py baseline FOLDER
                 + statistics: python pipeline.py statistics L1 L2 FOLDERS OUT
-                + lookalike:  python pipeline.py lookalile L2_CSV L2_AUDIO FOLDER QUERIES
+                + lookalike:  python pipeline.py lookalike L2_CSV L2_AUDIO FOLDER QUERIES
         """)
     print("\n=====================================")

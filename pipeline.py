@@ -1042,7 +1042,7 @@ def statistics(l1, l2, folder, out):
         write(filename, 44100, audio.astype(np.int16)) 
         
         
-def lookalike(folder, label_file_l2, wav_file_l2, to_sort, percentile=50, th = 0.1, max_inst = 250, n=10):
+def lookalike(folder, label_file_l2, wav_file_l2, to_sort, percentile=50, th = 0.1, max_inst = 250, min_inst=50, n=10):
     decoder = load_model(f'{folder}/decoder_nn.h5')
     lab     = pkl.load(open(f"{folder}/labels.pkl", "rb"))
     reverse = {v:k for k, v in lab.items()}
@@ -1106,7 +1106,7 @@ def lookalike(folder, label_file_l2, wav_file_l2, to_sort, percentile=50, th = 0
                             ngram = ngram[1:]
                             
     for l, x in labeled.items():
-        if len(x) > 10:
+        if len(x) > min_inst:
             random.shuffle(x)
             out_wav = f"{to_sort}/sorted_{l}.wav"
             audio = np.hstack([np.pad(v, 100) for v in x[0:max_inst]])

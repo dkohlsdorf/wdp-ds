@@ -1042,7 +1042,7 @@ def statistics(l1, l2, folder, out):
         write(filename, 44100, audio.astype(np.int16)) 
         
         
-def lookalike(folder, label_file_l2, wav_file_l2, to_sort, percentile=50, th = 0.1, max_inst = 250, min_inst=50, n=10):
+def lookalike(folder, label_file_l2, wav_file_l2, to_sort, percentile=50, th = 0.1, max_inst = 250, min_inst=50, n=10, compress=False):
     decoder = load_model(f'{folder}/decoder_nn.h5')
     lab     = pkl.load(open(f"{folder}/labels.pkl", "rb"))
     reverse = {v:k for k, v in lab.items()}
@@ -1092,7 +1092,10 @@ def lookalike(folder, label_file_l2, wav_file_l2, to_sort, percentile=50, th = 0
                     for entry in string:
                         overlap = len(ngram) > 0 and (entry[2] - ngram[-1][2] < 2 * RAW_AUDIO)
                         if len(ngram) > 0 or overlap:
-                            ngram.append(entry)
+                            if compress and len(ngram) > 0 and ngram[-1][0] == entry[0]:
+                                ngram[-1][2] = entry[2]
+                            else:
+                                ngram.append(entry)
                         else:
                             ngram = [entry]
                         

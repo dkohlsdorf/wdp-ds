@@ -29,3 +29,4 @@ and communicate the results with domain experts.
 + [redis](https://redis.io/)
 + [flask](https://flask.palletsprojects.com/en/2.0.x/)
 + [flask-login](https://flask-login.readthedocs.io/en/latest/)
++ polling

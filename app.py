@@ -11,7 +11,7 @@ from decoder_worker import DiscoveryService
 from flask import Flask, render_template, flash, redirect, request
 
 
-VERSION     = 'mai_smlr_threshold' 
+VERSION     = 'Test' 
 SEQ_PATH    = f'../web_service/{VERSION}/sequences/'
 IMG_PATH    = f'../web_service/{VERSION}/images/'
 PKL_PATH    = f'../web_service/{VERSION}/service.pkl'

@@ -131,11 +131,16 @@ def login():
 
 def process_sequence(s):
     id       = s['path'].split("/")[-1].replace('.wav', "")
-    id       =  re.sub("[^a-zA-Z0-9 ]+", "", id)
+    id       = re.sub("[^a-zA-Z0-9 ]+", "", id)
     time     = f"{str(datetime.timedelta(seconds=s['start'] / 44100)) } - {str(datetime.timedelta(seconds=s['stop']  / 44100)) }" 
     start    = s['start']
     stop     = s['stop']        
+
+    # TODO audio and raven
     img      = f"{id}_{start}_{stop}.png"
+    audio    = f"{id}_{start}_{stop}.wav"
+    raven    = f"{id}_{start}_{stop}.txt"
+    
     sequence = " ".join([c['cls'] for c in s['sequence']])
     
     return {
@@ -143,6 +148,8 @@ def process_sequence(s):
         "start"   : start,
         "stop"    : stop,
         "img"     : img,
+        "audio"   : audio,
+        "raven"   : raven, 
         "sequence": sequence,
         "time"    : time
     }

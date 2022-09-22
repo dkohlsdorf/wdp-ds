@@ -331,16 +331,8 @@ class DecodingWorker:
                     png_file   = f"{self.image_path}/{file_id}_{start_bound}_{stop_bound}.png"
                     audio_file = f"{self.image_path}/{file_id}_{start_bound}_{stop_bound}.wav"
                     raven_tab  = f"{self.image_path}/{file_id}_{start_bound}_{stop_bound}.txt"
-
-
-                    
-                    # TODO: write audio
                     write(audio_file, 44100, regions[i])
-                    
-
-                    # TODO: write table
                     raven(raven_tab, c)
-                    
                     
                     plot_neural(plottable, c, png_file)
                     records.append({                

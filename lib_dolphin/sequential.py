@@ -28,7 +28,6 @@ RAW_AUDIO    = 5120
 
 
 def raven(path, symbols, sep='\t'):    
-    # TODO: Debug me
     headers = ["Selection", "View", "Channel", "Begin Time (s)", "End Time (s)", "Low Freq (Hz)", "High Freq (Hz)",
                "Delta Time (s)", "Delta Freq (Hz)", "Avg Power Density (dB FS/Hz)", "Annotation"]
     header = sep.join(headers)

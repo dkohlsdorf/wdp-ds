@@ -136,7 +136,6 @@ def process_sequence(s):
     start    = s['start']
     stop     = s['stop']        
 
-    # TODO audio and raven
     img      = f"{id}_{start}_{stop}.png"
     audio    = f"{id}_{start}_{stop}.wav"
     raven    = f"{id}_{start}_{stop}.txt"

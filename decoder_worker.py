@@ -26,7 +26,7 @@ from fastavro import writer, reader, parse_schema
 from scipy.io.wavfile import write
 
 
-VERSION    = 'Test' 
+VERSION    = 'sep_2022' 
 SEQ_PATH   = f'../web_service/{VERSION}/sequences/'
 IMG_PATH   = f'../web_service/{VERSION}/images/'
 MODEL_PATH = '../web_service/ml_models_mai_smlr/'

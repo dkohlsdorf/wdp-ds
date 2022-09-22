@@ -11,11 +11,11 @@ from decoder_worker import DiscoveryService
 from flask import Flask, render_template, flash, redirect, request
 
 
-VERSION     = 'Test' 
+VERSION     = 'sep_2022' 
 SEQ_PATH    = f'../web_service/{VERSION}/sequences/'
 IMG_PATH    = f'../web_service/{VERSION}/images/'
 PKL_PATH    = f'../web_service/{VERSION}/service.pkl'
-UPLOAD_PATH = f'../web_service/{VERSION}/wav'
+UPLOAD_PATH = f'../web_service/{VERSION}/wav/'
 MODEL_PATH  = '../web_service/ml_models_mai_smlr/'
 
 

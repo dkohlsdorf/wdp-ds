@@ -46,8 +46,8 @@ def raven(path, symbols, sep='\t'):
             dt         = ""
             df         = ""
             power      = ""
-            table.append(f"{i}{sep}Waveform 1{sep}1{sep}{secs_start}{sep}{secs_end}{sep}{f_start}{sep}{f_end}{sep}{dt}{sep}{df}{sep}{power}{sep}{annotation}")
-            table.append(f"{i}{sep}Spectrogram 1{sep}1{sep}{secs_start}{sep}{secs_end}{sep}{f_start}{sep}{f_end}{sep}{dt}{sep}{df}{sep}{power}{sep}{annotation}")
+            table.append(f"{i+1}{sep}Waveform 1{sep}1{sep}{secs_start}{sep}{secs_end}{sep}{f_start}{sep}{f_end}{sep}{dt}{sep}{df}{sep}{power}{sep}{annotation}")
+            table.append(f"{i+1}{sep}Spectrogram 1{sep}1{sep}{secs_start}{sep}{secs_end}{sep}{f_start}{sep}{f_end}{sep}{dt}{sep}{df}{sep}{power}{sep}{annotation}")
     with open(path, "w") as fp:
         fp.write("\n".join(table))
 

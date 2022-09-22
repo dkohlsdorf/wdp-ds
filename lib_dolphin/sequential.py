@@ -35,8 +35,8 @@ def raven(path, symbols, sep='\t'):
     table = [header]
     for i, symbol in enumerate(symbols):     
         if symbol.cls[0] != '_':
-            x_start    = symbol.start + (FFT_STEP * i)
-            x_end      = x_start + RAW_AUDIO
+            x_start    = symbol.start * FFT_STEP
+            x_end      = symbol.end * FFT_STEP
             secs_start = x_start / 44100
             secs_end   = x_end / 44100
             f_start    = 0

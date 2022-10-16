@@ -29,7 +29,7 @@ from kneed import KneeLocator
 
 from subprocess import check_output
 
-NEURAL_NOISE_DAMPENING=0.5
+NEURAL_NOISE_DAMPENING=0.02
 NEURAL_SMOOTH_WIN=64
 NEURAL_SIZE_TH=32
 
@@ -896,6 +896,46 @@ def discrete_decoding(folder, audio, out_folder):
         f.write('</TABLE></BODY></HTML>')        
         
         
+def tune_neural_decoder(folder, csv, wav):
+    decoder = load_model(f"{folder}/decoder_nn.h5")
+    lab     = pkl.load(open(f"{folder}/labels.pkl", "rb"))
+    reverse = {v:k for k, v in lab.items()}
+    labeld_mapping = pkl.load(open(f'{folder}/label_mapping.pkl', 'rb'))
+
+    instances, ra, labels, label_dict = dataset_supervised_windows(
+        csv, wav, lo=FFT_LO, hi=FFT_HI, win=FFT_WIN, step=FFT_STEP, raw_size=RAW_AUDIO, label_dict=lab)    
+
+    x = np.stack(instances).reshape(len(instances), 36, 130, 1)
+    y = np.array(labels) != lab['NOISE']
+    y = y.astype(np.int32)
+    dampeners = np.arange(100) / 100 
+    
+    best_confusion = None
+    best_acc = 0
+    best_dampener = None
+
+    for d in dampeners:
+        p = decoder.predict(x)
+        p[:,:, 0] *= d
+        local_c = p.argmax(axis=2)
+        confusion = np.zeros((2,2))
+        for i, window in enumerate(local_c):
+            for c in window:
+                if c != 0:
+                    c = 1
+                _y = y[i]
+                if _y != 0:
+                    _y = 1
+                confusion[c][_y] += 1
+        acc = (confusion[0][0] + confusion[1][1]) / confusion.sum()
+        if acc > best_acc:
+            best_acc = acc
+            best_dampener = d
+            best_confusion = confusion
+    print(f"Accuracy {best_acc} for dampening_factor {best_dampener}")
+    print(confusion)
+    
+    
 def neural_decoding(folder, in_folder, out_folder):
     decoder = load_model(f'{folder}/decoder_nn.h5')
     lab     = pkl.load(open(f"{folder}/labels.pkl", "rb"))
@@ -1255,6 +1295,11 @@ if __name__ == '__main__':
         in_folder = sys.argv[3]
         out_folder = sys.argv[4]
         neural_decoding(folder, in_folder, out_folder)
+    elif len(sys.argv) > 4 and sys.argv[1] == 'tune_neural_decoder':
+        model = sys.argv[2]
+        csv   = sys.argv[3]
+        wav   = sys.argv[4]        
+        tune_neural_decoder(model, csv, wav)
     elif len(sys.argv) > 5 and sys.argv[1] == 'statistics':
         l1 = sys.argv[2]
         l2 = sys.argv[3]        
@@ -1274,6 +1319,7 @@ if __name__ == '__main__':
                 + train:      python pipeline.py train L1_CSV L1_AUDIO L2_CSV L2_AUDIO OUT_FOLDER
                 + seq2seq:    python pipeline.py train_sequential FOLDER LAB WAV NOISE
                               python pipeline.py decode_neural FOLDER IN OUT
+                              python pipeline.py tune_neural_decoder FOLDER CSV WAV
                 + nearest:    python pipeline.py neardup QUERY_FOLDER LAB WAV FOLDER OUT_FOLDER
                 + join:       python pipeline.py join FOLDER_2_JOIN WAV_OUT CSV_OUT
                 + clustering: python pipeline.py clustering LABEL_FILE AUDIO_FILE OUT_FOLDER

@@ -63,7 +63,7 @@ FFT_LO       = 100
 D            = FFT_WIN // 2 - FFT_LO - (FFT_WIN // 2 - FFT_HI)
 
 
-NEURAL_NOISE_DAMPENING = 0.05
+NEURAL_NOISE_DAMPENING = 0.02
 NEURAL_SMOOTH_WIN      = 64
 
 
@@ -104,8 +104,10 @@ def match(sequence, db):
 def labels(s):
     return [c.cls for c in s]
     
+    
 def overlap(x1, x2, y1, y2, e1, e2):
     return e1 == e2 and max(x1.start, y1.start) <= min(x2.stop, y2.stop)
+    
     
 def knn(sequence, sequences, ids, eids = None, k=10):
     pq = []

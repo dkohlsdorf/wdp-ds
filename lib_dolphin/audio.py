@@ -143,20 +143,26 @@ def dataset_unsupervised_windows(label, wavfile, lo, hi, win, step, raw_size, T,
     return instances[0:n]
     
 
-def dataset_supervised_windows(label, wavfile, lo, hi, win, step, raw_size):
+def dataset_supervised_windows(label, wavfile, lo, hi, win, step, raw_size, label_dict = None):
     df        = pd.read_csv(label)
+    df        = df.rename(columns=lambda x: x.strip())
     audio     = raw(wavfile)
     print("DIFF: {}".format(len(audio) - (df['offset'].max() + raw_size)))
     labels    = []
     instances = []
     ra = []
-    label_dict = {}
+    
+    fill = False
+    if label_dict is None:
+        label_dict = {}
+        fill = True
+        
     cur_label  = 0
     for _, row in df.iterrows():
         start = row['offset']
         stop  = start + raw_size
         label = row['annotation'].strip()
-        if label not in label_dict:
+        if label not in label_dict and fill:
             label_dict[label] = cur_label
             cur_label += 1
         w = audio[start:stop]

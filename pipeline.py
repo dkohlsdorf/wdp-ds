@@ -29,9 +29,23 @@ from kneed import KneeLocator
 
 from subprocess import check_output
 
+NEURAL_REJECT=0.001
 NEURAL_NOISE_DAMPENING=0.02
+NEURAL_LABEL_DAMPENING={
+    'Ea':0.1,
+    'Eb':0.1,
+    'Ec':0.1,    
+    'Ed':0.1,    
+    'Ee':0.1,
+    'Ef':0.1,
+    'Eg':0.1,
+    'Eh':0.01,
+    'Bc':0.25,
+    'Bd':0.01,
+    'Be':0.01
+}
 NEURAL_SMOOTH_WIN=64
-NEURAL_SIZE_TH=32
+
 
 FFT_STEP     = 128
 FFT_WIN      = 512
@@ -871,7 +885,6 @@ def discrete_decoding(folder, audio, out_folder):
             <TH> Context </TH>
             <TH> Video </TH>
             <TH> Time </TH>
-            <TH> String </TH>
             <TH> Image </TH>
         </TR>    
         """)
@@ -890,7 +903,6 @@ def discrete_decoding(folder, audio, out_folder):
                 context(file), 
                 video(file, context(file)), 
                 timestamp(file), 
-                " ".join(strg),
                 p
             ))
         f.write('</TABLE></BODY></HTML>')        
@@ -900,7 +912,6 @@ def tune_neural_decoder(folder, csv, wav):
     decoder = load_model(f"{folder}/decoder_nn.h5")
     lab     = pkl.load(open(f"{folder}/labels.pkl", "rb"))
     reverse = {v:k for k, v in lab.items()}
-    labeld_mapping = pkl.load(open(f'{folder}/label_mapping.pkl', 'rb'))
 
     instances, ra, labels, label_dict = dataset_supervised_windows(
         csv, wav, lo=FFT_LO, hi=FFT_HI, win=FFT_WIN, step=FFT_STEP, raw_size=RAW_AUDIO, label_dict=lab)    
@@ -935,12 +946,20 @@ def tune_neural_decoder(folder, csv, wav):
     print(f"Accuracy {best_acc} for dampening_factor {best_dampener}")
     print(confusion)
     
+
+def reject(x, p):
+    if p < NEURAL_REJECT:
+        return 0
+    else:
+        return x
     
-def neural_decoding(folder, in_folder, out_folder):
+          
+def neural_decoding(folder, in_folder, out_folder, smoothing=True):
     decoder = load_model(f'{folder}/decoder_nn.h5')
     lab     = pkl.load(open(f"{folder}/labels.pkl", "rb"))
     reverse = {v:k for k, v in lab.items()}
     label_mapping = pkl.load(open(f'{folder}/label_mapping.pkl', 'rb'))
+    print(label_mapping)
     
     images  = []
     strings = []
@@ -957,12 +976,22 @@ def neural_decoding(folder, in_folder, out_folder):
                 for i in range(0, len(s), 1000):
                     x = s[i:i + 1000]
                     a = x.reshape((1, len(x), D, 1))
-                    p = decoder.predict(a).reshape((a.shape[1], label_mapping.n + 1)) 
-                    if len(p) > NEURAL_SMOOTH_WIN:
-                        for i in range(0, len(p[0])):
-                            p[:, i] = np.convolve(p[:, i], np.ones(NEURAL_SMOOTH_WIN) / NEURAL_SMOOTH_WIN, mode='same')
+                    p = decoder.predict(a).reshape((a.shape[1], label_mapping.n + 1))
                     p[:, 0] *= NEURAL_NOISE_DAMPENING
+                    for i in range(1, len(p[0])):
+                        dc = i2name(i, reverse, label_mapping)
+                        if dc in NEURAL_LABEL_DAMPENING:
+                            df = NEURAL_LABEL_DAMPENING[dc]
+                            print(f" ... dampen {dc} by {df}")
+                            p[:, i] *= df
+                            
+                    if len(p) > NEURAL_SMOOTH_WIN and smoothing:
+                        for i in range(1, len(p[0])):
+                            p[:, i] = np.convolve(p[:, i], np.ones(NEURAL_SMOOTH_WIN) / NEURAL_SMOOTH_WIN, mode='same')
                     local_c = p.argmax(axis=1)
+                    local_p = p.max(axis=1)                    
+                    local_c = [reject(local_c[i], local_p[i])
+                               for i in range(len(local_c))]          
                     c += list(local_c)
                 if len([l for l in c if l > 0]) > 3:                    
                     compr = compress_neural(c, len(s), reverse, label_mapping)
@@ -1018,7 +1047,6 @@ def neural_decoding(folder, in_folder, out_folder):
         f.write("""
         <TR>
             <TH> Filename </TH>
-            <TH> String </TH>
             <TH> Image </TH>
         </TR>    
         """)
@@ -1027,13 +1055,12 @@ def neural_decoding(folder, in_folder, out_folder):
             f.write("""
             <TR>
                 <TD> {} </TD>
-                <TD> {} </TD>
                 <TD> 
                    <div style="width: 1024px; height: 100px; overflow: auto">
                      <img src="{}" height=100/> </div></TD>
             </TR>    
             """.format(
-                filename, seq, img
+                filename, img
             ))
         f.write('</TABLE></BODY> </HTML>')
 

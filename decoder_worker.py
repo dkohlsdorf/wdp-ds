@@ -63,7 +63,8 @@ FFT_LO       = 100
 D            = FFT_WIN // 2 - FFT_LO - (FFT_WIN // 2 - FFT_HI)
 
 
-NEURAL_REJECT=0.001
+#NEURAL_REJECT=0.001
+NEURAL_REJECT=0.01
 NEURAL_NOISE_DAMPENING=0.02
 NEURAL_LABEL_DAMPENING={
     'Ea':0.1,
@@ -360,6 +361,7 @@ class DecodingWorker:
                 start_bound, stop_bound = bounds[i] 
                 dec  = decode(s, self.decoder, self.label_mapping, self.reverse)
                 c    = compress_neural(dec, len(s), self.reverse, self.label_mapping)
+                print(f" ... {i}: {len(dec)} {len(c)} {len([c for region in c if region.id > 0])}")
                 if len([c for region in c if region.id > 0]) > 4:
                     plot_neural(plottable, c, f"{self.image_path}/{file_id}_{start_bound}_{stop_bound}.png")                
                     records.append({                

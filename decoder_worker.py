@@ -64,7 +64,7 @@ D            = FFT_WIN // 2 - FFT_LO - (FFT_WIN // 2 - FFT_HI)
 
 
 #NEURAL_REJECT=0.001
-NEURAL_REJECT=0.01
+NEURAL_REJECT=0.1
 NEURAL_NOISE_DAMPENING=0.02
 NEURAL_LABEL_DAMPENING={
     'Ea':0.1,
@@ -74,10 +74,7 @@ NEURAL_LABEL_DAMPENING={
     'Ee':0.1,
     'Ef':0.1,
     'Eg':0.1,
-    'Eh':0.01,
-    'Bc':0.25,
-    'Bd':0.01,
-    'Be':0.01
+    'Eh':0.01
 }
 NEURAL_SMOOTH_WIN=64
 
@@ -91,15 +88,6 @@ def decode(x, decoder, label_mapping, reverse, smoothing=True):
     a = x.reshape((1,t,d,1))
     p = decoder.predict(a).reshape((a.shape[1], label_mapping.n + 1)) 
 
-    """ <<< old
-    if len(p) > NEURAL_SMOOTH_WIN:
-        for i in range(0, len(p[0])):
-            p[:, i] = np.convolve(p[:, i], np.ones(NEURAL_SMOOTH_WIN) / NEURAL_SMOOTH_WIN, mode='same')
-    p[:, 0] *= NEURAL_NOISE_DAMPENING
-    local_c = p.argmax(axis=1)
-    """
-
-    # >>>> new
     p[:, 0] *= NEURAL_NOISE_DAMPENING
     for i in range(1, len(p[0])):
         dc = i2name(i, reverse, label_mapping)

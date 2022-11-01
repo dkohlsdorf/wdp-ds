@@ -946,13 +946,6 @@ def tune_neural_decoder(folder, csv, wav):
     print(f"Accuracy {best_acc} for dampening_factor {best_dampener}")
     print(confusion)
     
-
-def reject(x, p):
-    if p < NEURAL_REJECT:
-        return 0
-    else:
-        return x
-    
           
 def neural_decoding(folder, in_folder, out_folder, smoothing=True):
     decoder = load_model(f'{folder}/decoder_nn.h5')
@@ -990,7 +983,7 @@ def neural_decoding(folder, in_folder, out_folder, smoothing=True):
                             p[:, i] = np.convolve(p[:, i], np.ones(NEURAL_SMOOTH_WIN) / NEURAL_SMOOTH_WIN, mode='same')
                     local_c = p.argmax(axis=1)
                     local_p = p.max(axis=1)                    
-                    local_c = [reject(local_c[i], local_p[i])
+                    local_c = [reject(local_c[i], local_p[i], NEURAL_REJECT)
                                for i in range(len(local_c))]          
                     c += list(local_c)
                 if len([l for l in c if l > 0]) > 3:                    

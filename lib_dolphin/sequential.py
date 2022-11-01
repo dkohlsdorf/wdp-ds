@@ -96,6 +96,13 @@ def plot_neural(spectrogram, compressed, img_path):
     plt.close()
 
     
+def reject(x, p, th):
+    if p < th:
+        return 0
+    else:
+        return x
+
+
 def i2name(i, reverse, label_mapping):    
     if i == 0:
         return '_'

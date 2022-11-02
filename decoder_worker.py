@@ -13,6 +13,7 @@ import polling
 
 from collections import namedtuple
 from tensorflow.keras.models import load_model
+from scipy.signal import triang
 
 from lib_dolphin.audio import *
 from lib_dolphin.sequential import *

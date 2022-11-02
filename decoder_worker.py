@@ -62,35 +62,30 @@ FFT_LO       = 100
 
 D            = FFT_WIN // 2 - FFT_LO - (FFT_WIN // 2 - FFT_HI)
 
-NEURAL_NOISE_DAMPENING=0.1
-NEURAL_LABEL_DAMPENING={
-    'Ea':0.1,
-    'Eb':0.1,
-    'Ec':0.1,    
-    'Ed':0.1,    
-    'Ee':0.1,
-    'Ef':0.1,
-    'Eg':0.1,
-    'Eh':0.01,
-    'Bd':2.0,
-    'Bc':2.0,
-    'Be':2.0,
-    'Bh':2.0,
-    'Ba':2.0}
+NEURAL_NOISE_DAMPENING=0.5
+NEURAL_LABEL_DAMPENING={}
+NEURAL_REJECT=0.1
+NEURAL_SMOOTH_WIN=128
 
-NEURAL_REJECT=0.01
-NEURAL_SMOOTH_WIN=64
 
 
 def spec(x):
     return spectrogram(x, FFT_LO, FFT_HI, FFT_WIN, FFT_STEP)
 
     
-def decode(x, decoder, label_mapping, reverse, smoothing=True):
+def decode(x, decoder, label_mapping, reverse, smoothing=True, win='triang'):
     t, d = x.shape
     a = x.reshape((1,t,d,1))
     p = decoder.predict(a).reshape((a.shape[1], label_mapping.n + 1)) 
+    
 
+    if len(p) > NEURAL_SMOOTH_WIN and smoothing:
+        for i in range(0, len(p[0])):
+            if win=='triang':
+                window = triang(NEURAL_SMOOTH_WIN) / np.sum(triang(NEURAL_SMOOTH_WIN)) 
+            else:
+                window = np.hamming(NEURAL_SMOOTH_WIN) / sum(np.hamming(NEURAL_SMOOTH_WIN))
+            p[:, i] = np.convolve(p[:, i], window, mode='same')
     p[:, 0] *= NEURAL_NOISE_DAMPENING
     for i in range(1, len(p[0])):
         dc = i2name(i, reverse, label_mapping)
@@ -99,10 +94,6 @@ def decode(x, decoder, label_mapping, reverse, smoothing=True):
             print(f" ... dampen {dc} by {df}")
             p[:, i] *= df
 
-    if len(p) > NEURAL_SMOOTH_WIN and smoothing:
-        for i in range(1, len(p[0])):
-            hanning = np.hanning(NEURAL_SMOOTH_WIN) / NEURAL_SMOOTH_WIN
-            p[:, i] = np.convolve(p[:, i], hanning, mode='same')
     local_c = p.argmax(axis=1)
     local_p = p.max(axis=1)                    
     local_c = [reject(local_c[i], local_p[i], NEURAL_REJECT)

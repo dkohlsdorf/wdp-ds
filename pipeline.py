@@ -29,8 +29,9 @@ from kneed import KneeLocator
 
 from subprocess import check_output
 
-NEURAL_REJECT=0.001
-NEURAL_NOISE_DAMPENING=0.02
+
+NEURAL_REJECT=0.025
+NEURAL_NOISE_DAMPENING=0.01
 NEURAL_LABEL_DAMPENING={
     'Ea':0.1,
     'Eb':0.1,
@@ -42,9 +43,10 @@ NEURAL_LABEL_DAMPENING={
     'Eh':0.01,
     'Bc':0.25,
     'Bd':0.01,
-    'Be':0.01
+    'Be':0.01,
+    'Bh':0.01,
 }
-NEURAL_SMOOTH_WIN=64
+NEURAL_SMOOTH_WIN=32
 
 
 FFT_STEP     = 128

@@ -63,12 +63,8 @@ FFT_LO       = 100
 D            = FFT_WIN // 2 - FFT_LO - (FFT_WIN // 2 - FFT_HI)
 
 
-"""
-Daniel Tunes this 
-NEURAL_REJECT=0.001
-"""
 NEURAL_REJECT=0.025
-NEURAL_NOISE_DAMPENING=0.05
+NEURAL_NOISE_DAMPENING=0.01
 NEURAL_LABEL_DAMPENING={
     'Ea':0.1,
     'Eb':0.1,
@@ -83,7 +79,7 @@ NEURAL_LABEL_DAMPENING={
     'Be':0.01,
     'Bh':0.01,
 }
-NEURAL_SMOOTH_WIN=64
+NEURAL_SMOOTH_WIN=32
 
 
 def spec(x):

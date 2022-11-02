@@ -92,8 +92,11 @@ def plot_neural(spectrogram, compressed, img_path):
                              256, linewidth=1, edgecolor='r', facecolor=COLORS[region.id])
             ax.add_patch(rect)
             plt.text(region.start + (region.stop - region.start) // 2 , 30, region.cls, size=12)
-    plt.savefig(img_path, dpi=100, bbox_inches='tight', pad_inches=0)
-    plt.close()
+    if img_path is not None:
+        plt.savefig(img_path, dpi=100, bbox_inches='tight', pad_inches=0)
+        plt.close()
+    else:
+        plt.show()
 
     
 def reject(x, p, th):

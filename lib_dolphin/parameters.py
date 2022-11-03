@@ -19,7 +19,7 @@ NEURAL_LABEL_DAMPENING={
 'Ed': 0.0,
 'Ee': 0.0,
 'Ef': 0.0,
-'Eg': 0.1,
+'Eg': 0.0,
 'Eh': 0.0,
 }
 NEURAL_REJECT=0.01

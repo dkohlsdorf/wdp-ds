@@ -11,7 +11,7 @@ from lib_dolphin.eval import *
 MIN_LEN = 44100 // 10
 MAX_LEN = 44100 // 2
 
-NEURAL_SIZE_TH = 32
+NEURAL_SIZE_TH = 16
 
 SCALER = 1.0
 BIAS   = 0.7
@@ -113,17 +113,27 @@ def compress_neural(decoding, n, reverse, label_mapping):
 def plot_neural(spectrogram, compressed, img_path):    
     fig, ax = plt.subplots()
     fig.set_size_inches(len(spectrogram) / 100, len(spectrogram[0]) / 100)
-    ax.imshow(BIAS - spectrogram.T * SCALER, norm=Normalize(START, STOP), cmap='gray')                  
+    ax.imshow(BIAS - spectrogram.T * SCALER, cmap='gray')                  
     for region in compressed:        
         if region.id > 0:
             rect = patches.Rectangle((region.start, 0), region.stop - region.start,
                              256, linewidth=1, edgecolor='r', facecolor=COLORS[region.id])
             ax.add_patch(rect)
             plt.text(region.start + (region.stop - region.start) // 2 , 30, region.cls, size=12)
-    plt.savefig(img_path, dpi=100, bbox_inches='tight', pad_inches=0)
-    plt.close()
+    if img_path is not None:
+        plt.savefig(img_path, dpi=100, bbox_inches='tight', pad_inches=0)
+        plt.close()
+    else:
+        plt.show()
 
     
+def reject(x, p, th):
+    if p < th:
+        return 0
+    else:
+        return x
+
+
 def i2name(i, reverse, label_mapping):    
     if i == 0:
         return '_'

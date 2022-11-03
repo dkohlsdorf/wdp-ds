@@ -13,6 +13,7 @@ import polling
 
 from collections import namedtuple
 from tensorflow.keras.models import load_model
+from scipy.signal import triang
 
 from lib_dolphin.audio import *
 from lib_dolphin.sequential import *
@@ -25,8 +26,7 @@ from datetime import datetime
 from fastavro import writer, reader, parse_schema
 from scipy.io.wavfile import write
 
-
-VERSION    = 'sep_2022' 
+VERSION    = 'tuned_noise' 
 SEQ_PATH   = f'../web_service/{VERSION}/sequences/'
 IMG_PATH   = f'../web_service/{VERSION}/images/'
 MODEL_PATH = '../web_service/ml_models_mai_smlr/'
@@ -64,25 +64,43 @@ FFT_LO       = 100
 
 D            = FFT_WIN // 2 - FFT_LO - (FFT_WIN // 2 - FFT_HI)
 
+NEURAL_NOISE_DAMPENING=0.5
+NEURAL_LABEL_DAMPENING={}
+NEURAL_REJECT=0.05
+NEURAL_SMOOTH_WIN=128
 
-NEURAL_NOISE_DAMPENING = 0.05
-NEURAL_SMOOTH_WIN      = 64
 
 
 def spec(x):
     return spectrogram(x, FFT_LO, FFT_HI, FFT_WIN, FFT_STEP)
 
-
-def decode(x, decoder, label_mapping):
+    
+def decode(x, decoder, label_mapping, reverse, smoothing=True, win='triang'):
     t, d = x.shape
-    print(x.shape)
     a = x.reshape((1,t,d,1))
     p = decoder.predict(a).reshape((a.shape[1], label_mapping.n + 1)) 
-    if len(p) > NEURAL_SMOOTH_WIN:
+    
+
+    if len(p) > NEURAL_SMOOTH_WIN and smoothing:
         for i in range(0, len(p[0])):
-            p[:, i] = np.convolve(p[:, i], np.ones(NEURAL_SMOOTH_WIN) / NEURAL_SMOOTH_WIN, mode='same')
+            if win=='triang':
+                window = triang(NEURAL_SMOOTH_WIN) / np.sum(triang(NEURAL_SMOOTH_WIN)) 
+            else:
+                window = np.hamming(NEURAL_SMOOTH_WIN) / sum(np.hamming(NEURAL_SMOOTH_WIN))
+            p[:, i] = np.convolve(p[:, i], window, mode='same')
     p[:, 0] *= NEURAL_NOISE_DAMPENING
+    for i in range(1, len(p[0])):
+        dc = i2name(i, reverse, label_mapping)
+        if dc in NEURAL_LABEL_DAMPENING:
+            df = NEURAL_LABEL_DAMPENING[dc]
+            print(f" ... dampen {dc} by {df}")
+            p[:, i] *= df
+
     local_c = p.argmax(axis=1)
+    local_p = p.max(axis=1)                    
+    local_c = [reject(local_c[i], local_p[i], NEURAL_REJECT)
+               for i in range(len(local_c))]
+
     return local_c
 
     
@@ -106,8 +124,10 @@ def match(sequence, db):
 def labels(s):
     return [c.cls for c in s]
     
+    
 def overlap(x1, x2, y1, y2, e1, e2):
     return e1 == e2 and max(x1.start, y1.start) <= min(x2.stop, y2.stop)
+    
     
 def knn(sequence, sequences, ids, eids = None, k=10):
     pq = []
@@ -259,7 +279,7 @@ class DiscoveryService:
         s = spec(audio)
         plottable = spectrogram(audio, 0, FFT_WIN // 2, FFT_WIN, FFT_STEP)
         start_bound, stop_bound = 0, len(audio)
-        dec  = decode(s, self.decoder, self.label_mapping)
+        dec  = decode(s, self.decoder, self.label_mapping, self.reverse)
         c    = compress_neural(dec, len(s), self.reverse, self.label_mapping)
         img_p = f"{self.img_path}/{query_id}.png"
         plot_neural(plottable, c, img_p)                
@@ -325,8 +345,9 @@ class DecodingWorker:
                 s         = spec(regions[i])
                 plottable = spectrogram(regions[i], 0, FFT_WIN // 2, FFT_WIN, FFT_STEP)
                 start_bound, stop_bound = bounds[i] 
-                dec  = decode(s, self.decoder, self.label_mapping)
+                dec  = decode(s, self.decoder, self.label_mapping, self.reverse)
                 c    = compress_neural(dec, len(s), self.reverse, self.label_mapping)
+                print(f" ... {i}: {len(dec)} {len(c)} {len([c for region in c if region.id > 0])}")
                 if len([c for region in c if region.id > 0]) > 4:
                     png_file   = f"{self.image_path}/{file_id}_{start_bound}_{stop_bound}.png"
                     audio_file = f"{self.image_path}/{file_id}_{start_bound}_{stop_bound}.wav"
@@ -366,3 +387,5 @@ if __name__ == '__main__':
                 path = f'{folder}/{filename}'
                 print(f" .. Enqueue: {path}")
                 r.lpush(DecodingWorker.KEY, path)
+
+                

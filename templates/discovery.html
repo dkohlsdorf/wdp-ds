@@ -72,7 +72,13 @@
 
 {%for i in range(0, n)%}
   <h4> {{sequences[i]['id']}} {{sequences[i]['time']}} </h4>
-  <p><a href="/neighborhood/{{keys[i]}}"> {{sequences[i]['sequence']}}</a></p>
+  
+  <p>
+    <a href="/neighborhood/{{keys[i]}}"> {{sequences[i]['sequence']}}</a>
+    <a href="/{{sequences[i]['audio']}}"> [wav] </a>
+    <a href="/{{sequences[i]['raven']}}"> [raven_table] </a>
+  </p>
+
   <div class="scroll"> <img src="/{{sequences[i]['img']}}" border="0"> </div>   
 {%endfor%}
 </body>

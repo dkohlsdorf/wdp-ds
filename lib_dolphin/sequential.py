@@ -16,11 +16,39 @@ NEURAL_SIZE_TH = 16
 SCALER = 1.0
 BIAS   = 0.7
 START  = 0.2
-STOP   = 0.
+STOP   = 0.8
 
 SPLIT_SEC    = 60
 SPLIT_RATE   = 44100
 SPLIT_SKIP   = 0.5
+
+
+FFT_STEP     = 128
+RAW_AUDIO    = 5120
+
+
+def raven(path, symbols, sep='\t'):    
+    headers = ["Selection", "View", "Channel", "Begin Time (s)", "End Time (s)", "Low Freq (Hz)", "High Freq (Hz)",
+               "Delta Time (s)", "Delta Freq (Hz)", "Avg Power Density (dB FS/Hz)", "Annotation"]
+    header = sep.join(headers)
+    table = [header]
+    for i, symbol in enumerate(symbols):     
+        if symbol.cls[0] != '_':
+            x_start    = symbol.start * FFT_STEP
+            x_end      = symbol.stop * FFT_STEP
+            secs_start = x_start / 44100
+            secs_end   = x_end / 44100
+            f_start    = 0
+            f_end      = 44100 // 2
+            channel    = 1
+            annotation = symbol.cls
+            dt         = ""
+            df         = ""
+            power      = ""
+            table.append(f"{i+1}{sep}Waveform 1{sep}1{sep}{secs_start}{sep}{secs_end}{sep}{f_start}{sep}{f_end}{sep}{dt}{sep}{df}{sep}{power}{sep}{annotation}")
+            table.append(f"{i+1}{sep}Spectrogram 1{sep}1{sep}{secs_start}{sep}{secs_end}{sep}{f_start}{sep}{f_end}{sep}{dt}{sep}{df}{sep}{power}{sep}{annotation}")
+    with open(path, "w") as fp:
+        fp.write("\n".join(table))
 
 
 def split(audio_file):

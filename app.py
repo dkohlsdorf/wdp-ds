@@ -11,11 +11,11 @@ from decoder_worker import DiscoveryService
 from flask import Flask, render_template, flash, redirect, request
 
 
-VERSION     = 'mai_smlr_threshold' 
+VERSION     = 'sep_2022' 
 SEQ_PATH    = f'../web_service/{VERSION}/sequences/'
 IMG_PATH    = f'../web_service/{VERSION}/images/'
 PKL_PATH    = f'../web_service/{VERSION}/service.pkl'
-UPLOAD_PATH = f'../web_service/{VERSION}/wav'
+UPLOAD_PATH = f'../web_service/{VERSION}/wav/'
 MODEL_PATH  = '../web_service/ml_models_mai_smlr/'
 
 
@@ -131,11 +131,15 @@ def login():
 
 def process_sequence(s):
     id       = s['path'].split("/")[-1].replace('.wav', "")
-    id       =  re.sub("[^a-zA-Z0-9 ]+", "", id)
+    id       = re.sub("[^a-zA-Z0-9 ]+", "", id)
     time     = f"{str(datetime.timedelta(seconds=s['start'] / 44100)) } - {str(datetime.timedelta(seconds=s['stop']  / 44100)) }" 
     start    = s['start']
     stop     = s['stop']        
+
     img      = f"{id}_{start}_{stop}.png"
+    audio    = f"{id}_{start}_{stop}.wav"
+    raven    = f"{id}_{start}_{stop}.txt"
+    
     sequence = " ".join([c['cls'] for c in s['sequence']])
     
     return {
@@ -143,6 +147,8 @@ def process_sequence(s):
         "start"   : start,
         "stop"    : stop,
         "img"     : img,
+        "audio"   : audio,
+        "raven"   : raven, 
         "sequence": sequence,
         "time"    : time
     }

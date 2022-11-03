@@ -24,6 +24,7 @@ from redis import Redis
 from datetime import datetime 
 
 from fastavro import writer, reader, parse_schema
+from scipy.io.wavfile import write
 
 VERSION    = 'tuned_noise' 
 SEQ_PATH   = f'../web_service/{VERSION}/sequences/'
@@ -348,7 +349,13 @@ class DecodingWorker:
                 c    = compress_neural(dec, len(s), self.reverse, self.label_mapping)
                 print(f" ... {i}: {len(dec)} {len(c)} {len([c for region in c if region.id > 0])}")
                 if len([c for region in c if region.id > 0]) > 4:
-                    plot_neural(plottable, c, f"{self.image_path}/{file_id}_{start_bound}_{stop_bound}.png")                
+                    png_file   = f"{self.image_path}/{file_id}_{start_bound}_{stop_bound}.png"
+                    audio_file = f"{self.image_path}/{file_id}_{start_bound}_{stop_bound}.wav"
+                    raven_tab  = f"{self.image_path}/{file_id}_{start_bound}_{stop_bound}.txt"
+                    write(audio_file, 44100, regions[i])
+                    raven(raven_tab, c)
+                    
+                    plot_neural(plottable, c, png_file)
                     records.append({                
                         "path":     str(filename),
                         "start":    start_bound,

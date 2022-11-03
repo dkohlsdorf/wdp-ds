@@ -19,7 +19,7 @@ from lib_dolphin.audio import *
 from lib_dolphin.sequential import *
 from lib_dolphin.eval import *
 from lib_dolphin.discrete import *
-
+from lib_dolphin.parameters import *
 from redis import Redis
 from datetime import datetime 
 
@@ -54,21 +54,6 @@ SCHEMA = {
         }
     ]
 }
-
-
-
-FFT_STEP     = 128
-FFT_WIN      = 512
-FFT_HI       = 230
-FFT_LO       = 100
-
-D            = FFT_WIN // 2 - FFT_LO - (FFT_WIN // 2 - FFT_HI)
-
-NEURAL_NOISE_DAMPENING=0.5
-NEURAL_LABEL_DAMPENING={}
-NEURAL_REJECT=0.05
-NEURAL_SMOOTH_WIN=128
-
 
 
 def spec(x):

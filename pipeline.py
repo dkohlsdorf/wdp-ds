@@ -17,7 +17,7 @@ from lib_dolphin.dtw import *
 from lib_dolphin.htk_helpers import *
 from lib_dolphin.sequential import *
 from lib_dolphin.statistics import * 
-
+from lib_dolphin.parameters import *
 from collections import namedtuple, Counter, defaultdict
 
 from scipy.io.wavfile import read, write
@@ -28,53 +28,6 @@ from sklearn.cluster import AgglomerativeClustering, KMeans
 from kneed import KneeLocator
 
 from subprocess import check_output
-
-
-NEURAL_REJECT=0.025
-NEURAL_NOISE_DAMPENING=0.01
-NEURAL_LABEL_DAMPENING={
-    'Ea':0.1,
-    'Eb':0.1,
-    'Ec':0.1,    
-    'Ed':0.1,    
-    'Ee':0.1,
-    'Ef':0.1,
-    'Eg':0.1,
-    'Eh':0.01,
-    'Bc':0.25,
-    'Bd':0.01,
-    'Be':0.01,
-    'Bh':0.01,
-}
-NEURAL_SMOOTH_WIN=32
-
-
-FFT_STEP     = 128
-FFT_WIN      = 512
-FFT_HI       = 230
-FFT_LO       = 100
-
-D            = FFT_WIN // 2 - FFT_LO - (FFT_WIN // 2 - FFT_HI)
-RAW_AUDIO    = 5120
-T            = int((RAW_AUDIO - FFT_WIN) / FFT_STEP)
-
-CONV_PARAM   = [
-    (8, 8,  32),
-    (4, 16, 32),
-    (2, 32, 32),
-    (1, 64, 32),
-    (8,  4, 32),
-    (16, 4, 32),
-    (32, 4, 32)
-]
-
-N_BANKS = len(CONV_PARAM)
-N_FILTERS = int(np.sum([i for _, _, i in CONV_PARAM]))
-
-WINDOW_PARAM = (T, D, 1)
-LATENT       = 128
-EPOCHS       = 10
-BATCH        = 25
 
 
 def compute_bic(kmeans, X):

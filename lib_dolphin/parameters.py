@@ -1,0 +1,62 @@
+import numpy as np
+
+# AUDIO PARAMS
+FFT_STEP     = 128
+FFT_WIN      = 512
+FFT_HI       = 230
+FFT_LO       = 100
+
+D            = FFT_WIN // 2 - FFT_LO - (FFT_WIN // 2 - FFT_HI)
+RAW_AUDIO    = 5120
+T            = int((RAW_AUDIO - FFT_WIN) / FFT_STEP)
+
+# DECODING PARAMS
+NEURAL_NOISE_DAMPENING=0.5
+NEURAL_LABEL_DAMPENING={
+'Ea': 0.0,
+'Eb': 0.0,
+'Ec': 0.0,
+'Ed': 0.0,
+'Ee': 0.0,
+'Ef': 0.0,
+'Eg': 0.1,
+'Eh': 0.0,
+}
+NEURAL_REJECT=0.01
+NEURAL_SMOOTH_WIN=128
+
+
+# MODEL PARAMS
+CONV_PARAM   = [
+    (8, 8,  32),
+    (4, 16, 32),
+    (2, 32, 32),
+    (1, 64, 32),
+    (8,  4, 32),
+    (16, 4, 32),
+    (32, 4, 32)
+]
+
+N_BANKS = len(CONV_PARAM)
+N_FILTERS = int(np.sum([i for _, _, i in CONV_PARAM]))
+
+WINDOW_PARAM = (T, D, 1)
+LATENT       = 128
+EPOCHS       = 10
+BATCH        = 25
+
+
+# SEQUENTIAL PARAMS
+MIN_LEN = 44100 // 10
+MAX_LEN = 44100 // 2
+
+NEURAL_SIZE_TH = 16
+
+SCALER = 1.0
+BIAS   = 0.7
+START  = 0.2
+STOP   = 0.8
+
+SPLIT_SEC    = 60
+SPLIT_RATE   = 44100
+SPLIT_SKIP   = 0.5

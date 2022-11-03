@@ -6,25 +6,7 @@ import matplotlib.patches as patches
 from lib_dolphin.audio import *
 from collections import namedtuple
 from lib_dolphin.eval import *
-
-
-MIN_LEN = 44100 // 10
-MAX_LEN = 44100 // 2
-
-NEURAL_SIZE_TH = 16
-
-SCALER = 1.0
-BIAS   = 0.7
-START  = 0.2
-STOP   = 0.8
-
-SPLIT_SEC    = 60
-SPLIT_RATE   = 44100
-SPLIT_SKIP   = 0.5
-
-
-FFT_STEP     = 128
-RAW_AUDIO    = 5120
+from lib_dolphin.parameters import *
 
 
 def raven(path, symbols, sep='\t'):    

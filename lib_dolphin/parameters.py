@@ -1,4 +1,5 @@
 import numpy as np
+from collections import defaultdict
 
 # AUDIO PARAMS
 FFT_STEP     = 128
@@ -22,7 +23,13 @@ NEURAL_LABEL_DAMPENING={
 'Eg': 0.0,
 'Eh': 0.0,
 }
-NEURAL_REJECT=0.01
+
+NEURAL_REJECT= defaultdict(lambda: 0.003, {
+    'Bb': 0.33,
+    'Bc': 0.33,
+    'Bd': 0.75,
+    'Be': 0.6,
+})
 NEURAL_SMOOTH_WIN=128
 
 
@@ -50,7 +57,7 @@ BATCH        = 25
 MIN_LEN = 44100 // 10
 MAX_LEN = 44100 // 2
 
-NEURAL_SIZE_TH = 16
+NEURAL_SIZE_TH = 0
 
 SCALER = 1.0
 BIAS   = 0.7

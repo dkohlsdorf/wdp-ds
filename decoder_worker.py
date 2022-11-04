@@ -68,10 +68,7 @@ def decode(x, decoder, label_mapping, reverse, smoothing=True, win='triang'):
 
     if len(p) > NEURAL_SMOOTH_WIN and smoothing:
         for i in range(0, len(p[0])):
-            if win=='triang':
-                window = triang(NEURAL_SMOOTH_WIN) / np.sum(triang(NEURAL_SMOOTH_WIN)) 
-            else:
-                window = np.hamming(NEURAL_SMOOTH_WIN) / sum(np.hamming(NEURAL_SMOOTH_WIN))
+            window = triang(NEURAL_SMOOTH_WIN) / np.sum(triang(NEURAL_SMOOTH_WIN)) 
             p[:, i] = np.convolve(p[:, i], window, mode='same')
     p[:, 0] *= NEURAL_NOISE_DAMPENING
     for i in range(1, len(p[0])):
@@ -80,10 +77,10 @@ def decode(x, decoder, label_mapping, reverse, smoothing=True, win='triang'):
             df = NEURAL_LABEL_DAMPENING[dc]
             print(f" ... dampen {dc} by {df}")
             p[:, i] *= df
-
+    
     local_c = p.argmax(axis=1)
     local_p = p.max(axis=1)                    
-    local_c = [reject(local_c[i], local_p[i], NEURAL_REJECT)
+    local_c = [reject(local_c[i], local_p[i], NEURAL_REJECT[i2name(local_c[i], reverse, label_mapping)])
                for i in range(len(local_c))]
 
     return local_c

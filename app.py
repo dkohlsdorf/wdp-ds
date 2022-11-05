@@ -131,7 +131,7 @@ def login():
 
 def process_sequence(s):
     id       = s['path'].split("/")[-1].replace('.wav', "")
-    id       = re.sub("[^a-zA-Z0-9 ]+", "", id)
+    id       = re.sub("[^a-zA-Z0-9_ ]+", "", id)
     time     = f"{str(datetime.timedelta(seconds=s['start'] / 44100)) } - {str(datetime.timedelta(seconds=s['stop']  / 44100)) }" 
     start    = s['start']
     stop     = s['stop']        

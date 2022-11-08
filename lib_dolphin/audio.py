@@ -73,8 +73,8 @@ def dataset_unsupervised_regions_windowed(regions, wavfile, encoder, supervised,
             if w is not None:
                 if i % 100 == 0:
                     print(" ... reading {}/{}={}".format(i, N, i / N))
-                x = encoder.predict(w)
-                y = supervised.predict(w)
+                x = encoder.predict(w, verbose=0)
+                y = supervised.predict(w, verbose=0)
 
                 n_wstl = 0
                 n_others = 0
@@ -117,8 +117,8 @@ def dataset_unsupervised_regions(regions, wavfile, encoder, supervised, lo, hi, 
             if w is not None:
                 if i % 100 == 0:
                     print(" ... reading {}/{}={}".format(i, N, i / N))
-                x = encoder.predict(w)
-                y = supervised.predict(w)                
+                x = encoder.predict(w, verbose = 0)
+                y = supervised.predict(w, verbose = 0)                
                 instances.append(x)
                 labels.append(y)
                 ids.append(i)

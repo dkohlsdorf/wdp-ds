@@ -116,8 +116,8 @@ def train_triplets(enc, by_label):
 
 
 def neighbours_encoder(encoder, x_train, y_train, x_test, y_test, label_dict, name, out_folder):
-    x_train = encoder.predict(x_train, batch_size = BATCH)
-    x_test = encoder.predict(x_test, batch_size = BATCH)
+    x_train = encoder.predict(x_train, batch_size = BATCH, verbose = 0)
+    x_test = encoder.predict(x_test, batch_size = BATCH, verbose = 0)
 
     index = nmslib.init(method='hnsw', space='cosinesimil')
     index.addDataPointBatch(x_train)
@@ -222,7 +222,7 @@ def train(label_file, wav_file, label_file_l2, wav_file_l2, out_folder="output",
             base_encoder.save('{}/base_encoder.h5'.format(out_folder))
             enc_filters(enc, N_FILTERS, N_BANKS, "{}/filters_ae.png".format(out_folder))                
             plot_tensorflow_hist(hist, "{}/history_train_ae.png".format(out_folder))
-            visualize_dataset(ae.predict(x_test, batch_size=BATCH), "{}/reconstructions.png".format(out_folder))
+            visualize_dataset(ae.predict(x_test, batch_size=BATCH, verbose=0), "{}/reconstructions.png".format(out_folder))
             acc_ae = neighbours_encoder(enc, x_train, y_train, x_test, y_test, label_dict, "aute encoder", out_folder)
             accuracy_ae.append(acc_ae)
             enc.save('{}/encoder.h5'.format(out_folder))                
@@ -241,14 +241,14 @@ def train(label_file, wav_file, label_file_l2, wav_file_l2, out_folder="output",
             accuracy_nn_supervised.append(acc_nn)
 
             if relabel:            
-                prediction = model.predict(x_train)
+                prediction = model.predict(x_train, verbose=0)
                 y_train    = prediction.argmax(axis=1)
                 
             n = len(label_dict)        
             label_names = ["" for i in range(n)]
             for l, i in label_dict.items():
                 label_names[i] = l
-            prediction_test = model.predict(x_test)
+            prediction_test = model.predict(x_test, verbose=0)
             confusion = np.zeros((n,n))
             correct = 0
             for i in range(len(y_test)):
@@ -270,19 +270,22 @@ def train(label_file, wav_file, label_file_l2, wav_file_l2, out_folder="output",
         plt.close()
     else:
         model = load_model('{}/supervised.h5'.format(out_folder))
-        enc   = load_model('{}/encoder.h5'.format(out_folder))    
+        enc   = load_model('{}/encoder.h5'.format(out_folder))        
 
-    by_label = dict([(k, enc.predict(np.stack(v), batch_size=10)) for k, v in by_label.items()])
+
+    print(f"Debug Shape: {np.stack(list(by_label.values())[0][0]).shape}")
+        
+    by_label = dict([(k, enc.predict(np.stack(v), batch_size=10, verbose=0)) for k, v in by_label.items()])
     clusters = dict([(k, cluster_model(v, out_folder, reverse[k], min_k = 8, max_k=None)) for k, v in by_label.items() if k != label_dict['NOISE']])
     pkl.dump(clusters, open('{}/clusters_window.pkl'.format(out_folder),'wb'))
     print(f'Done Clustering: {[(k, v.cluster_centers_.shape) for k, v in clusters.items()]}')
     
     b = np.stack(instances)
-    h = enc.predict(b, batch_size=10)
+    h = enc.predict(b, batch_size=10, verbose=0)
     if export_truth:
         x = labels
     else:
-        x = model.predict(b, batch_size=10)
+        x = model.predict(b, batch_size=10, verbose=0)
     extracted = {}
     for n, i in enumerate(x):
         if n % 1000 == 0:
@@ -294,7 +297,7 @@ def train(label_file, wav_file, label_file_l2, wav_file_l2, out_folder="output",
         l = reverse[li]
         if l != 'NOISE':
             hn      = h[n].reshape(1, LATENT)
-            pred_hn = clusters[li].predict(hn)
+            pred_hn = clusters[li].predict(hn, verbose = 0)
             c = int(pred_hn[0])    
             if l not in extracted:
                 extracted[l] = {}
@@ -317,7 +320,8 @@ def moving_average(x, w):
     return np.convolve(x, np.ones(w), 'valid') / w
 
 
-def train_sequential(folder, labels, data, noise):
+# TODO Daniel is here
+def train_sequential(folder, labels, data, noise, l1=False, retrain=True):
     ids         = pkl.load(open(f"{folder}/ids.pkl", "rb"))
     inst        = pkl.load(open(f"{folder}/instances.pkl", "rb"))
     predictions = [x for x in pkl.load(open(f"{folder}/predictions.pkl", "rb"))]
@@ -599,7 +603,7 @@ def htk_converter(file, folder, out):
     audio    = raw(file) 
     spec     = spectrogram(audio, FFT_LO, FFT_HI, FFT_WIN, FFT_STEP)
     windowed = windowing(spec, T)
-    x        = enc.predict(windowed, batch_size=10)
+    x        = enc.predict(windowed, batch_size=10, verbose = 0)
     return write_htk(x, out), x, windowed
 
 
@@ -1075,7 +1079,7 @@ def lookalike(folder, label_file_l2, wav_file_l2, to_sort, percentile=50, th = 0
             string = []
             for x, (start, stop) in zip(regions, bounds):
                 s = spectrogram(x, FFT_LO, FFT_HI, FFT_WIN, FFT_STEP)
-                p = decoder.predict(s.reshape(1, len(s), D, 1))[0]
+                p = decoder.predict(s.reshape(1, len(s), D, 1), verbose=0)[0]
                 if len(p) > NEURAL_SMOOTH_WIN:
                     for i in range(0, len(p[0])):
                         p[:, i] = np.convolve(p[:, i], np.ones(NEURAL_SMOOTH_WIN) / NEURAL_SMOOTH_WIN, mode='same')
@@ -1158,7 +1162,7 @@ def neardup(query_folder, labels, wav, folder, out, k = 10, percentile=50, band=
             if len(x) > 0:            
                 s = spectrogram(x, FFT_LO, FFT_HI, FFT_WIN, FFT_STEP)
                 w = windowing(s, T)
-                e = encoder.predict(w)
+                e = encoder.predict(w, verbose=0)
                 queries.append(e)
                 names.append(f)
 

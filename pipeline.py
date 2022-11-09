@@ -5,6 +5,8 @@ import sys
 import os
 import matplotlib.pyplot as plt
 import matplotlib.patches as patches
+import datetime
+
 
 import random
 
@@ -320,8 +322,9 @@ def moving_average(x, w):
     return np.convolve(x, np.ones(w), 'valid') / w
 
 
-# TODO Daniel is here
 def train_sequential(folder, labels, data, noise, l1=False, retrain=True):
+    model_id    = datetime.datetime.today().strftime("%Y%m%d")
+    print(f"train decoder for model {model_id}")
     ids         = pkl.load(open(f"{folder}/ids.pkl", "rb"))
     inst        = pkl.load(open(f"{folder}/instances.pkl", "rb"))
     predictions = [x for x in pkl.load(open(f"{folder}/predictions.pkl", "rb"))]
@@ -332,38 +335,47 @@ def train_sequential(folder, labels, data, noise, l1=False, retrain=True):
     noise   = raw(noise)
 
     reverse = {v:k for k, v in lab.items()}
-    
-    ranges = []
-    for _, row in df.iterrows():
-        ranges.append([row['starts'], row['stops']])
 
-    encoder       = load_model(f'{folder}/base_encoder.h5')
+    if l1:
+        offsets = list(df['offset'])
+        ranges = [[start, stop] for start, stop in zip(offsets[0:-1], offsets[1:])]
+    else:
+        ranges = []
+        for _, row in df.iterrows():
+            ranges.append([row['starts'], row['stops']])
+
     clst          = pkl.load(open(f"{folder}/clusters_window.pkl", "rb"))
     label_mapping = LabelMapping.mapping(clst)
     pkl.dump(label_mapping, open(f'{folder}/label_mapping.pkl', 'wb'))
 
-    dim = np.sum([c.n_clusters for c in clst.values()]) + 1
     opt = SGD(learning_rate=0.01, momentum=0.9)
-    decoder = seq2seq_classifier(WINDOW_PARAM, encoder, LATENT, dim)
-    decoder.compile(optimizer=opt, loss='categorical_crossentropy', metrics=['accuracy'])
+    if retrain:
+        encoder       = load_model(f'{folder}/base_encoder.h5')    
+        dim = np.sum([c.n_clusters for c in clst.values()]) + 1
+        decoder = seq2seq_classifier(WINDOW_PARAM, encoder, LATENT, dim)
+        decoder.compile(optimizer=opt, loss='categorical_crossentropy', metrics=['accuracy'])
+    else:
+        decoder = load_model(f"{folder}/decoder_nn.h5")
+
     decoder.summary()
     
     TOTAL = len(predictions)
     accuracies = []
     for i in range(0, TOTAL * 25):
         if i % 100 == 0 and i > 0:
-            print(f'Epoch: {i} {np.mean(accuracies[-100:])} ')
+            print(f'Epoch: {i}/{TOTAL * 25} {np.mean(accuracies[-100:])}')
         batch_x, batch_y, y = get_batch(signals, noise, inst, ranges, ids, predictions, dim, clst, label_mapping,\
                                         FFT_LO, FFT_HI, FFT_WIN, FFT_STEP, T, batch = 3)    
         loss, acc = decoder.train_on_batch(x=batch_x, y=batch_y)
         accuracies.append(acc)
-    decoder.save(f'{folder}/decoder_nn.h5')
-    enc_filters(encoder, N_FILTERS, N_BANKS, f'{folder}/decoder_nn_filters.png')
+        
+    decoder.save(f'{folder}/decoder_nn_{model_id}.h5')
+    enc_filters(encoder, N_FILTERS, N_BANKS, f'{folder}/decoder_nn_filters_{model_id}.png')
     accuracies = np.convolve(accuracies, np.ones(TOTAL), 'valid') / TOTAL
     plt.plot(moving_average(accuracies, TOTAL))
     plt.xlabel('iter')
     plt.ylabel('acc')
-    plt.savefig(f'{folder}/acc_seq2seq.png')
+    plt.savefig(f'{folder}/acc_seq2seq_{model_id}.png')
     plt.close()
     
     

@@ -26,10 +26,10 @@ from datetime import datetime
 from fastavro import writer, reader, parse_schema
 from scipy.io.wavfile import write
 
-VERSION    = 'tuned_noise' 
+VERSION    = 'nov22' 
 SEQ_PATH   = f'../web_service/{VERSION}/sequences/'
 IMG_PATH   = f'../web_service/{VERSION}/images/'
-MODEL_PATH = '../web_service/ml_models_mai_smlr/'
+MODEL_PATH = '../web_service/ml_models_nov9/'
 
 SCHEMA = {
     "name": "WDP_Decoded",

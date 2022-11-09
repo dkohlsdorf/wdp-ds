@@ -202,7 +202,7 @@ def draw_signal(ranges, signals, ids, predictions, instances, clst, label_mappin
     return signals[start:stop], labeling
 
 
-def combined(length, signals, noise, ranges, ids, predictions, instances, clst, label_mapping, n = 10):
+def combined(length, signals, noise, ranges, ids, predictions, instances, clst, label_mapping, n = 10, min_signal=0.9):
     noise = np.concatenate([draw_noise(length, noise) for i in range(n)])
     N = len(noise)        
     signal, c = draw_signal(ranges, signals, ids, predictions, instances, clst, label_mapping)
@@ -212,7 +212,7 @@ def combined(length, signals, noise, ranges, ids, predictions, instances, clst, 
         insert_at = np.random.randint(n, N-n)
     else:
         insert_at = 0
-    p = np.random.uniform()
+    p = min(min_signal, np.random.uniform())
     noise_p = 1.0 - p
     w = int(min(n, N)) 
     if w == N:

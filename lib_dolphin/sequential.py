@@ -207,21 +207,20 @@ def draw_signal(ranges, signals, ids, predictions, instances, clst, label_mappin
     total_score /= (1 + n_nonzero)
     if verbose:
         print(f" ... kmeans fit: {total_score}")            
-    return signals[start:stop], labeling, total_score
+    return signals[start:stop], labeling, total_score, n_nonzero
 
 
 def combined(length, signals, noise, ranges, ids, predictions, instances, clst, label_mapping, n = 10, min_signal=1.0, score_threshold=-10, n_trials = 250, verbose=False):
     noise = np.concatenate([draw_noise(length, noise) for i in range(n)])
     N = len(noise)        
     
-    signal, c, score = draw_signal(ranges, signals, ids, predictions, instances, clst, label_mapping)
+    signal, c, score, n_nonzero = draw_signal(ranges, signals, ids, predictions, instances, clst, label_mapping)
     trials = 0    
-    while score_threshold is not None and score < score_threshold and trials < n_trials:
-        signal, c, score = draw_signal(ranges, signals, ids, predictions, 
+    while score_threshold is not None and score < score_threshold and trials < n_trials and n_nonzero > 0:
+        signal, c, score, n_nonzero= draw_signal(ranges, signals, ids, predictions, 
                                        instances, clst, label_mapping)
-        trials += 1
-        
-        
+        trials += 1        
+    
     n = len(signal)    
     if N-n > n:
         insert_at = np.random.randint(n, N-n)

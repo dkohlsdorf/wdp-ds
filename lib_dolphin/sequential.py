@@ -179,7 +179,7 @@ def draw_noise(length, noise):
     return sample
 
 
-def draw_signal(ranges, signals, ids, predictions, instances, clst, label_mapping, WIN = None):    
+def draw_signal(ranges, signals, ids, predictions, instances, clst, label_mapping, WIN = None, verbose=False):    
     i = np.random.randint(0, len(ids))
     start, stop = ranges[ids[i]]
     c = predictions[i]
@@ -189,6 +189,8 @@ def draw_signal(ranges, signals, ids, predictions, instances, clst, label_mappin
             c[:, d] = np.convolve(c[:, d], np.ones(WIN) / WIN, mode='same')
 
     labeling = []
+    total_score = 0
+    n_nonzero = 0
     for j in range(len(c)):
         l = np.argmax(c[j])
         if l == 4:
@@ -197,17 +199,30 @@ def draw_signal(ranges, signals, ids, predictions, instances, clst, label_mappin
         else:
             ii = instances[i][j]
             cluster_number = clst[l].predict(ii.reshape(1, ii.shape[0]))[0]
-            ci = 1 + label_mapping.fwd(l, cluster_number)
+            score = clst[l].score(ii.reshape(1, ii.shape[0]))
+            ci = 1 + label_mapping.fwd(l, cluster_number)            
             labeling.append(ci)
-    return signals[start:stop], labeling
+            total_score += score
+            n_nonzero   += 1
+    total_score /= (1 + n_nonzero)
+    if verbose:
+        print(f" ... kmeans fit: {total_score}")            
+    return signals[start:stop], labeling, total_score
 
 
-def combined(length, signals, noise, ranges, ids, predictions, instances, clst, label_mapping, n = 10, min_signal=0.9, verbose=False):
+def combined(length, signals, noise, ranges, ids, predictions, instances, clst, label_mapping, n = 10, min_signal=1.0, score_threshold=-10, n_trials = 250, verbose=False):
     noise = np.concatenate([draw_noise(length, noise) for i in range(n)])
     N = len(noise)        
-    signal, c = draw_signal(ranges, signals, ids, predictions, instances, clst, label_mapping)
-    n = len(signal)
     
+    signal, c, score = draw_signal(ranges, signals, ids, predictions, instances, clst, label_mapping)
+    trials = 0    
+    while score_threshold is not None and score < score_threshold and trials < n_trials:
+        signal, c, score = draw_signal(ranges, signals, ids, predictions, 
+                                       instances, clst, label_mapping)
+        trials += 1
+        
+        
+    n = len(signal)    
     if N-n > n:
         insert_at = np.random.randint(n, N-n)
     else:

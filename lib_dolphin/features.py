@@ -29,7 +29,7 @@ def encoder(in_shape, latent_dim, conv_params):
     return Model(inputs =[inp], outputs=[x])
 
 
-def seq2seq_classifier(in_shape, encoder, n_latent, n_classes, lstm=True, dropout=False):    
+def seq2seq_classifier(in_shape, encoder, n_latent, n_classes, lstm=True, dropout=True):    
     dft_dim = in_shape[1]
     shape = (None, dft_dim, 1)
     inp   = Input(shape)

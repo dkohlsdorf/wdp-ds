@@ -348,11 +348,12 @@ def train_sequential(folder, labels, data, noise, l1=False, retrain=True):
     label_mapping = LabelMapping.mapping(clst)
     pkl.dump(label_mapping, open(f'{folder}/label_mapping.pkl', 'wb'))
 
-    opt = SGD(learning_rate=0.01, momentum=0.9)
+    # SGD(learning_rate=0.01, momentum=0.9)
+    opt = Adam() 
     if retrain:
         encoder       = load_model(f'{folder}/base_encoder.h5')    
-        dim = np.sum([c.n_clusters for c in clst.values()]) + 1
-        decoder = seq2seq_classifier(WINDOW_PARAM, encoder, LATENT, dim)
+        dim           = np.sum([c.n_clusters for c in clst.values()]) + 1
+        decoder       = seq2seq_classifier(WINDOW_PARAM, encoder, LATENT, dim)
         decoder.compile(optimizer=opt, loss='categorical_crossentropy', metrics=['accuracy'])
     else:
         decoder = load_model(f"{folder}/decoder_nn.h5")

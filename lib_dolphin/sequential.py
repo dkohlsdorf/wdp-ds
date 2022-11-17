@@ -196,7 +196,6 @@ def draw_signal(ranges, signals, ids, predictions, instances, clst, label_mappin
             c[j][4] = -1.0
         l = np.argmax(c[j])
         if l == 4:
-            print("noise")
             ci = 0
             labeling.append(0)
         else:
@@ -213,7 +212,7 @@ def draw_signal(ranges, signals, ids, predictions, instances, clst, label_mappin
     return signals[start:stop], labeling, total_score, n_nonzero
 
 
-def combined(length, signals, noise, ranges, ids, predictions, instances, clst, label_mapping, n = 10, min_signal=1.0, score_threshold=-10, n_trials = 250, verbose=False):
+def combined(length, signals, noise, ranges, ids, predictions, instances, clst, label_mapping, n = 10, min_signal=1.0, score_threshold=-None, n_trials = 250, verbose=False):
     
     noise = np.concatenate([draw_noise(length, noise) for i in range(n)])
     N = len(noise)    

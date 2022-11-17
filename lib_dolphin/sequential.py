@@ -179,7 +179,7 @@ def draw_noise(length, noise):
     return sample
 
 
-def draw_signal(ranges, signals, ids, predictions, instances, clst, label_mapping, WIN = None, verbose=False):    
+def draw_signal(ranges, signals, ids, predictions, instances, clst, label_mapping, WIN = None, verbose=False, no_noise=True):    
     i = np.random.randint(0, len(ids))
     start, stop = ranges[ids[i]]
     c = predictions[i]
@@ -192,8 +192,11 @@ def draw_signal(ranges, signals, ids, predictions, instances, clst, label_mappin
     total_score = 0
     n_nonzero = 0
     for j in range(len(c)):
+        if no_noise:
+            c[j][4] = -1.0
         l = np.argmax(c[j])
         if l == 4:
+            print("noise")
             ci = 0
             labeling.append(0)
         else:
@@ -211,16 +214,17 @@ def draw_signal(ranges, signals, ids, predictions, instances, clst, label_mappin
 
 
 def combined(length, signals, noise, ranges, ids, predictions, instances, clst, label_mapping, n = 10, min_signal=1.0, score_threshold=-10, n_trials = 250, verbose=False):
-    noise = np.concatenate([draw_noise(length, noise) for i in range(n)])
-    N = len(noise)        
     
-    signal, c, score, n_nonzero = draw_signal(ranges, signals, ids, predictions, instances, clst, label_mapping)
+    noise = np.concatenate([draw_noise(length, noise) for i in range(n)])
+    N = len(noise)    
+    
     trials = 0    
+    signal, c, score, n_nonzero = draw_signal(ranges, signals, ids, predictions, instances, clst, label_mapping)
     while score_threshold is not None and score < score_threshold and trials < n_trials and n_nonzero > 0:
         signal, c, score, n_nonzero= draw_signal(ranges, signals, ids, predictions, 
                                        instances, clst, label_mapping)
-        trials += 1        
-    
+        trials += 1      
+        
     n = len(signal)    
     if N-n > n:
         insert_at = np.random.randint(n, N-n)
@@ -231,6 +235,8 @@ def combined(length, signals, noise, ranges, ids, predictions, instances, clst, 
     w = int(min(n, N)) 
     if w == N and verbose:
         print("Cut: {} {}".format(n, N))        
+    if verbose:
+        print(f"Noise to Signal Ratio: noise = {N} signal = {n_nonzero}/{n} ||||| {n/N * 100}%")
     noise[insert_at:insert_at+w] = noise_p * noise[insert_at:insert_at+w] + p * signal[:w]
     return noise, insert_at, insert_at+w, c
 

@@ -322,7 +322,7 @@ def moving_average(x, w):
     return np.convolve(x, np.ones(w), 'valid') / w
 
 
-def train_sequential(folder, labels, data, noise, l1=False, retrain=True):
+def train_sequential(folder, labels, data, noise, l1=False, retrain=False):
     model_id    = datetime.datetime.today().strftime("%Y%m%d")
     print(f"train decoder for model {model_id}")
     ids         = pkl.load(open(f"{folder}/ids.pkl", "rb"))
@@ -347,12 +347,12 @@ def train_sequential(folder, labels, data, noise, l1=False, retrain=True):
     clst          = pkl.load(open(f"{folder}/clusters_window.pkl", "rb"))
     label_mapping = LabelMapping.mapping(clst)
     pkl.dump(label_mapping, open(f'{folder}/label_mapping.pkl', 'wb'))
+    dim = np.sum([c.n_clusters for c in clst.values()]) + 1
 
     # SGD(learning_rate=0.01, momentum=0.9)
     opt = Adam() 
     if retrain:
         encoder       = load_model(f'{folder}/base_encoder.h5')    
-        dim           = np.sum([c.n_clusters for c in clst.values()]) + 1
         decoder       = seq2seq_classifier(WINDOW_PARAM, encoder, LATENT, dim)
         decoder.compile(optimizer=opt, loss='categorical_crossentropy', metrics=['accuracy'])
     else:

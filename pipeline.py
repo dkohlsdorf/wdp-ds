@@ -322,7 +322,7 @@ def moving_average(x, w):
     return np.convolve(x, np.ones(w), 'valid') / w
 
 
-def train_sequential(folder, labels, data, noise, l1=False, retrain=False):
+def train_sequential(folder, labels, data, noise, l1=True, retrain=False):
     model_id    = datetime.datetime.today().strftime("%Y%m%d")
     print(f"train decoder for model {model_id}")
     ids         = pkl.load(open(f"{folder}/ids.pkl", "rb"))
@@ -371,7 +371,8 @@ def train_sequential(folder, labels, data, noise, l1=False, retrain=False):
         accuracies.append(acc)
         
     decoder.save(f'{folder}/decoder_nn_{model_id}.h5')
-    enc_filters(encoder, N_FILTERS, N_BANKS, f'{folder}/decoder_nn_filters_{model_id}.png')
+    if retrain:
+        enc_filters(encoder, N_FILTERS, N_BANKS, f'{folder}/decoder_nn_filters_{model_id}.png')
     accuracies = np.convolve(accuracies, np.ones(TOTAL), 'valid') / TOTAL
     plt.plot(moving_average(accuracies, TOTAL))
     plt.xlabel('iter')

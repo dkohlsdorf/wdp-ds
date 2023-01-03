@@ -11,7 +11,9 @@ D            = FFT_WIN // 2 - FFT_LO - (FFT_WIN // 2 - FFT_HI)
 RAW_AUDIO    = 5120
 T            = int((RAW_AUDIO - FFT_WIN) / FFT_STEP)
 
-# DECODING PARAMS
+
+# ==========================
+# SPOTTED DECODING PARAMS
 NEURAL_NOISE_DAMPENING=0.5
 NEURAL_LABEL_DAMPENING={
 'Ea': 0.0,
@@ -31,6 +33,8 @@ NEURAL_REJECT= defaultdict(lambda: 0.003, {
     'Be': 0.6,
 })
 NEURAL_SMOOTH_WIN=128
+# ==========================
+
 
 
 # MODEL PARAMS

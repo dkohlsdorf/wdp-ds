@@ -29,7 +29,6 @@ from scipy.io.wavfile import write
 VERSION    = 'bottlenose_jan23' 
 SEQ_PATH   = f'../web_service/{VERSION}/sequences/'
 IMG_PATH   = f'../web_service/{VERSION}/images/'
-MODEL_PATH = '../web_service/ml_models_nov9/'
 
 SCHEMA = {
     "name": "WDP_Decoded",

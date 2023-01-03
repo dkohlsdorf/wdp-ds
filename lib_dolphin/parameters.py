@@ -13,7 +13,8 @@ T            = int((RAW_AUDIO - FFT_WIN) / FFT_STEP)
 
 
 # ==========================
-# SPOTTED DECODING PARAMS
+"""SPOTTED DECODING PARAMS
+MODEL_PATH = '../web_service/ml_models_nov9/'
 NEURAL_NOISE_DAMPENING=0.5
 NEURAL_LABEL_DAMPENING={
 'Ea': 0.0,
@@ -31,6 +32,26 @@ NEURAL_REJECT= defaultdict(lambda: 0.003, {
     'Bc': 0.33,
     'Bd': 0.75,
     'Be': 0.6,
+})
+NEURAL_SMOOTH_WIN=128 """
+
+# BOTTLENOSE DECODING PARAMS
+MODEL_PATH = '../web_service/ml_models_v2/'
+NEURAL_NOISE_DAMPENING=1.0
+NEURAL_LABEL_DAMPENING={
+'Ea': 0.0,
+'Eb': 0.0,
+'Ec': 0.0,
+'Ed': 0.0,
+'Ee': 0.0,
+'Ef': 0.0,
+'Eg': 0.0,
+'Eh': 0.0,
+'Uc': 0.0
+}
+
+NEURAL_REJECT= defaultdict(lambda: 0.003, {
+    'Be': 0.75
 })
 NEURAL_SMOOTH_WIN=128
 # ==========================

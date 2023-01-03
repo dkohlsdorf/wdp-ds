@@ -26,7 +26,7 @@ from datetime import datetime
 from fastavro import writer, reader, parse_schema
 from scipy.io.wavfile import write
 
-VERSION    = 'nov22' 
+VERSION    = 'bottlenose_jan23' 
 SEQ_PATH   = f'../web_service/{VERSION}/sequences/'
 IMG_PATH   = f'../web_service/{VERSION}/images/'
 MODEL_PATH = '../web_service/ml_models_nov9/'

@@ -47,11 +47,15 @@ NEURAL_LABEL_DAMPENING={
 'Ef': 0.0,
 'Eg': 0.0,
 'Eh': 0.0,
-'Uc': 0.0
+'Dd': 0.0,
+'Uc': 0.0,
+'Ud': 0.0 
 }
 
 NEURAL_REJECT= defaultdict(lambda: 0.003, {
-    'Be': 0.75
+    'Be': 0.75,
+    'Bc': 0.75
+
 })
 NEURAL_SMOOTH_WIN=128
 # ==========================

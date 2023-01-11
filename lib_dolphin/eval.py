@@ -14,9 +14,9 @@ from scipy.io.wavfile import read, write
 
 from matplotlib.colors import Normalize
 
-
+PATH = os.path.dirname(__file__)
 COLORS = list(
-    pd.read_csv('lib_dolphin/colors.txt', sep='\t', header=None)[1].apply(lambda x: x + "80")
+    pd.read_csv(f'{PATH}/colors.txt', sep='\t', header=None)[1].apply(lambda x: x + "80")
 )
 
 

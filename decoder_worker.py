@@ -26,10 +26,9 @@ from datetime import datetime
 from fastavro import writer, reader, parse_schema
 from scipy.io.wavfile import write
 
-VERSION    = 'bottlenose_jan23' 
+VERSION    = 'pack_jan23' 
 SEQ_PATH   = f'../web_service/{VERSION}/sequences/'
 IMG_PATH   = f'../web_service/{VERSION}/images/'
-MODEL_PATH = '../web_service/ml_models_nov9/'
 
 SCHEMA = {
     "name": "WDP_Decoded",
@@ -365,7 +364,7 @@ if __name__ == '__main__':
         folder = sys.argv[2]
         r = Redis()
         for filename in os.listdir(folder):
-            if filename.endswith('.wav'):
+            if not filename.startswith('.') and (filename.endswith('.wav') or filename.endswith('.WAV')):
                 path = f'{folder}/{filename}'
                 print(f" .. Enqueue: {path}")
                 r.lpush(DecodingWorker.KEY, path)

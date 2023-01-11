@@ -322,7 +322,7 @@ def moving_average(x, w):
     return np.convolve(x, np.ones(w), 'valid') / w
 
 
-def train_sequential(folder, labels, data, noise, l1=True, retrain=False):
+def train_sequential(folder, labels, data, noise, l1=False, retrain=True):
     model_id    = datetime.datetime.today().strftime("%Y%m%d")
     print(f"train decoder for model {model_id}")
     ids         = pkl.load(open(f"{folder}/ids.pkl", "rb"))

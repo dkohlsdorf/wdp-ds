@@ -59,11 +59,15 @@ def spec(x):
     return spectrogram(x, FFT_LO, FFT_HI, FFT_WIN, FFT_STEP)
 
     
-def decode(x, decoder, label_mapping, reverse, smoothing=True, win='triang'):
+def decode(x, decoder, label_mapping, reverse, smoothing=True, win='triang', splitter=2000):
     t, d = x.shape
-    a = x.reshape((1,t,d,1))
-    p = decoder.predict(a).reshape((a.shape[1], label_mapping.n + 1)) 
-    
+    result = []
+    for i in range(0, t, splitter):
+        a = x[i:i+splitter, :]
+        a = a.reshape((1,len(a),d,1))
+        p = decoder.predict(a, verbose=False).reshape((a.shape[1], label_mapping.n + 1)) 
+        result.append(p)
+    p = np.concatenate(result)
 
     if len(p) > NEURAL_SMOOTH_WIN and smoothing:
         for i in range(0, len(p[0])):

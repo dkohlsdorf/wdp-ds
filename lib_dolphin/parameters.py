@@ -14,24 +14,22 @@ T            = int((RAW_AUDIO - FFT_WIN) / FFT_STEP)
 
 # ==========================
 MODEL_PATH = '../../web_service/ml_models_v2/'
-NEURAL_NOISE_DAMPENING = 5.0
-NEURAL_LABEL_DAMPENING = {
+NEURAL_NOISE_DAMPENING=5.0
+NEURAL_LABEL_DAMPENING={
     'Uc' : 0.1,
-    
     'Ee' : 0.1,
     'Eb' : 0.1,
     'Eg' : 0.1,
     'Ed' : 0.1,
     'Ef' : 0.75,
-
     'Bc' : 0.75,
     'Be' : 0.75,    
     'Bf' : 0.75,
     'Bg' : 0.75,
 }
 
-NEURAL_REJECT = defaultdict(lambda: 0.1, {})
-NEURAL_SMOOTH_WIN = 128
+NEURAL_REJECT= defaultdict(lambda: 0.1, {})
+NEURAL_SMOOTH_WIN=128
 
 """
 #SPOTTED DECODING PARAMS

@@ -17,16 +17,17 @@ MODEL_PATH = '../web_service/ml_models_v2/'
 NEURAL_NOISE_DAMPENING=5.0
 NEURAL_LABEL_DAMPENING={
     'Uc' : 0.1,
-    'Ee' : 0.1,
-    'Eb' : 0.1,
-    'Eh' : 0.1,
-    'Eg' : 0.1,
-    'Ed' : 0.1,
+    'Ea' : 0.0,
+    'Eb' : 0.0,
+    'Ec' : 0.0,
+    'Ed' : 0.0,
+    'Ee' : 0.0,
+    'Ef' : 0.0,
+    'Eg' : 0.0,    
     'Bc' : 0.1,
     'Be' : 0.1,    
-    'Ef' : 0.75,    
-    'Bf' : 0.75,
-    'Bg' : 0.75,
+    'Bf' : 0.1,
+    'Bg' : 0.1,
 }
 
 NEURAL_REJECT= defaultdict(lambda: 0.1, {})

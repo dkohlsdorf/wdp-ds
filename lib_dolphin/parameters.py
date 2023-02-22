@@ -24,6 +24,7 @@ NEURAL_LABEL_DAMPENING={
     'Ee' : 0.0,
     'Ef' : 0.0,
     'Eg' : 0.0,    
+    'Eh' : 0.0,
     'Bc' : 0.1,
     'Be' : 0.1,    
     'Bf' : 0.1,

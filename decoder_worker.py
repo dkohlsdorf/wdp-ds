@@ -356,8 +356,42 @@ class DecodingWorker:
             with open(f'{self.sequence_path}/{file_id}.avro', 'wb') as out:
                 writer(out, self.schema, records)
             
-        
 
+def transitions(sequence_path, output):
+    sequences = []
+    for file in os.listdir(sequence_path):
+        eid = file.replace('.avro', '')
+        print(f" ... reading: {file} {eid}")
+        if file.endswith('avro') and not file.startswith('query'):
+            with open(f'{sequence_path}/{file}', 'rb') as fo:
+                avro_reader = reader(fo)
+                for record in avro_reader:
+                    sequences.append(record)
+    unigrams = []
+    for sequence in sequences:
+        for symbol in sequence['sequence']:
+            if symbol['cls'].startswith('_'):
+                unigrams.append('_')
+            else:
+                unigrams.append(symbol['cls'])
+    
+    unigrams = sorted(list(set(unigrams)))
+    idx = {unigram : i for i, unigram in enumerate(unigrams)}
+    n = max(idx.values()) + 1
+    bigrams = np.zeros((n, n))
+    for sequence in sequences:
+        for i in range(1, len(sequence['sequence'])):
+            n0 = sequence['sequence'][i - 1]['cls'] 
+            n1 = sequence['sequence'][i]['cls']
+            if not n0.startswith('_') and not n1.startswith('_'):
+                i = idx[n0]
+                j = idx[n1]
+                bigrams[i][j] += 1
+    plot_result_matrix(bigrams, unigrams, unigrams, "transitions")
+    plt.savefig(output)
+    plt.close()
+
+    
 if __name__ == '__main__':    
     if sys.argv[1] == 'worker':
         print("Decoding Worker")    
@@ -372,5 +406,9 @@ if __name__ == '__main__':
                 path = f'{folder}/{filename}'
                 print(f" .. Enqueue: {path}")
                 r.lpush(DecodingWorker.KEY, path)
-
+    elif sys.argv[1] == 'transitions':
+        print("Compute Transitions")
+        output = sys.argv[2]
+        transitions(SEQ_PATH, output)
+        
                 

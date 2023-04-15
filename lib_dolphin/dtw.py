@@ -1,10 +1,10 @@
 import numpy as np
 import multiprocessing as mp
 
-#from numba import jit
+from numba import jit
 
 
-#@jit(nopython=True)        
+@jit(nopython=True)        
 def min3(a, b, c):    
     x = a
     if b < x:
@@ -14,7 +14,7 @@ def min3(a, b, c):
     return x
 
 
-#@jit(nopython=True)        
+@jit(nopython=True)        
 def imax(a, b):    
     x = a
     if b > x:
@@ -22,7 +22,7 @@ def imax(a, b):
     return x
 
 
-#@jit(nopython=True)        
+@jit(nopython=True)        
 def imin(a, b):    
     x = a
     if b < x:
@@ -33,7 +33,7 @@ def imin(a, b):
 BAND = 0.1
 
 
-#@jit(nopython=True)        
+@jit(nopython=True)        
 def dtw(x, y, band=BAND, gap_penalty = 0.0):
     N = x.shape[0]
     M = y.shape[0]
@@ -52,7 +52,7 @@ def dtw(x, y, band=BAND, gap_penalty = 0.0):
     return dp[N, M] / (N * M)
 
 
-#@jit
+@jit
 def dtw_distances(X, band=BAND, gap_penalty = 0.0):
     N = len(X)
     d = np.zeros((N, N))

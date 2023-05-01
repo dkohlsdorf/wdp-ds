@@ -86,7 +86,7 @@ def decode(x, decoder, label_mapping, reverse, smoothing=True, win='triang', spl
     local_c = [reject(local_c[i], local_p[i], NEURAL_REJECT[i2name(local_c[i], reverse, label_mapping)])
                for i in range(len(local_c))]
 
-    return local_c
+    return local_c, p
 
     
 def ngrams(sequence, n=2, sep=''):
@@ -170,6 +170,7 @@ def subsequences(sequence, max_len=8):
 
 
 class DiscoveryService:
+    # TODO add relaxed search index
     
     def __init__(self, sequence_path, img_path, limit = None):
         self.sequences     = []
@@ -264,7 +265,7 @@ class DiscoveryService:
         s = spec(audio)
         plottable = spectrogram(audio, 0, FFT_WIN // 2, FFT_WIN, FFT_STEP)
         start_bound, stop_bound = 0, len(audio)
-        dec  = decode(s, self.decoder, self.label_mapping, self.reverse)
+        dec, dec_prob = decode(s, self.decoder, self.label_mapping, self.reverse)
         c    = compress_neural(dec, len(s), self.reverse, self.label_mapping)
         img_p = f"{self.img_path}/{query_id}.png"
         plot_neural(plottable, c, img_p)                
@@ -327,20 +328,26 @@ class DecodingWorker:
             regions, bounds, audio_file = split(filename)
             start = time.time()        
             for i in range(len(regions)):
-                s         = spec(regions[i])
+                s = spec(regions[i])
                 plottable = spectrogram(regions[i], 0, FFT_WIN // 2, FFT_WIN, FFT_STEP)
                 start_bound, stop_bound = bounds[i] 
-                dec  = decode(s, self.decoder, self.label_mapping, self.reverse)
-                c    = compress_neural(dec, len(s), self.reverse, self.label_mapping)
+                dec, dec_prob = decode(s, self.decoder, self.label_mapping, self.reverse)
+                c = compress_neural(dec, len(s), self.reverse, self.label_mapping)
+
+                raw_prob_file = f"{self.image_path}/{file_id}_{start_bound}_{stop_bound}.npy"
+                with open(raw_prob_file, 'wb') as f:
+                    np.save(f, dec_prob)
+
                 print(f" ... {i}: {len(dec)} {len(c)} {len([c for region in c if region.id > 0])}")
                 if len([c for region in c if region.id > 0]) > 4:
-                    png_file   = f"{self.image_path}/{file_id}_{start_bound}_{stop_bound}.png"
-                    audio_file = f"{self.image_path}/{file_id}_{start_bound}_{stop_bound}.wav"
-                    raven_tab  = f"{self.image_path}/{file_id}_{start_bound}_{stop_bound}.txt"
+                    png_file      = f"{self.image_path}/{file_id}_{start_bound}_{stop_bound}.png"
+                    audio_file    = f"{self.image_path}/{file_id}_{start_bound}_{stop_bound}.wav"
+                    raven_tab     = f"{self.image_path}/{file_id}_{start_bound}_{stop_bound}.txt"
+                
                     write(audio_file, 44100, regions[i])
-                    raven(raven_tab, c)
-                    
+                    raven(raven_tab, c)                
                     plot_neural(plottable, c, png_file)
+                        
                     records.append({                
                         "path":     str(filename),
                         "start":    start_bound,

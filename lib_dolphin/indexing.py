@@ -58,7 +58,7 @@ def partition(ids, idx, lr):
 
 
 @jit
-def build_tree(data, make_selector, n_leaf=10):
+def build_tree(data, make_selector, n_leaf=100):
     N = len(data)
     ids = np.arange(0, N)
     selections = np.zeros(N)
@@ -80,7 +80,7 @@ def build_tree(data, make_selector, n_leaf=10):
             node.selector = ids[i.start:i.stop]
     return root
 
-@jit
+
 def dtw_selector(X, ids, idx):
     n = idx.stop - idx.start
     selected_idx = np.random.randint(n) + idx.start

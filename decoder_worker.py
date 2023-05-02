@@ -26,9 +26,10 @@ from datetime import datetime
 from fastavro import writer, reader, parse_schema
 from scipy.io.wavfile import write
 
-VERSION    = 'no_echo' 
+VERSION    = 'relaxed_search_may23' 
 SEQ_PATH   = f'../web_service/{VERSION}/sequences/'
 IMG_PATH   = f'../web_service/{VERSION}/images/'
+RAW_PATH   = f'../web_service/{VERSION}/raw_prob/'
 
 SCHEMA = {
     "name": "WDP_Decoded",
@@ -303,12 +304,13 @@ class DecodingWorker:
     
     KEY = 'WDP-DS'
     
-    def __init__(self, model_path, image_path, sequence_path, redis):
+    def __init__(self, model_path, image_path, sequence_path, raw_prob_path, redis):
         self.decoder       = load_model(f'{model_path}/decoder_nn.h5')
         self.lab           = pkl.load(open(f"{model_path}/labels.pkl", "rb"))
         self.reverse       = {v:k for k, v in self.lab.items()}
         self.label_mapping = pkl.load(open(f'{model_path}/label_mapping.pkl', 'rb'))
         self.image_path    = image_path
+        self.raw_prob_path = raw_prob_path
         self.sequence_path = sequence_path
         
         self.redis         = redis
@@ -334,7 +336,7 @@ class DecodingWorker:
                 dec, dec_prob = decode(s, self.decoder, self.label_mapping, self.reverse)
                 c = compress_neural(dec, len(s), self.reverse, self.label_mapping)
 
-                raw_prob_file = f"{self.image_path}/{file_id}_{start_bound}_{stop_bound}.npy"
+                raw_prob_file = f"{self.raw_prob_path}/{file_id}_{start_bound}_{stop_bound}.npy"
                 with open(raw_prob_file, 'wb') as f:
                     np.save(f, dec_prob)
 
@@ -402,7 +404,7 @@ def transitions(sequence_path, output):
 if __name__ == '__main__':    
     if sys.argv[1] == 'worker':
         print("Decoding Worker")    
-        worker = DecodingWorker(MODEL_PATH, IMG_PATH, SEQ_PATH, Redis())
+        worker = DecodingWorker(MODEL_PATH, IMG_PATH, SEQ_PATH, RAW_PATH, Redis())
         polling.poll(lambda: worker.work(), step=5, poll_forever=True)        
     elif sys.argv[1] == 'enqueue':
         print('Batch Enqueue')

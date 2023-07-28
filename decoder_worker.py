@@ -20,12 +20,14 @@ from lib_dolphin.sequential import *
 from lib_dolphin.eval import *
 from lib_dolphin.discrete import *
 from lib_dolphin.parameters import *
+from lib_dolphin.extern_index import *
+
 from redis import Redis
 from datetime import datetime 
 
 from fastavro import writer, reader, parse_schema
 from scipy.io.wavfile import write
-
+ADDR       = 'localhost:50051' 
 VERSION    = 'no_echo' 
 SEQ_PATH   = f'../web_service/{VERSION}/sequences/'
 IMG_PATH   = f'../web_service/{VERSION}/images/'
@@ -50,7 +52,8 @@ SCHEMA = {
                     {"name": "id",       "type": "int"}                
                 ]}
             }        
-        }
+         },
+        {"name" : "proba_ids", "type": {"type" : "array", "items" : "int"}}
     ]
 }
 
@@ -86,7 +89,7 @@ def decode(x, decoder, label_mapping, reverse, smoothing=True, win='triang', spl
     local_c = [reject(local_c[i], local_p[i], NEURAL_REJECT[i2name(local_c[i], reverse, label_mapping)])
                for i in range(len(local_c))]
 
-    return local_c
+    return local_c, p
 
     
 def ngrams(sequence, n=2, sep=''):
@@ -264,15 +267,23 @@ class DiscoveryService:
         s = spec(audio)
         plottable = spectrogram(audio, 0, FFT_WIN // 2, FFT_WIN, FFT_STEP)
         start_bound, stop_bound = 0, len(audio)
-        dec  = decode(s, self.decoder, self.label_mapping, self.reverse)
+        dec, probs = decode(s, self.decoder, self.label_mapping, self.reverse)
         c    = compress_neural(dec, len(s), self.reverse, self.label_mapping)
         img_p = f"{self.img_path}/{query_id}.png"
-        plot_neural(plottable, c, img_p)                
+        plot_neural(plottable, c, img_p)
+
+        n = len(probs)
+        probas = []
+        for i in range(100, n, 50):
+            probas.append(probs[i-100:i])
+        ids = insert_all(probas, ADDR)
+
         records = [{                
-            "path":     name,
-            "start":    start_bound,
-            "stop":     stop_bound,
-            "sequence": [token.to_dict() for token in c]
+            "path":      name,
+            "start":     start_bound,
+            "stop":      stop_bound,
+            "sequence":  [token.to_dict() for token in c],
+            "proba_ids": ids
         }]                                               
         with open(f'{self.sequence_path}/{query_id}.avro', 'wb') as out:
             writer(out, SCHEMA, records)
@@ -319,19 +330,24 @@ class DecodingWorker:
         
         print(f'.. Check for work {now} {result}')        
         if result is not None:
+            if result == 'reindex':
+                reindex(ADDR, VERSION)
+                return
+            
             records = []
             
             filename = result
             file_id = str(filename).split('/')[-1].split('.')[0]             
             print(f'.. Work: {filename} {file_id}')
             regions, bounds, audio_file = split(filename)
-            start = time.time()        
+            start = time.time()
+
             for i in range(len(regions)):
                 s         = spec(regions[i])
                 plottable = spectrogram(regions[i], 0, FFT_WIN // 2, FFT_WIN, FFT_STEP)
                 start_bound, stop_bound = bounds[i] 
-                dec  = decode(s, self.decoder, self.label_mapping, self.reverse)
-                c    = compress_neural(dec, len(s), self.reverse, self.label_mapping)
+                dec, probs = decode(s, self.decoder, self.label_mapping, self.reverse)
+                c = compress_neural(dec, len(s), self.reverse, self.label_mapping)
                 print(f" ... {i}: {len(dec)} {len(c)} {len([c for region in c if region.id > 0])}")
                 if len([c for region in c if region.id > 0]) > 4:
                     png_file   = f"{self.image_path}/{file_id}_{start_bound}_{stop_bound}.png"
@@ -339,13 +355,20 @@ class DecodingWorker:
                     raven_tab  = f"{self.image_path}/{file_id}_{start_bound}_{stop_bound}.txt"
                     write(audio_file, 44100, regions[i])
                     raven(raven_tab, c)
+
+                    n = len(probs)
+                    probas = []
+                    for i in range(100, n, 50):
+                        probas.append(probs[i-100:i])
+                    ids = insert_all(probas, ADDR)
                     
                     plot_neural(plottable, c, png_file)
                     records.append({                
                         "path":     str(filename),
                         "start":    start_bound,
                         "stop":     stop_bound,
-                        "sequence": [token.to_dict() for token in c]
+                        "sequence": [token.to_dict() for token in c],
+                        "proba_ids": ids
                     })                                                
                 
                 if i % 10 == 0 and i > 0:
@@ -355,8 +378,8 @@ class DecodingWorker:
                     start = time.time()         
             with open(f'{self.sequence_path}/{file_id}.avro', 'wb') as out:
                 writer(out, self.schema, records)
-            
 
+                
 def transitions(sequence_path, output):
     sequences = []
     for file in os.listdir(sequence_path):
@@ -401,6 +424,7 @@ if __name__ == '__main__':
         print('Batch Enqueue')
         folder = sys.argv[2]
         r = Redis()
+        r.lpush(DecodingWorker.KEY, 'reindex')
         for filename in os.listdir(folder):
             if not filename.startswith('.') and (filename.endswith('.wav') or filename.endswith('.WAV')):
                 path = f'{folder}/{filename}'

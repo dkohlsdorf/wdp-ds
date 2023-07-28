@@ -31,7 +31,9 @@ def insert_all(ts, addr):
             response = stub.insert(x)
             print(f"Insert Response: status = {response.status} id = {response.ts_id}")
             ids.append(response.ts_id)
-            
+    return ids
+
+
 def reindex(addr, name):
     with grpc.insecure_channel(addr) as channel:
         request = indexing_pb2.ReindexingRequest(n_samples = 1024)

@@ -330,7 +330,7 @@ class DecodingWorker:
         
         print(f'.. Check for work {now} {result}')        
         if result is not None:
-            if result == 'reindex':
+            if result == b'reindex':
                 reindex(ADDR, VERSION)
                 return
             

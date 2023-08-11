@@ -39,6 +39,13 @@ def reindex(addr, name):
         stub = indexing_pb2_grpc.TimeSeriesServiceStub(channel)
         request = indexing_pb2.ReindexingRequest(n_samples = 1024)
         response = stub.reindex(request)
-        stub = indexing_pb2_grpc.TimeSeriesServiceStub(channel)
+        print("reindexing done")
         response = stub.save(indexing_pb2.SaveIndexRequest(name = "name"))
-    
+        print("saving done")
+
+        
+def load(addr, name):
+    with grpc.insecure_channel(addr) as channel:
+        stub = indexing_pb2_grpc.TimeSeriesServiceStub(channel)
+        response = stub.load(indexing_pb2.LoadIndexRequest(name = name))
+        

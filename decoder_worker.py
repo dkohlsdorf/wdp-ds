@@ -349,7 +349,7 @@ class DecodingWorker:
                 dec, probs = decode(s, self.decoder, self.label_mapping, self.reverse)
                 c = compress_neural(dec, len(s), self.reverse, self.label_mapping)
                 print(f" ... {i}: {len(dec)} {len(c)} {len([c for region in c if region.id > 0])}")
-                if len([c for region in c if region.id > 0]) > 4:
+                if len([c for region in c if region.id > 0]) > 8:
                     png_file   = f"{self.image_path}/{file_id}_{start_bound}_{stop_bound}.png"
                     audio_file = f"{self.image_path}/{file_id}_{start_bound}_{stop_bound}.wav"
                     raven_tab  = f"{self.image_path}/{file_id}_{start_bound}_{stop_bound}.txt"
@@ -357,7 +357,7 @@ class DecodingWorker:
                     raven(raven_tab, c)
 
                     n = len(probs)
-                    probas = []
+                    probas = []                
                     for i in range(100, n, 50):
                         probas.append(probs[i-100:i])
                     ids = insert_all(probas, ADDR)

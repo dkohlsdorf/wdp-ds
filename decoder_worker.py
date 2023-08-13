@@ -27,6 +27,7 @@ from datetime import datetime
 
 from fastavro import writer, reader, parse_schema
 from scipy.io.wavfile import write
+
 ADDR       = 'localhost:50051' 
 VERSION    = 'no_echo' 
 SEQ_PATH   = f'../web_service/{VERSION}/sequences/'
@@ -170,7 +171,7 @@ def subsequences(sequence, max_len=8):
         for i in range(length, n):
             substring = " ".join([s['cls'] for s in sequence[i-length:i]])
             yield substring
-
+            
 
 class DiscoveryService:
     
@@ -181,6 +182,9 @@ class DiscoveryService:
         self.decodings     = []
         self.encounter_ids = []
 
+        # TODO ts id extern index -> sequence 
+        self.inverted_idx = {}
+        
         self.densities  = {}       
         self.neighbors  = {}
         self.substrings = {}
@@ -194,6 +198,7 @@ class DiscoveryService:
         self.parse(sequence_path, limit)
         self.setup_discovery()
         self.setup_substrings()        
+        self.setup_inverted()
         self.sequence_path = sequence_path
         self.img_path = img_path    
         
@@ -202,8 +207,9 @@ class DiscoveryService:
         self.lab           = pkl.load(open(f"{model_path}/labels.pkl", "rb"))
         self.reverse       = {v:k for k, v in self.lab.items()}
         self.label_mapping = pkl.load(open(f'{model_path}/label_mapping.pkl', 'rb'))
+        load(ADDR, VERSION)
         
-    def parse(self, sequence_path, limit):        
+    def parse(self, sequence_path, limit):            
         for file in os.listdir(sequence_path):
             eid = file.replace('.avro', '')
             print(f" ... reading: {file} {eid}")
@@ -214,7 +220,7 @@ class DiscoveryService:
                     avro_reader = reader(fo)
                     for record in avro_reader:
                         self.sequences.append(record)
-                        self.encounter_ids.append(eid)
+                        self.encounter_ids.append(eid)                        
                         
     def setup_substrings(self):
         for i, sequence in enumerate(self.sequences):
@@ -223,7 +229,12 @@ class DiscoveryService:
                 if sub not in self.substrings:
                     self.substrings[sub] = []
                 self.substrings[sub].append(i)
-                        
+
+    def setup_inverted(self):
+        for i, sequence in enumerate(self.sequences):
+            for ts_id in sequence['proba_ids']:
+                self.inverted_idx[ts_id] = i 
+        
     def setup_discovery(self):
         for key, sequence in enumerate(self.sequences):
             decoded = [DecodedSymbol.from_dict(x) for x in sequence['sequence']]            
@@ -259,8 +270,8 @@ class DiscoveryService:
         keys = [neighbor for _, neighbor in self.neighbors[region]]
         nn   = [self.sequences[neighbor] for neighbor in keys]
         return self.sequences[region], nn, keys
-
-    def query_by_file(self, filename):
+    
+    def query_by_file(self, filename, relax=False):
         name = str(filename).split('/')[-1].split('.')[0]             
         query_id = f"query_{name}"
         audio = raw(filename)
@@ -274,26 +285,27 @@ class DiscoveryService:
 
         n = len(probs)
         probas = []
-        for i in range(100, n, 50):
-            probas.append(probs[i-100:i])
-        ids = insert_all(probas, ADDR)
-
+        for i in range(100, n, 10):
+            probas.append(probs[i-100:i])    
+        
         records = [{                
             "path":      name,
             "start":     start_bound,
             "stop":      stop_bound,
             "sequence":  [token.to_dict() for token in c],
-            "proba_ids": ids
+            "proba_ids": []
         }]                                               
         with open(f'{self.sequence_path}/{query_id}.avro', 'wb') as out:
             writer(out, SCHEMA, records)
 
         decoded = [DecodedSymbol.from_dict(x) for x in records[0]['sequence']]
-        neighbors = query(decoded, self.decodings, self.db)
+        if relax:
+            neighbors = find_relaxed(ADDR, VERSION, probas, self.inverted_idx)
+        else:
+            neighbors = query(decoded, self.decodings, self.db)
         keys = [neighbor for _, neighbor in neighbors]
         nn   = [self.sequences[neighbor] for neighbor in keys]        
-        return f"{query_id}.png", [s.cls for s in decoded], nn, keys
-        
+        return f"{query_id}.png", [s.cls for s in decoded], nn, keys        
             
     def get(self, region):
         keys = [neighbor for _, neighbor in self.neighbors[region]]

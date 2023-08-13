@@ -11,7 +11,7 @@ from decoder_worker import DiscoveryService
 from flask import Flask, render_template, flash, redirect, request
 
 
-VERSION     = 'sep_2022' 
+VERSION     = 'no_echo' 
 SEQ_PATH    = f'../web_service/{VERSION}/sequences/'
 IMG_PATH    = f'../web_service/{VERSION}/images/'
 PKL_PATH    = f'../web_service/{VERSION}/service.pkl'
@@ -162,12 +162,11 @@ def discovery():
     return render_template('discovery.html', sequences=sequences, n=len(sequences), keys = s[2])
 
 
-@app.route('/query', methods=['POST'])
+@app.route('/query_relaxed', methods=['POST'])
 @flask_login.login_required
-def upload():
+def upload_relaxed():
     if request.method == 'POST':
         print(request.files)
-
         if 'file' not in request.files:
             flash('No File Uploaded')
             return redirect('/discovery')            
@@ -177,7 +176,32 @@ def upload():
             return redirect('/discovery')
         path = f"{UPLOAD_PATH}/{file.filename}"
         file.save(path)
-        img, decoding, nn, keys = DISCOVERY.query_by_file(path)
+        print("Done Upload")
+        img, decoding, nn, keys = DISCOVERY.query_by_file(path, True)
+        decoding = " ".join(decoding)
+        
+        history = QueryHistory()
+        history.insert(decoding, path.split('/')[-1])
+
+        sequences = [process_sequence(x) for x in nn]        
+        return render_template('discovery.html', sequences=sequences, n=len(sequences), keys = keys, query=(img, decoding))
+    
+@app.route('/query', methods=['POST'])
+@flask_login.login_required
+def upload():
+    if request.method == 'POST':
+        print(request.files)
+        if 'file' not in request.files:
+            flash('No File Uploaded')
+            return redirect('/discovery')            
+        file = request.files['file']
+        if not file.filename.endswith('.wav'):
+            flash('Only wav files are allowed')
+            return redirect('/discovery')
+        path = f"{UPLOAD_PATH}/{file.filename}"
+        file.save(path)
+        print("Done Upload")
+        img, decoding, nn, keys = DISCOVERY.query_by_file(path, False)
         decoding = " ".join(decoding)
         
         history = QueryHistory()

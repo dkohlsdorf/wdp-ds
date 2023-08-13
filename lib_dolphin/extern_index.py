@@ -7,6 +7,8 @@ sys.path.append('lib_dolphin/gen')
 import indexing_pb2
 import indexing_pb2_grpc
 
+from collections import defaultdict
+
 SIL = True
 
 def timeseries(ts):
@@ -43,9 +45,33 @@ def reindex(addr, name):
         response = stub.save(indexing_pb2.SaveIndexRequest(name = "name"))
         print("saving done")
 
-        
+
 def load(addr, name):
     with grpc.insecure_channel(addr) as channel:
-        stub = indexing_pb2_grpc.TimeSeriesServiceStub(channel)
+        stub = indexing_pb2_grpc.TimeSeriesServiceStub(channel)        
         response = stub.load(indexing_pb2.LoadIndexRequest(name = name))
         
+
+def find_relaxed(addr, name, sequences, inverted_idx, k = 10):
+    with grpc.insecure_channel(addr) as channel:
+        stub = indexing_pb2_grpc.TimeSeriesServiceStub(channel)        
+        not_there = 0
+        there = 0
+        found = defaultdict(int)
+        not_found = set()
+        for sequence in sequences:
+            query = timeseries(sequence)
+            response = stub.query(query)
+            for neighbor in response.ids:
+                if neighbor not in inverted_idx:
+                    not_there += 1
+                    not_found.add(neighbor)
+                else:
+                    i = inverted_idx[neighbor]
+                    found[i] += 1
+                    there += 1
+            neighbors = sorted(found.items(), key=lambda x: -x[1])[:k]
+
+    print(f"{there} / {not_there}: {len(not_found)}")
+    print(not_found)
+    return [(1.0 / n, k) for k, n in neighbors]

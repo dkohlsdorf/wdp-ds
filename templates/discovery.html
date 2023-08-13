@@ -40,11 +40,18 @@
     </tr>
     <tr>         
         <td>
-            <form action='/query' method='post' enctype='multipart/form-data'>
-                <input type="file" name="file">
-                <input type='submit' value='Upload'/>
-            </form> 
+          Relaxed: <form action='/query_relaxed' method='post' enctype='multipart/form-data'>
+            <input type="file" name="file"> 
+            <input type='submit' value='Upload'/>
+          </form> 
         </td> 
+        <td>
+          Constrained: <form action='/query' method='post' enctype='multipart/form-data'>
+            <input type="file" name="file"> 
+            <input type='submit' value='Upload'/>
+          </form> 
+        </td> 
+
     </tr>
     <tr>                 
         <td>

@@ -59,6 +59,7 @@ def find_relaxed(addr, name, sequences, inverted_idx, k = 10):
         there = 0
         found = defaultdict(int)
         not_found = set()
+        is_found = set()
         for sequence in sequences:
             query = timeseries(sequence)
             response = stub.query(query)
@@ -70,8 +71,8 @@ def find_relaxed(addr, name, sequences, inverted_idx, k = 10):
                     i = inverted_idx[neighbor]
                     found[i] += 1
                     there += 1
+                    is_found.add(neighbor)
             neighbors = sorted(found.items(), key=lambda x: -x[1])[:k]
 
-    print(f"{there} / {not_there}: {len(not_found)}")
-    print(not_found)
+    print(f"{there} / {not_there}: {len(not_found)} / {len(is_found)}")
     return [(1.0 / n, k) for k, n in neighbors]

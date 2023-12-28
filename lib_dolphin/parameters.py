@@ -14,7 +14,7 @@ T            = int((RAW_AUDIO - FFT_WIN) / FFT_STEP)
 
 # ==========================
 MODEL_PATH = '../web_service/mv3_upload/'
-NEURAL_NOISE_DAMPENING=5.0
+NEURAL_NOISE_DAMPENING=0.5
 NEURAL_LABEL_DAMPENING={
     'Ea' : 0.0,
     'Eb' : 0.0,
@@ -25,6 +25,8 @@ NEURAL_LABEL_DAMPENING={
     'Eg' : 0.0,    
     'Eh' : 0.0,
     'Bg' : 0.0,
+    'Bh' : 0.0,
+    'Ug' : 0.0
 }
 
 NEURAL_REJECT= defaultdict(lambda: 0.25, {})

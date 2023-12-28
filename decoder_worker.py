@@ -28,10 +28,11 @@ from datetime import datetime
 from fastavro import writer, reader, parse_schema
 from scipy.io.wavfile import write
 
-ADDR       = 'localhost:50051' 
-VERSION    = 'extern_clean' 
-SEQ_PATH   = f'../web_service/{VERSION}/sequences/'
-IMG_PATH   = f'../web_service/{VERSION}/images/'
+ADDR        = 'localhost:50051' 
+VERSION_IDX = 'extern' 
+VERSION     = 'extern_clean' 
+SEQ_PATH    = f'../web_service/{VERSION}/sequences/'
+IMG_PATH    = f'../web_service/{VERSION}/images/'
 
 SCHEMA = {
     "name": "WDP_Decoded",
@@ -206,7 +207,7 @@ class DiscoveryService:
         self.lab           = pkl.load(open(f"{model_path}/labels.pkl", "rb"))
         self.reverse       = {v:k for k, v in self.lab.items()}
         self.label_mapping = pkl.load(open(f'{model_path}/label_mapping.pkl', 'rb'))
-        load(ADDR, VERSION)
+        load(ADDR, VERSION_IDX)
         
     def parse(self, sequence_path, limit):            
         for file in os.listdir(sequence_path):
@@ -299,7 +300,7 @@ class DiscoveryService:
 
         decoded = [DecodedSymbol.from_dict(x) for x in records[0]['sequence']]
         if relax:
-            neighbors = find_relaxed(ADDR, VERSION, probas, self.inverted_idx)
+            neighbors = find_relaxed(ADDR, VERSION_IDX, probas, self.inverted_idx)
         else:
             neighbors = query(decoded, self.decodings, self.db)
         keys = [neighbor for _, neighbor in neighbors]
@@ -342,7 +343,7 @@ class DecodingWorker:
         print(f'.. Check for work {now} {result}')        
         if result is not None:
             if result == b'reindex':
-                reindex(ADDR, VERSION)
+                reindex(ADDR, VERSION_IDX)
                 return
             
             records = []

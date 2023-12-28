@@ -29,7 +29,7 @@ from fastavro import writer, reader, parse_schema
 from scipy.io.wavfile import write
 
 ADDR       = 'localhost:50051' 
-VERSION    = 'extern' 
+VERSION    = 'extern_clean' 
 SEQ_PATH   = f'../web_service/{VERSION}/sequences/'
 IMG_PATH   = f'../web_service/{VERSION}/images/'
 

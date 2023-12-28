@@ -13,7 +13,7 @@ T            = int((RAW_AUDIO - FFT_WIN) / FFT_STEP)
 
 
 # ==========================
-MODEL_PATH = '../web_service/ml_models_v2/'
+MODEL_PATH = '../web_service/mv3_upload/'
 NEURAL_NOISE_DAMPENING=5.0
 NEURAL_LABEL_DAMPENING={
     'Uc' : 0.1,

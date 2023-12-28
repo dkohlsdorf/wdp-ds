@@ -61,7 +61,6 @@ SCHEMA = {
 
 def spec(x):
     return spectrogram(x, FFT_LO, FFT_HI, FFT_WIN, FFT_STEP)
-
     
 def decode(x, decoder, label_mapping, reverse, smoothing=True, win='triang', splitter=2000):
     t, d = x.shape

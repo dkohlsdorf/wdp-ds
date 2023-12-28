@@ -1,7 +1,7 @@
 import random
 import numpy as np
 import pandas as pd
-#from numba import jit
+from numba import jit
 
 
 from numpy.fft        import fft
@@ -42,7 +42,7 @@ def resolve_window(sample_raw, window, step, fwd = True):
         return int(sample_raw * step + window)
 
     
-#@jit
+@jit
 def windowing(region, window):
     N, D = region.shape
     windows = []

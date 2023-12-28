@@ -42,7 +42,7 @@ def reindex(addr, name):
         request = indexing_pb2.ReindexingRequest(n_samples = 1024)
         response = stub.reindex(request)
         print("reindexing done")
-        response = stub.save(indexing_pb2.SaveIndexRequest(name = "name"))
+        response = stub.save(indexing_pb2.SaveIndexRequest(name = name))
         print("saving done")
 
 

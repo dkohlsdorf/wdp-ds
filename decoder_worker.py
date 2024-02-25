@@ -7,6 +7,7 @@ import json
 
 import tensorflow as tf
 
+import matplotlib.image
 import matplotlib.pyplot as plt
 import matplotlib.patches as patches
 
@@ -337,10 +338,12 @@ class DecodingWorker:
         self.schema        = parse_schema(SCHEMA)                    
 
     def process(self, filename):
-        x = raw(filename)
-        s = spec(x)
+        assert filename.endswith('wav')    
+        x         = raw(filename)
+        plottable = spectrogram(x, 0, FFT_WIN // 2, FFT_WIN, FFT_STEP)
+        s         = spec(x)
         _, probs = decode(s, self.decoder, self.label_mapping, self.reverse)
-        return x, s, probs
+        return x, plottable, probs
         
     def work(self):
         now = datetime.now()        
@@ -459,10 +462,17 @@ if __name__ == '__main__':
            worker = DecodingWorker(MODEL_PATH, IMG_PATH, SEQ_PATH, None)
            print(f"Concvert {fname} to json file {oname}")
            _, spec, probs = worker.process(fname)
+           print(f" ... sizes {spec.shape} {probs.shape}")
+           img_path = fname.replace(".wav", ".png")
+           img_name = img_path.split("/")[-1]
+
+           matplotlib.image.imsave(img_path, BIAS - spec.T * SCALER, cmap='gray')
+
            output = {
-               "spec"  : spec.tolist(),
+               "spec"  : img_name,
                "probs" : probs.tolist()
            }
+           
            with open(oname, 'w', encoding='utf-8') as f:
                json.dump(output, f, ensure_ascii=False, indent=4)
-
+               

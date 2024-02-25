@@ -20,6 +20,7 @@ and communicate the results with domain experts.
 + 5) `notebooks`:         Some experimental notebooks
 + 6) `templates`:         HTML templates for webapp
 + 7) `dtw_index`:         dtw index server in c++
++ 8) `dolphin_mnist`:     java program to label audio data
 
 ## Dependencies for python
 + sklearn

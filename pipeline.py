@@ -277,12 +277,12 @@ def train(label_file, wav_file, label_file_l2, wav_file_l2, out_folder="output",
 
     print(f"Debug Shape: {np.stack(list(by_label.values())[0][0]).shape}")
         
-    by_label = dict([(k, enc.predict(np.stack(v), batch_size=10, verbose=0)) for k, v in by_label.items()])
+    by_label = dict([(k, enc.predict(np.stack(v).reshape((len(v), T, D, 1)), batch_size=10, verbose=0)) for k, v in by_label.items()])
     clusters = dict([(k, cluster_model(v, out_folder, reverse[k], min_k = 8, max_k=None)) for k, v in by_label.items() if k != label_dict['NOISE']])
     pkl.dump(clusters, open('{}/clusters_window.pkl'.format(out_folder),'wb'))
     print(f'Done Clustering: {[(k, v.cluster_centers_.shape) for k, v in clusters.items()]}')
     
-    b = np.stack(instances)
+    b = np.stack(instances).reshape((len(instances), T, D, 1))
     h = enc.predict(b, batch_size=10, verbose=0)
     if export_truth:
         x = labels
@@ -299,7 +299,7 @@ def train(label_file, wav_file, label_file_l2, wav_file_l2, out_folder="output",
         l = reverse[li]
         if l != 'NOISE':
             hn      = h[n].reshape(1, LATENT)
-            pred_hn = clusters[li].predict(hn, verbose = 0)
+            pred_hn = clusters[li].predict(hn)
             c = int(pred_hn[0])    
             if l not in extracted:
                 extracted[l] = {}

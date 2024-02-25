@@ -1,6 +1,6 @@
 import numpy as np
 
-#from numba import jit
+from numba import jit
 from collections import namedtuple
 from lib_dolphin.dtw import * 
 
@@ -8,7 +8,7 @@ from lib_dolphin.dtw import *
 Symbol = namedtuple("Symbol", "id type")
 
 
-#@jit
+@jit
 def levenstein(x, y):
     n = len(x)
     m = len(y)     
@@ -29,7 +29,7 @@ def levenstein(x, y):
     return d[n, m] / (n * m)
 
 
-#@jit
+@jit
 def levenstein_distances(X):
     N = len(X)
     d = np.zeros((N, N))

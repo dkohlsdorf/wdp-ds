@@ -10,14 +10,18 @@ and communicate the results with domain experts.
 + The HTK version of the Conv LSTM HMM Hybrid is [here](https://github.com/dkohlsdorf/wdp-ds/releases/tag/v15), Aug 2021
 + The version that also includes a lot of evaluastion and training [here](https://github.com/dkohlsdorf/wdp-ds/releases/tag/v16) Sep 2021
 
+
 ## Contents
 
 + 1) `lib_dolphin`:       Training and Evaluation of Machine Learning Models
 + 2) `pipeline.py`:       Run this to build a model
 + 3) `decoder_worker.py`: Implement everything abotu decoding audio files 
 + 4) `app.py`:            Web server visualizing the results
++ 5) `notebooks`:         Some experimental notebooks
++ 6) `templates`:         HTML templates for webapp
++ 7) `dtw_index`:         dtw index server in c++
 
-## Dependencies
+## Dependencies for python
 + sklearn
 + tensorflow 2.0
 + numpy / scipy

@@ -3,6 +3,7 @@ import sys
 import time
 import heapq
 import numpy as np 
+import json
 
 import tensorflow as tf
 
@@ -324,7 +325,7 @@ class DecodingWorker:
     
     KEY = 'WDP-DS'
     
-    def __init__(self, model_path, image_path, sequence_path, redis):
+    def __init__(self, model_path, image_path, sequence_path, redis=None):
         self.decoder       = load_model(f'{model_path}/decoder_nn.h5')
         self.lab           = pkl.load(open(f"{model_path}/labels.pkl", "rb"))
         self.reverse       = {v:k for k, v in self.lab.items()}
@@ -334,6 +335,12 @@ class DecodingWorker:
         
         self.redis         = redis
         self.schema        = parse_schema(SCHEMA)                    
+
+    def process(self, filename):
+        x = raw(filename)
+        s = spec(x)
+        _, probs = decode(s, self.decoder, self.label_mapping, self.reverse)
+        return x, s, probs
         
     def work(self):
         now = datetime.now()        
@@ -428,7 +435,7 @@ def transitions(sequence_path, output):
     
 if __name__ == '__main__':    
     if sys.argv[1] == 'worker':
-        print("Decoding Worker")    
+        print("Decoding Worker")   
         worker = DecodingWorker(MODEL_PATH, IMG_PATH, SEQ_PATH, Redis())
         polling.poll(lambda: worker.work(), step=5, poll_forever=True)        
     elif sys.argv[1] == 'enqueue':
@@ -445,5 +452,17 @@ if __name__ == '__main__':
         print("Compute Transitions")
         output = sys.argv[2]
         transitions(SEQ_PATH, output)
-        
-                
+    elif sys.argv[1] == 'convert_json':
+        if(len(sys.argv)) == 4:
+           fname = sys.argv[2]
+           oname = sys.argv[3]
+           worker = DecodingWorker(MODEL_PATH, IMG_PATH, SEQ_PATH, None)
+           print(f"Concvert {fname} to json file {oname}")
+           _, spec, probs = worker.process(fname)
+           output = {
+               "spec"  : spec.tolist(),
+               "probs" : probs.tolist()
+           }
+           with open(oname, 'w', encoding='utf-8') as f:
+               json.dump(output, f, ensure_ascii=False, indent=4)
+

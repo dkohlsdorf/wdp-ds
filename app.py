@@ -7,29 +7,38 @@ import flask_login
 import sqlite3
 import os.path
 
-from decoder_worker import DiscoveryService
+from redis import Redis
+from decoder_worker import DiscoveryService, DecodingWorker
 from flask import Flask, render_template, flash, redirect, request
 from lib_dolphin.parameters import *
 
-VERSION     = 'extern_clean' 
-SEQ_PATH    = f'../web_service/{VERSION}/sequences/'
-IMG_PATH    = f'../web_service/{VERSION}/images/'
-PKL_PATH    = f'../web_service/{VERSION}/service.pkl'
+VERSION = 'extern_clean' 
+SEQ_PATH = f'../web_service/{VERSION}/sequences/'
+IMG_PATH = f'../web_service/{VERSION}/images/'
+PKL_PATH = f'../web_service/{VERSION}/service.pkl'
 UPLOAD_PATH = f'../web_service/{VERSION}/wav/'
+ALIGNMENT_UPLOAD_PATH = f'../web_service/{VERSION}/alignment/'
 
+DISABLE_SERVICE = True
 
-LIMIT      = None
+LIMIT = None
 
-USERS    = {'dolphin-visitor': {'password' : 'stenella_frontalis'}}
-SECRET   = 'wdp-ds-dolphin' 
+USERS = {'dolphin-visitor': {'password' : 'stenella_frontalis'}}
+SECRET = 'wdp-ds-dolphin' 
 
 try:
+    print(f"... Loading {PKL_PATH}")
     DISCOVERY = pickle.load(open(PKL_PATH, "rb"))
+    print("... done")
 except (OSError, IOError) as e:
     DISCOVERY = DiscoveryService(SEQ_PATH, IMG_PATH, LIMIT)
     pickle.dump(DISCOVERY, open(PKL_PATH, "wb"))
 
-DISCOVERY.init_model(MODEL_PATH)
+if not DISABLE_SERVICE:
+    print("... init service")
+    DISCOVERY.init_model(MODEL_PATH)
+    print("... done")
+      
 
 class QueryHistory:
     
@@ -159,6 +168,28 @@ def discovery():
     s         = DISCOVERY.sample()
     sequences = [process_sequence(s[0])] + [process_sequence(x) for x in s[1][1:]]
     return render_template('discovery.html', sequences=sequences, n=len(sequences), keys = s[2])
+
+
+@app.route('/alignment_project/<project_id>', methods=['POST', 'GET'])
+@flask_login.login_required
+def alignment_project(project_id):
+    if request.method == 'POST':
+        print(request.files)
+        if 'file' not in request.files:
+            flash('No File Uploaded')
+            return redirect(f'/alignment_project/{project_id}')            
+        file = request.files['file']
+        if not file.filename.endswith('.wav'):
+            flash('Only wav files are allowed')
+            return redirect(f'/alignment_project/{project_id}')
+        path = f"{ALIGNMENT_UPLOAD_PATH}/{file.filename}"
+        file.save(path)
+        print("Done Upload")
+        print(f" .... redis {DecodingWorker.JSON_KEY} {path}")
+        r = Redis()        
+        r.lpush(DecodingWorker.JSON_KEY, path)
+    project_id = int(project_id)
+    return render_template('alignment_project.html', project_id=project_id)
 
 
 @app.route('/query_relaxed', methods=['POST'])

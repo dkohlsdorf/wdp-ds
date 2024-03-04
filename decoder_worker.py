@@ -321,10 +321,11 @@ class DiscoveryService:
         else:
             return [], []
     
-    
+        
 class DecodingWorker:
     
     KEY = 'WDP-DS'
+    JSON_KEY = "WDP-DS_JSON"
     
     def __init__(self, model_path, image_path, sequence_path, redis=None):
         self.decoder       = load_model(f'{model_path}/decoder_nn.h5')
@@ -344,6 +345,35 @@ class DecodingWorker:
         s         = spec(x)
         _, probs = decode(s, self.decoder, self.label_mapping, self.reverse)
         return x, plottable, probs
+
+    def to_json(self, fname):
+        img_path = fname.replace(".wav", ".png")
+        json_path = fname.replace(".wav", ".json")
+        img_name = img_path.split("/")[-1]
+        print(f"Convert {fname} to json file {json_path} and img {img_path}")
+
+        _, spec, probs = self.process(fname)
+        print(f" ... sizes {spec.shape} {probs.shape}")
+        matplotlib.image.imsave(img_path, BIAS - spec.T * SCALER, cmap='gray')
+        
+        output = {
+            "spec"  : img_name,
+            "probs" : probs.tolist()
+        }
+            
+        with open(json_path, 'w', encoding='utf-8') as f:
+            json.dump(output, f, ensure_ascii=False, indent=4)
+
+    
+    def json_work(self):        
+        result = self.redis.lpop(DecodingWorker.JSON_KEY)
+        if result is None:
+            print("\t ... no work")
+        else:
+            fname = result.decode('utf-8')
+            print(f"... {result} {type(result)}")
+            self.to_json(fname)
+            
         
     def work(self):
         now = datetime.now()        
@@ -434,8 +464,8 @@ def transitions(sequence_path, output):
     plot_result_matrix(bigrams, unigrams, unigrams, "transitions")
     plt.savefig(output)
     plt.close()
+        
 
-    
 if __name__ == '__main__':    
     if sys.argv[1] == 'worker':
         print("Decoding Worker")   
@@ -456,23 +486,11 @@ if __name__ == '__main__':
         output = sys.argv[2]
         transitions(SEQ_PATH, output)
     elif sys.argv[1] == 'convert_json':
-        if(len(sys.argv)) == 4:
-           fname = sys.argv[2]
-           oname = sys.argv[3]
-           worker = DecodingWorker(MODEL_PATH, IMG_PATH, SEQ_PATH, None)
-           print(f"Concvert {fname} to json file {oname}")
-           _, spec, probs = worker.process(fname)
-           print(f" ... sizes {spec.shape} {probs.shape}")
-           img_path = fname.replace(".wav", ".png")
-           img_name = img_path.split("/")[-1]
-
-           matplotlib.image.imsave(img_path, BIAS - spec.T * SCALER, cmap='gray')
-
-           output = {
-               "spec"  : img_name,
-               "probs" : probs.tolist()
-           }
-           
-           with open(oname, 'w', encoding='utf-8') as f:
-               json.dump(output, f, ensure_ascii=False, indent=4)
-               
+        if(len(sys.argv)) == 3:            
+            fname = sys.argv[2]
+            worker = DecodingWorker(MODEL_PATH, IMG_PATH, SEQ_PATH, None)
+            worker.to_json(fname)
+    elif sys.argv[1] == 'json_converter':
+        worker = DecodingWorker(MODEL_PATH, IMG_PATH, SEQ_PATH, Redis())
+        polling.poll(lambda: worker.json_work(), step=5, poll_forever=True)
+            

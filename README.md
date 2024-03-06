@@ -21,6 +21,7 @@ and communicate the results with domain experts.
 + 6) `templates`:         HTML templates for webapp
 + 7) `dtw_index`:         dtw index server in c++
 + 8) `dolphin_mnist`:     java program to label audio data
++ 9) `dbs.py`:            db queries for web app 
 
 ## Dependencies for python
 + sklearn

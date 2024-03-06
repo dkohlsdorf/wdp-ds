@@ -1,0 +1,63 @@
+<!doctype html>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Discovery</title>
+    <style>
+      .panel {
+	  width: 200px;
+	  overflow: scroll;
+      }
+      .scroll{
+	  overflow-x: scroll;
+      }
+    </style>
+    <script type="text/javascript">
+      function getData(url) {
+	  return fetch(url)
+	      .then(response=>{
+		  return response.json()
+	      })
+      }
+	  
+      let urls = [];
+
+      {%for i in range(0, n)%}
+      {% if files[i][1] == 'done' %}    
+      const url_{{files[i][0]}} = "{{ url_for("alignment_seq", file_id=files[i][0]) }}";
+      urls.push(url_{{files[i][0]}});
+      {% endif %}    
+      {%endfor%}
+      // on page load, too
+      Promise.all(urls.map(getData)).then((json_data) => {
+	  var mapped_json = {};
+	  for(let i = 0; i < json_data.length; i++) {
+	      mapped_json[json_data[i].spec] = json_data[i].probs;
+	  }
+	  console.log(mapped_json);
+
+	  // start spectrogram shit here
+      });
+    </script>
+</head>
+<body>
+  <h1> [:WDP:] Alignment Project {{project_id}} </h1>
+<table>
+    <tr>         
+        <td>
+          Relaxed: <form action='/alignment_project/{{project_id}}' method='post' enctype='multipart/form-data'>
+            <input type="file" name="file"> 
+            <input type='submit' value='Upload'/>
+          </form> 
+        </td> 
+    </tr>
+</table>
+<hr/>
+
+{%for i in range(0, n)%}
+  {{files[i][0]}} {{files[i][1]}} <br/>
+{%endfor%}  
+
+</body>
+<html>

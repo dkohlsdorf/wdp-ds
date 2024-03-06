@@ -4,7 +4,6 @@ import time
 import heapq
 import numpy as np 
 import json
-
 import tensorflow as tf
 
 import matplotlib.image
@@ -16,6 +15,8 @@ import polling
 from collections import namedtuple
 from tensorflow.keras.models import load_model
 from scipy.signal import triang
+
+from dbs import *
 
 from lib_dolphin.audio import *
 from lib_dolphin.sequential import *
@@ -349,7 +350,7 @@ class DecodingWorker:
     def to_json(self, fname):
         img_path = fname.replace(".wav", ".png")
         json_path = fname.replace(".wav", ".json")
-        img_name = img_path.split("/")[-1]
+        fileid = fname.split("/")[-1].replace(".wav", "")
         print(f"Convert {fname} to json file {json_path} and img {img_path}")
 
         _, spec, probs = self.process(fname)
@@ -357,14 +358,17 @@ class DecodingWorker:
         matplotlib.image.imsave(img_path, BIAS - spec.T * SCALER, cmap='gray')
         
         output = {
-            "spec"  : img_name,
+            "spec"  : fileid,
             "probs" : probs.tolist()
         }
             
         with open(json_path, 'w', encoding='utf-8') as f:
             json.dump(output, f, ensure_ascii=False, indent=4)
 
-    
+        db = AlignmentDB()        
+        db.finish_file(fileid)
+
+        
     def json_work(self):        
         result = self.redis.lpop(DecodingWorker.JSON_KEY)
         if result is None:

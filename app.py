@@ -4,13 +4,14 @@ import pickle
 import flask
 import flask_login
 
-import sqlite3
 import os.path
 
 from redis import Redis
 from decoder_worker import DiscoveryService, DecodingWorker
+from dbs import *
 from flask import Flask, render_template, flash, redirect, request
 from lib_dolphin.parameters import *
+
 
 VERSION = 'extern_clean' 
 SEQ_PATH = f'../web_service/{VERSION}/sequences/'
@@ -39,48 +40,6 @@ if not DISABLE_SERVICE:
     DISCOVERY.init_model(MODEL_PATH)
     print("... done")
       
-
-class QueryHistory:
-    
-    def __init__(self, file='query.db'):
-        if not os.path.exists(file):
-            conn = sqlite3.connect('query.db')       
-            cur  = conn.cursor()             
-            cur.execute("""
-                CREATE TABLE query_history (
-                     query_string text,
-                     query_file text,
-                     date text
-                )
-            """)
-            conn.commit()
-            conn.close()
-        
-    def insert(self, query, file=None):
-        conn = sqlite3.connect('query.db')       
-        cur  = conn.cursor()             
-
-        date = datetime.datetime.now().strftime("%d-%m-%Y %H:%M:%S")
-        cur.execute("INSERT INTO query_history VALUES (?, ?, ?)", (query, file, date))
-        conn.commit()
-        conn.close()
-
-    def get(self, n=None):
-        conn = sqlite3.connect('query.db')               
-        cur  = conn.cursor()         
-        filter_n = f"LIMIT {n}" if n is not None else ""   
-        cur.execute(f"""
-            SELECT * 
-            FROM query_history
-            ORDER BY date DESC
-            {filter_n}
-        """)
-        result = cur.fetchall()
-        conn.commit()
-        conn.close()        
-        return result
-
-
 
 app = Flask(__name__,
             static_url_path = '', 
@@ -170,9 +129,20 @@ def discovery():
     return render_template('discovery.html', sequences=sequences, n=len(sequences), keys = s[2])
 
 
+@app.route('/alignment_seq/<file_id>')
+@flask_login.login_required
+def alignment_seq(file_id):
+    path = f"{ALIGNMENT_UPLOAD_PATH}/{file_id}.json"
+    with open(path) as f:
+        data = f.read()
+    return data
+
+
 @app.route('/alignment_project/<project_id>', methods=['POST', 'GET'])
 @flask_login.login_required
 def alignment_project(project_id):
+    db = AlignmentDB()
+    project_id = int(project_id)
     if request.method == 'POST':
         print(request.files)
         if 'file' not in request.files:
@@ -182,14 +152,20 @@ def alignment_project(project_id):
         if not file.filename.endswith('.wav'):
             flash('Only wav files are allowed')
             return redirect(f'/alignment_project/{project_id}')
+
         path = f"{ALIGNMENT_UPLOAD_PATH}/{file.filename}"
         file.save(path)
+        
+        db.insert_file(project_id, file.filename.split("/")[-1].replace(".wav", ""))        
         print("Done Upload")
         print(f" .... redis {DecodingWorker.JSON_KEY} {path}")
         r = Redis()        
         r.lpush(DecodingWorker.JSON_KEY, path)
-    project_id = int(project_id)
-    return render_template('alignment_project.html', project_id=project_id)
+        return flask.redirect(flask.url_for('alignment_project', project_id=project_id))
+    else:
+        files = db.get_files(project_id)
+        n = len(files)
+        return render_template('alignment_project.html', project_id=project_id, files=files, n=n)
 
 
 @app.route('/query_relaxed', methods=['POST'])
@@ -216,6 +192,7 @@ def upload_relaxed():
         sequences = [process_sequence(x) for x in nn]        
         return render_template('discovery.html', sequences=sequences, n=len(sequences), keys = keys, query=(img, decoding))
     
+
 @app.route('/query', methods=['POST'])
 @flask_login.login_required
 def upload():

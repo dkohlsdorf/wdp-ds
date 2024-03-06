@@ -82,11 +82,11 @@
   
   <p>
     <a href="/neighborhood/{{keys[i]}}"> {{sequences[i]['sequence']}}</a>
-    <a href="/{{sequences[i]['audio']}}"> [wav] </a>
-    <a href="/{{sequences[i]['raven']}}"> [raven_table] </a>
+    <a href="/web_service/{{version}}/images/{{sequences[i]['audio']}}"> [wav] </a>
+    <a href="/web_service/{{version}}/images/{{sequences[i]['raven']}}"> [raven_table] </a>
   </p>
 
-  <div class="scroll"> <img src="/{{sequences[i]['img']}}" border="0"> </div>   
+  <div class="scroll"> <img src="/web_service/{{version}}/images/{{sequences[i]['img']}}" border="0"> </div>   
 {%endfor%}
 </body>
 </html>

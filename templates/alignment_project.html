@@ -9,7 +9,8 @@
 	  display: none;
       }      
     </style>
-    <script src="../static/spectrogram.js">	  
+    <script src="/spectrogram.js"> </script>
+    <script>
       let urls = [];
       {%for i in range(0, n)%}
       {% if files[i][1] == 'done' %}    
@@ -44,11 +45,19 @@
         </td> 
     </tr>
 </table>
+detection th: <input type='range' min="0" max="100" value="50" id="detection"/>
+distance th:  <input type='range' min="0" max="100" value="50" id="distance"/>
 <hr/>
 
 {%for i in range(0, n)%}
-  {{files[i][0]}} {{files[i][1]}} <br/>
+{% if files[i][1] == 'done' %}    
+   <img class="spec" id="{{files[i][0]}}"
+        src="/web_service/{{version}}/images/{{files[i][0]}}_alignment.png"/>
+{% else %}
+   ... processing {{files[i][0]}}<br/>
+{% endif %}    
 {%endfor%}  
 
+<canvas id="alignments" style="border:1px solid #000000;"/>
 </body>
 <html>

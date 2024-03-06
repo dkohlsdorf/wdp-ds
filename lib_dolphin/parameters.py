@@ -13,7 +13,7 @@ T            = int((RAW_AUDIO - FFT_WIN) / FFT_STEP)
 
 
 # ==========================
-MODEL_PATH = '../web_service/mv3_upload/'
+MODEL_PATH = 'static/web_service/mv3_upload/'
 NEURAL_NOISE_DAMPENING=0.5
 NEURAL_LABEL_DAMPENING={
     'Ea' : 0.0,
@@ -34,7 +34,7 @@ NEURAL_SMOOTH_WIN=128
 
 """
 #SPOTTED DECODING PARAMS
-MODEL_PATH = '../web_service/ml_models_nov9/'
+MODEL_PATH = 'static/web_service/ml_models_nov9/'
 NEURAL_NOISE_DAMPENING=0.5
 NEURAL_LABEL_DAMPENING={
 'Ea': 0.0,
@@ -56,7 +56,7 @@ NEURAL_REJECT= defaultdict(lambda: 0.003, {
 NEURAL_SMOOTH_WIN=128 
 
 # BOTTLENOSE DECODING PARAMS
-MODEL_PATH = '../web_service/ml_models_v2/'
+MODEL_PATH = 'static/web_service/ml_models_v2/'
 NEURAL_NOISE_DAMPENING=1.0
 NEURAL_LABEL_DAMPENING={
 'Ea': 0.0,

@@ -42,8 +42,8 @@ if not DISABLE_SERVICE:
       
 
 app = Flask(__name__,
-            static_url_path = '/static', 
-            static_folder   = IMG_PATH,
+            static_url_path = '', 
+            static_folder   = 'static',
             template_folder = 'templates')
 app.secret_key = SECRET
 app.config['UPLOAD_FOLDER'] = UPLOAD_PATH 
@@ -126,7 +126,7 @@ def process_sequence(s):
 def discovery():
     s         = DISCOVERY.sample()
     sequences = [process_sequence(s[0])] + [process_sequence(x) for x in s[1][1:]]
-    return render_template('discovery.html', sequences=sequences, n=len(sequences), keys = s[2])
+    return render_template('discovery.html', sequences=sequences, n=len(sequences), keys = s[2], version=VERSION)
 
 
 @app.route('/alignment_seq/<file_id>')
@@ -165,7 +165,7 @@ def alignment_project(project_id):
     else:
         files = db.get_files(project_id)
         n = len(files)
-        return render_template('alignment_project.html', project_id=project_id, files=files, n=n)
+        return render_template('alignment_project.html', project_id=project_id, files=files, n=n, version=VERSION)
 
 
 @app.route('/query_relaxed', methods=['POST'])
@@ -190,7 +190,7 @@ def upload_relaxed():
         history.insert(decoding, path.split('/')[-1])
 
         sequences = [process_sequence(x) for x in nn]        
-        return render_template('discovery.html', sequences=sequences, n=len(sequences), keys = keys, query=(img, decoding))
+        return render_template('discovery.html', sequences=sequences, n=len(sequences), keys = keys, query=(img, decoding), version=VERSION)
     
 
 @app.route('/query', methods=['POST'])
@@ -215,7 +215,7 @@ def upload():
         history.insert(decoding, path.split('/')[-1])
 
         sequences = [process_sequence(x) for x in nn]        
-        return render_template('discovery.html', sequences=sequences, n=len(sequences), keys = keys, query=(img, decoding))
+        return render_template('discovery.html', sequences=sequences, n=len(sequences), keys = keys, query=(img, decoding), version=VERSION)
     
     
 @app.route('/neighborhood/<key>')
@@ -224,7 +224,7 @@ def neighborhood(key):
     key       = int(key)
     s         = DISCOVERY.get(key)
     sequences = [process_sequence(s[0])] + [process_sequence(x) for x in s[1][1:]]
-    return render_template('discovery.html', sequences=sequences, n=len(sequences), keys = s[2])
+    return render_template('discovery.html', sequences=sequences, n=len(sequences), keys = s[2], version=VERSION)
 
 
 @app.route('/history')
@@ -247,5 +247,5 @@ def find():
         string = request.args.get('strg', None)
     sequences, keys = DISCOVERY.find(string)
     sequences = [process_sequence(x) for x in sequences]
-    return render_template('discovery.html', sequences=sequences, n=len(sequences), keys = keys, strg = string)
+    return render_template('discovery.html', sequences=sequences, n=len(sequences), keys = keys, strg = string, version=-VERSION)
 

@@ -14,11 +14,11 @@ from lib_dolphin.parameters import *
 
 
 VERSION = 'extern_clean' 
-SEQ_PATH = f'../web_service/{VERSION}/sequences/'
-IMG_PATH = f'../web_service/{VERSION}/images/'
-PKL_PATH = f'../web_service/{VERSION}/service.pkl'
-UPLOAD_PATH = f'../web_service/{VERSION}/wav/'
-ALIGNMENT_UPLOAD_PATH = f'../web_service/{VERSION}/alignment/'
+SEQ_PATH = f'static/web_service/{VERSION}/sequences/'
+IMG_PATH = f'static/web_service/{VERSION}/images/'
+PKL_PATH = f'static/web_service/{VERSION}/service.pkl'
+UPLOAD_PATH = f'static/web_service/{VERSION}/wav/'
+ALIGNMENT_UPLOAD_PATH = f'static/web_service/{VERSION}/alignment/'
 
 DISABLE_SERVICE = True
 
@@ -42,7 +42,7 @@ if not DISABLE_SERVICE:
       
 
 app = Flask(__name__,
-            static_url_path = '', 
+            static_url_path = '/static', 
             static_folder   = IMG_PATH,
             template_folder = 'templates')
 app.secret_key = SECRET

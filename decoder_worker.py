@@ -348,9 +348,9 @@ class DecodingWorker:
         return x, plottable, probs
 
     def to_json(self, fname):
-        img_path = fname.replace(".wav", ".png")
         json_path = fname.replace(".wav", ".json")
         fileid = fname.split("/")[-1].replace(".wav", "")
+        img_path = f"{IMG_PATH}/{fileid}_alignment.png"
         print(f"Convert {fname} to json file {json_path} and img {img_path}")
 
         _, spec, probs = self.process(fname)

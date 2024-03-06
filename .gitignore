@@ -5,6 +5,8 @@ project
 *~
 *.db
 
+static/web_service
+
 # Models
 .idea
 secret.json

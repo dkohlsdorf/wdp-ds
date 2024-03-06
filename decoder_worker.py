@@ -33,8 +33,8 @@ from scipy.io.wavfile import write
 
 ADDR        = 'localhost:50051' 
 VERSION     = 'extern_clean' 
-SEQ_PATH    = f'../web_service/{VERSION}/sequences/'
-IMG_PATH    = f'../web_service/{VERSION}/images/'
+SEQ_PATH    = f'static/web_service/{VERSION}/sequences/'
+IMG_PATH    = f'static/web_service/{VERSION}/images/'
 
 SCHEMA = {
     "name": "WDP_Decoded",

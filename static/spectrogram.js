@@ -5,6 +5,8 @@
      [3] Gap algorithm
 **/
 
+
+// ========================== START UNTESTED
 function euclid(x, y) {
     let n = x.length;
     let distance = 0.0;
@@ -40,6 +42,45 @@ function dtw(x, y) {
     }
     return dp[n][m];    
 }
+// ========================== STOP UNTESTED
+
+
+const NOISE = 0;
+const MIN_REGION = 250;
+
+function region_score(probs) {
+    let score = Math.max(... probs.slice(1));
+    let noise = probs[0] + 1e-6;
+    return score / noise;
+}
+
+function regions(sequence, th) {
+    let N = sequence.length;
+    let regions = [];
+    let start = -1;
+    for(let t = 0; t < N; t++) {
+	let snr = region_score(sequence[t])
+	//console.log(snr, th);
+	if(snr > th && start < 0) {
+	    console.log(console.log(sequence[t]));
+	    start = t;
+	}
+	if(snr < th && start >= 0) {
+	    console.log("b");
+	    let len = N - start;
+	    if(len > MIN_REGION) {
+		console.log("c");
+		regions.push([start, t, snr]);
+	    }
+	    start = -1;
+	}	
+    }
+    let len = N - start;
+    if(len > MIN_REGION && start >= 0) {
+	regions.push([start, N, -1]);
+    }   
+    return regions;
+}
 
 function largest_width(images) {
     let maxLen = 0;
@@ -59,9 +100,9 @@ function get_gaps(id) {
     // TODO mock
     gaps = {
 	"05291001_RegPCA110_3969000_6615000": [
-	    {start: 500, len: 1000},
-	    {start: 2500, len: 4000},
-	    {start: 12500, len: 2000},
+	    //{start: 500, len: 1000},
+	    //{start: 2500, len: 4000},
+	    //{start: 12500, len: 2000},
 	]
     };
     
@@ -76,33 +117,32 @@ function getMousePos(canvas, evt) {
     };
 }
 
-function spectrograms(images, canvas) {
+function spectrograms(images, data, canvas) {
     const max_width = largest_width(images);
+    const height = images[0].height;
     canvas.width = max_width;
-    canvas.height = images.length * images[0].height;
-
-    canvas.addEventListener("click", function (evt) {
-	var mousePos = getMousePos(canvas, evt);
-	console.log(mousePos.x + ',' + mousePos.y);
-    }, false);
-
-    // TODO pull this out
+    canvas.height = images.length * height;
+    
     const context = canvas.getContext('2d');    
+    let all_regions = [];
     for(let i = 0; i < images.length; i++) {
-	let id = images[i].id;
+	let id   = images[i].id;
 	let gaps = get_gaps(id);
-
+	let seq  = data[id];
+	let reg  = regions(seq, 150.0); 
+	all_regions.push(reg);
+	
 	let cur_img = 0;
 	let cum_gap = 0;
 	for(let gap of gaps) {
 	    let cur_canvas = cur_img + cum_gap;
-	    console.log(cur_img, gap.start - cur_img, cur_canvas);
 	    context.drawImage(images[i],
 			      cur_img, 0, gap.start - cur_img, images[i].height,
 			      cur_canvas, i * images[i].height, gap.start - cur_img, images[i].height);
 	    context.fillStyle = "red";
 	    context.fillText(cur_canvas, cur_canvas, i * images[i].height + 10);
-	    context.fillText(cur_canvas + (gap.start - cur_img), cur_canvas +  (gap.start - cur_img), i * images[i].height + 10);
+	    context.fillText(cur_canvas + (gap.start - cur_img),
+			     cur_canvas +  (gap.start - cur_img), i * images[i].height + 10);
 	    cur_img = gap.start;
 	    cum_gap += gap.len;
 	}
@@ -114,8 +154,32 @@ function spectrograms(images, canvas) {
 	context.fillStyle = "red";
 	context.fillText(cur_canvas, cur_canvas, i * images[i].height + 10);
 	context.fillText(cur_canvas + (images[i].width - cur_img), cur_canvas + (images[i].width - cur_img) - 30, i * images[i].height + 10);
+
+
+	for(let r of reg) {
+	    context.fillStyle = "green";                                                         
+	    context.globalAlpha = 0.2;
+	    context.fillRect(r[0], i * images[i].height,r[1] - r[0], images[i].height);
+	    context.globalAlpha = 1.0;
+	    
+	    console.log(id + " " + r[0] + " " + r[1] + " " + r[2]);
+	}
+	
 	console.log('---');
     }
+    canvas.addEventListener("click", function (evt) {
+	const mousePos = getMousePos(canvas, evt);
+	const spec_id = Math.floor(mousePos.y / height);
+	let region_id = -1;
+	for(let i = 0; i < all_regions[spec_id].length; i++) {
+	    let region = all_regions[spec_id][i];
+	    if(mousePos.x > region[0] && mousePos.x < region[1]) {
+		region_id = i;
+		break;
+	    }
+	}
+	console.log(mousePos.x + ',' + mousePos.y + ": " + spec_id + " " + region_id);
+    }, false);
 }
 
 function getData(url) {

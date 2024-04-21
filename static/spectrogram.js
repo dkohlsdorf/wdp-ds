@@ -1,12 +1,9 @@
 /**
    TODO:
-     [1] Implement detection against noise
-     [2] Find anchors
      [3] Gap algorithm
 **/
 
 
-// ========================== START UNTESTED
 function euclid(x, y) {
     let n = x.length;
     let distance = 0.0;
@@ -28,7 +25,8 @@ function dtw(x, y) {
     let m = y.length;
     let d = x[0].length;
 
-    let dp = 0; // TODO this is harder than i want to
+    let dp =  Array.from({ length: n + 1 }, () => new Array(m + 1).fill(0.0));
+
     dp[0][0] = 0.0; 
     for(let i = 1; i < n + 1; i++) {
 	for(let j = 1; j < m + 1; j++) {
@@ -42,7 +40,22 @@ function dtw(x, y) {
     }
     return dp[n][m];    
 }
-// ========================== STOP UNTESTED
+
+function nn(sequences, _i, _j, dist_th) {
+    let neighbors = []
+    for(let i = 0; i < sequences.length; i++) {
+	for(let j = 0; j < sequences[i].length; j++) {
+	    if(i!= _i && j != _j) {
+		let dist = dtw(sequences[i][j], distances[_i][_j]);
+		console.log("Distance (${i}, ${j}), (${_i}, ${_j}) = ${dist}");
+		if(dist < dist_th) {
+		    neighbors.push([i, j]);
+		}		
+	    }
+	}
+    }
+    return neighbors;
+}
 
 
 const NOISE = 0;
@@ -124,13 +137,32 @@ function spectrograms(images, data, canvas) {
     canvas.height = images.length * height;
     
     const context = canvas.getContext('2d');    
+
     let all_regions = [];
+    let sequences = [];
     for(let i = 0; i < images.length; i++) {
 	let id   = images[i].id;
-	let gaps = get_gaps(id);
 	let seq  = data[id];
 	let reg  = regions(seq, 150.0); 
+	let local_sequences = [];
+	for(let r of reg) {
+	    local_sequences.push(seq.slice(r[0], r[1]));
+	}
+	sequences.push(local_sequences);
 	all_regions.push(reg);
+    }
+
+    let neighbors = {};
+    for(let i = 0; i < sequences.length; i++) {
+	for(let j = 0; j < sequences.length[i]; j++) {
+	    neighbors[(i,j)] = nn(sequences, i, j, dist_th);
+	}
+    }
+    
+    for(let i = 0; i < images.length; i++) {
+	let id   = images[i].id;
+	let reg  = all_regions[i];
+	let gaps = get_gaps(id);
 	
 	let cur_img = 0;
 	let cum_gap = 0;

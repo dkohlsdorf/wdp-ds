@@ -218,26 +218,43 @@ def decode(classifier_path, audio_path, label_path, out_csv, batch_size=100):
     n_labels = int(max(labels.values())) + 1
 
     audio = raw(audio_path)
-    spec = spectrogram(audio, FFT_LO, FFT_HI, FFT_WIN, FFT_STEP)
-    spec = spec[0:-(len(spec) % 36), :]
-    windows = spec.reshape((len(spec) // 36, 36, 130, 1))
-    predictions = classifier.predict(windows, batch_size=batch_size)
-
     row_names = {v:k for k, v in labels.items()}
     row_names[-1] = 'sample'
     data = {k:[] for k, v in row_names.items()}
-    for t, row in enumerate(predictions):
-        for i in range(0, n_labels):
-            data[i].append(row[i])
-        data[-1].append(t * 36 * FFT_STEP)
-    df = pd.DataFrame({row_names[k] : v for k, v in data.items()})    
 
+    for start in range(0, len(audio), 100000000):
+        spec = spectrogram(audio[start:start+100000000], FFT_LO, FFT_HI, FFT_WIN, FFT_STEP)
+        spec = spec[0:-(len(spec) % 36), :]
+        windows = spec.reshape((len(spec) // 36, 36, 130, 1))
+        if len(windows) > 0:
+            predictions = classifier.predict(windows, batch_size=batch_size)
+            for t, row in enumerate(predictions):
+                for i in range(0, n_labels):
+                    data[i].append(row[i])
+                data[-1].append(start + t * 36 * FFT_STEP)
+                
+    df = pd.DataFrame({row_names[k] : v for k, v in data.items()})    
     df['WSTL'] = df.apply(lambda x: max(x.WSTL_UP, x.WSTL_DOWN), axis=1)
     df['WSTL_REGION'] = connected_components(df['WSTL'], DETECTION_TH, SMOOTH_WIN, MIN_REGION_SZE)
     df['BURST_REGION'] = connected_components(df['BURST'], DETECTION_TH, SMOOTH_WIN, MIN_REGION_SZE)
     df['ECHO_REGION'] = connected_components(df['ECHO'], DETECTION_TH, SMOOTH_WIN, MIN_REGION_SZE)
-
     df.to_csv(out_csv, index=None)
+
+
+def extract(audio_path, csv_path, region_col, output_folder, offset):
+    audio = raw(audio_path)
+    df = pd.read_csv(csv_path)
+    start = df.groupby(region_col)['sample'].min()
+    start = start.reset_index()
+    stop = df.groupby(region_col)['sample'].max() + (38 * FFT_STEP)
+    stop = stop.reset_index()
+    ranges = start.merge(stop, on=region_col, suffixes=('_min', '_max'))
+
+    instance_id = 0
+    for i, row in ranges.iterrows():
+        instance_id = offset + i
+        write(f"{output_folder}/{region_col}_{instance_id}.wav", 44100, audio[row.sample_min:row.sample_max])        
+    return instance_id
 
     
 if __name__ == '__main__':
@@ -260,24 +277,39 @@ if __name__ == '__main__':
             decode(classifier, audio, label, output)
         elif audio.endswith('/'):    
             for fp in os.listdir(audio):
-                path = f"{audio}{fp}"
-                output = path.replace('.wav', '.csv')
-                print(f"Decoding: {path} {output}")
-                decode(classifier, path, label, output)
+                if fp.endswith('.wav'):
+                    path = f"{audio}{fp}"
+                    output = path.replace('.wav', '.csv')
+                    print(f"Decoding: {path} {output}")
+                    decode(classifier, path, label, output)
         else:
-            print("Audio needs to be .wav or paths ending with /")
-            
+            print("Audio needs to be .wav or paths ending with /")            
     elif len(sys.argv) == 6 and sys.argv[1] == 'decode':
         classifier = sys.argv[2]
         audio      = sys.argv[3]
         label      = sys.argv[4]
         output     = sys.argv[5]
         decode(classifier, audio, label, output)
+    elif len(sys.argv) == 5 and sys.argv[1] == 'extract':
+        audio = sys.argv[2]    
+        col = sys.argv[3]
+        output = sys.argv[4]
+        if audio.endswith('/'):    
+            instance_id = 0
+            for fp in os.listdir(audio):
+                if fp.endswith('.wav'):
+                    path = f"{audio}{fp}"
+                    csv = path.replace('.wav', '.csv')
+                    print(f"Extracting: {path} {output}")
+                    instance_id = extract(path, csv, col, output, instance_id)
+        else:
+            print("Audio needs to be paths ending with /")            
     else:
         print(sys.argv)
         print("""
             Usage:
                 + train:      python pipeline.py train L1_CSV L1_AUDIO L2_CSV L2_AUDIO OUT_FOLDER
                 + decode:     python pipeline.py decode CLASSIFIER (AUDIO|FOLDER) LABELS [OUTPUT]
+                + extract:    python pipeline.py extract (AUDIO|FOLDER) COL OUTPUT
         """)
-    print("\n=====================================")
+        print("\n=====================================")

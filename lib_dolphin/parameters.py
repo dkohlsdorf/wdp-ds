@@ -33,6 +33,6 @@ BATCH        = 25
 
 
 # Detection Params
-DETECTION_TH   = 0.5
-SMOOTH_WIN     = 10
+DETECTION_TH   = 0.75
+SMOOTH_WIN     = 3
 MIN_REGION_SZE = 4

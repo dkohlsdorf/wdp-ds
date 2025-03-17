@@ -1,4 +1,3 @@
-
 import numpy as np
 import pickle as pkl
 import sys
@@ -241,19 +240,34 @@ def decode(classifier_path, audio_path, label_path, out_csv, batch_size=100):
     df.to_csv(out_csv, index=None)
 
 
-def extract(audio_path, csv_path, region_col, output_folder, offset):
+def extract(audio_path, csv_path, region_col, output_folder, offset,
+            min_samples = 36 * FFT_STEP, max_samples = 36 * FFT_STEP * 100):
+    col = region_col.replace('_REGION', '')
     audio = raw(audio_path)
     df = pd.read_csv(csv_path)
     start = df.groupby(region_col)['sample'].min()
     start = start.reset_index()
     stop = df.groupby(region_col)['sample'].max() + (38 * FFT_STEP)
     stop = stop.reset_index()
-    ranges = start.merge(stop, on=region_col, suffixes=('_min', '_max'))
 
+    noise  = df.groupby(region_col)['NOISE'].prod().reset_index()
+    signal = df.groupby(region_col)[col].prod().reset_index()
+    
+    ranges = start.merge(stop, on=region_col, suffixes=('_min', '_max'))
+    ranges = ranges.merge(signal, on=region_col)
+    ranges = ranges.merge(noise, on=region_col)
+    ranges = ranges.fillna(0.0)
     instance_id = 0
     for i, row in ranges.iterrows():
         instance_id = offset + i
-        write(f"{output_folder}/{region_col}_{instance_id}.wav", 44100, audio[row.sample_min:row.sample_max])        
+        region = audio[int(row.sample_min - FFT_WIN * 36):int(row.sample_max)]
+        n_samples = len(region)        
+        snr = int(row[col] /(1e-12 + row.NOISE)) // 10000
+        if n_samples > min_samples and n_samples < max_samples and snr > 1:
+            write(f"{output_folder}/{region_col}_{instance_id}_{snr}.wav", 44100, region)
+        else:
+            reason = " too short " if n_samples <= min_samples else " too long"
+            print(f"\t\t REJECT: {audio_path} range {row.sample_min}:{row.sample_max} |{n_samples}| {reason}")
     return instance_id
 
     

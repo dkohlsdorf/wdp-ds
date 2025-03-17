@@ -1,75 +1,24 @@
-import json
+
 import numpy as np
 import pickle as pkl
 import sys
 import os
 import matplotlib.pyplot as plt
-import matplotlib.patches as patches
-import datetime
-
-
-import random
 
 import nmslib
 
 from lib_dolphin.audio import *
 from lib_dolphin.features import *
-from lib_dolphin.eval import *
-from lib_dolphin.dtw import *
-from lib_dolphin.htk_helpers import *
-from lib_dolphin.sequential import *
-from lib_dolphin.statistics import * 
 from lib_dolphin.parameters import *
+from lib_dolphin.connected_components import *
+
 from collections import namedtuple, Counter, defaultdict
 
 from scipy.io.wavfile import read, write
-from scipy.spatial import distance
 from tensorflow.keras.models import load_model
 from tensorflow.keras.optimizers import *
-from sklearn.cluster import AgglomerativeClustering, KMeans
-from kneed import KneeLocator
 
 from subprocess import check_output
-
-
-def compute_bic(kmeans, X):
-    centers = [kmeans.cluster_centers_]
-    labels  = kmeans.labels_
-    m = kmeans.n_clusters
-    n = np.bincount(labels)
-    N, d = X.shape    
-    cl_var = (1.0 / (N - m) / d) * sum([sum(distance.cdist(X[np.where(labels == i)], [centers[0][i]], 
-             'euclidean')**2) for i in range(m)])
-    const_term = 0.5 * m * np.log(N) * (d+1)
-    BIC = np.sum([n[i] * np.log(n[i]) -
-               n[i] * np.log(N) -
-             ((n[i] * d) / 2) * np.log(2*np.pi*cl_var) -
-             ((n[i] - 1) * d/ 2) for i in range(m)]) - const_term
-    return(BIC)
-
-    
-def cluster_model(data, out_folder, label, min_k=2, max_k=26): 
-    if max_k is None:
-        km = KMeans(n_clusters=min_k)
-        km.fit(data)
-        return km
-    
-    scores = []
-    models = []
-    for k in range(min_k, max_k):
-        km = KMeans(n_clusters=k)
-        km.fit(data)
-        bic = compute_bic(km, data)
-        scores.append(bic)
-        models.append(km)
-    kn = KneeLocator(np.arange(len(scores)), scores, curve='concave', direction='increasing')
-    model = models[kn.knee]
-    plt.plot([km.n_clusters for km in models], scores)
-    plt.vlines(model.n_clusters, plt.ylim()[0], plt.ylim()[1], linestyles='dashed')
-    plt.title(f'Knee at {model.n_clusters}')
-    plt.savefig(f'{out_folder}/{label}_cluster_knee.png')
-    plt.close()
-    return model
 
 
 def triplets(by_label, n = 50000):
@@ -79,13 +28,13 @@ def triplets(by_label, n = 50000):
         neg_label = np.random.randint(0, len(l))
         while neg_label == pos_label:
             neg_label = np.random.randint(0, len(l))
-            
+
         anc_i     = np.random.randint(0, len(by_label[pos_label]))
         pos_i     = np.random.randint(0, len(by_label[pos_label]))
         neg_i     = np.random.randint(0, len(by_label[neg_label]))
         yield by_label[pos_label][anc_i], by_label[pos_label][pos_i], by_label[neg_label][neg_i]
 
-            
+
 def train_triplets(enc, by_label):
     model = triplet_model(WINDOW_PARAM, enc, LATENT)
     for epoch in range(EPOCHS):
@@ -140,1191 +89,195 @@ def neighbours_encoder(encoder, x_train, y_train, x_test, y_test, label_dict, na
         confusion[y_test[i], l] += 1
 
     accuracy = np.sum(confusion * np.eye(n)) / len(y_test)
-    plot_result_matrix(confusion, label_names, label_names, "confusion {} {}".format(name, accuracy))
-    plt.savefig('{}/confusion_nn_{}.png'.format(out_folder, name))
-    plt.close()
     return accuracy
 
-    
-def train(label_file, wav_file, label_file_l2, wav_file_l2, out_folder="output", perc_test=0.33, retrain=True, super_epochs=3, relabel=False, resample=10000, export_truth=True):
-    instances, ra, labels, label_dict = dataset_supervised_windows(
-        label_file, wav_file, lo=FFT_LO, hi=FFT_HI, win=FFT_WIN, step=FFT_STEP, raw_size=RAW_AUDIO)    
-    reverse = dict([(v, k) for k, v in label_dict.items()])
-    print(label_dict)
-    
+
+def group_by_label(instances, labels):
     by_label = {}
     for i in range(0, len(instances)):
-        y = labels[i] 
+        y = labels[i]
         if y not in by_label:
-            by_label[y] = []            
+            by_label[y] = []
         by_label[y].append(instances[i])
-    print([(k, len(v)) for k, v in by_label.items()])
-    
-    if retrain:    
-        _instances = []
-        _labels = []
-        for k, v in by_label.items():
-            for _ in range(0, resample):
-                i = np.random.randint(0, len(v))
-                if reverse[k] != 'NOISE':
-                    noise = by_label[label_dict['NOISE']]
-                    ni = np.random.randint(0, len(noise))
-                    _labels.append(k)
-                    _instances.append((v[i] + noise[ni]) / 2.0)
-                else:
-                    _labels.append(k)
-                    _instances.append(v[i])
-                    
-        y_train = []
-        y_test  = []
-        x_train = []
-        x_test  = []
-        for i in range(0, len(_instances)):                    
-            if np.random.uniform() < perc_test:
-                x_test.append(_instances[i])
-                y_test.append(_labels[i])
-            else:            
-                x_train.append(_instances[i])
-                y_train.append(_labels[i])
-
-        x_train = np.stack(x_train).reshape(len(x_train), T, D, 1)
-        x_test  = np.stack(x_test).reshape(len(x_test), T, D, 1)    
-        y_train = np.array(y_train)
-        y_test  = np.array(y_test)
-
-        x_unsup = dataset_unsupervised_windows(label_file_l2, wav_file_l2, lo=FFT_LO, hi=FFT_HI, win=FFT_WIN, step=FFT_STEP, raw_size=RAW_AUDIO, T=T, n=10000)
-        x_unsup = np.stack(x_unsup).reshape(len(x_unsup), T, D, 1)
-        print(f"Unsupervised: {x_unsup.shape}")
-        print(f"Train: {x_train.shape} / {Counter(y_train)}")
-        print(f"Test:  {x_test.shape} / {Counter(y_test)}")
-        
-        base_encoder = encoder(WINDOW_PARAM, LATENT, CONV_PARAM)    
-        base_encoder.summary()
-        enc = window_encoder(WINDOW_PARAM, base_encoder, LATENT)
-
-        accuracy_supervised    = []
-        accuracy_nn_supervised = []
-        accuracy_siamese       = []
-        accuracy_ae            = []
-        for i in range(0, super_epochs):                        
-            siamese = train_triplets(enc, by_label)
-            siamese.save('{}/siam.h5'.format(out_folder))
-            enc.save('{}/encoder.h5'.format(out_folder))    
-            base_encoder.save('{}/base_encoder.h5'.format(out_folder))            
-            enc_filters(enc, N_FILTERS, N_BANKS, "{}/filters_siam.png".format(out_folder))                
-            acc_siam = neighbours_encoder(enc, x_train, y_train, x_test, y_test, label_dict, "siamese", out_folder)
-            accuracy_siamese.append(acc_siam)
-            
-            ae          = auto_encoder(WINDOW_PARAM, enc, LATENT, CONV_PARAM)    
-            ae.summary()
-            hist        = ae.fit(x=x_unsup, y=x_unsup, batch_size=BATCH, epochs=EPOCHS, shuffle=True)
-            hist        = ae.fit(x=x_train, y=x_train, batch_size=BATCH, epochs=EPOCHS, shuffle=True)
-            ae.save('{}/ae.h5'.format(out_folder))
-            enc.save('{}/encoder.h5'.format(out_folder))        
-            base_encoder.save('{}/base_encoder.h5'.format(out_folder))
-            enc_filters(enc, N_FILTERS, N_BANKS, "{}/filters_ae.png".format(out_folder))                
-            plot_tensorflow_hist(hist, "{}/history_train_ae.png".format(out_folder))
-            visualize_dataset(ae.predict(x_test, batch_size=BATCH, verbose=0), "{}/reconstructions.png".format(out_folder))
-            acc_ae = neighbours_encoder(enc, x_train, y_train, x_test, y_test, label_dict, "aute encoder", out_folder)
-            accuracy_ae.append(acc_ae)
-            enc.save('{}/encoder.h5'.format(out_folder))                
-            pkl.dump(label_dict, open('{}/labels.pkl'.format(out_folder), "wb"))
-
-            model       = classifier(WINDOW_PARAM, enc, LATENT, 5, CONV_PARAM) 
-            model.summary()
-            hist        = model.fit(x=x_train, y=y_train, validation_data=(x_test, y_test), batch_size=BATCH, epochs=EPOCHS, shuffle=True)
-            
-            model.save('{}/supervised.h5'.format(out_folder))
-            enc.save('{}/encoder.h5'.format(out_folder))     
-            base_encoder.save('{}/base_encoder.h5'.format(out_folder))
-            enc_filters(enc, N_FILTERS, N_BANKS, "{}/filters_supervised.png".format(out_folder))        
-            plot_tensorflow_hist(hist, "{}/history_train_supervised.png".format(out_folder))        
-            acc_nn = neighbours_encoder(enc, x_train, y_train, x_test, y_test, label_dict, "classifier", out_folder)
-            accuracy_nn_supervised.append(acc_nn)
-
-            if relabel:            
-                prediction = model.predict(x_train, verbose=0)
-                y_train    = prediction.argmax(axis=1)
-                
-            n = len(label_dict)        
-            label_names = ["" for i in range(n)]
-            for l, i in label_dict.items():
-                label_names[i] = l
-            prediction_test = model.predict(x_test, verbose=0)
-            confusion = np.zeros((n,n))
-            correct = 0
-            for i in range(len(y_test)):
-                pred = np.argmax(prediction_test[i])
-                confusion[y_test[i], pred] += 1
-            accuracy = np.sum(confusion * np.eye(n)) / len(y_test)
-            plot_result_matrix(confusion, label_names, label_names, "confusion acc {}".format(accuracy))
-            plt.savefig('{}/confusion_type.png'.format(out_folder))
-            plt.close()
-            accuracy_supervised.append(accuracy)
-
-        plt.plot(accuracy_supervised, label="supervised")
-        plt.plot(accuracy_nn_supervised, label="nn_supervised")
-        plt.plot(accuracy_siamese, label="nn_siam")
-        plt.plot(accuracy_ae, label="nn_ae")
-        plt.legend()
-        plt.title("Super Epochs")
-        plt.savefig('{}/super_epoch_acc.png'.format(out_folder))
-        plt.close()
-    else:
-        model = load_model('{}/supervised.h5'.format(out_folder))
-        enc   = load_model('{}/encoder.h5'.format(out_folder))        
+    return by_label
 
 
-    print(f"Debug Shape: {np.stack(list(by_label.values())[0][0]).shape}")
-        
-    by_label = dict([(k, enc.predict(np.stack(v).reshape((len(v), T, D, 1)), batch_size=10, verbose=0)) for k, v in by_label.items()])
-    clusters = dict([(k, cluster_model(v, out_folder, reverse[k], min_k = 8, max_k=None)) for k, v in by_label.items() if k != label_dict['NOISE']])
-    pkl.dump(clusters, open('{}/clusters_window.pkl'.format(out_folder),'wb'))
-    print(f'Done Clustering: {[(k, v.cluster_centers_.shape) for k, v in clusters.items()]}')
-    
-    b = np.stack(instances).reshape((len(instances), T, D, 1))
-    h = enc.predict(b, batch_size=10, verbose=0)
-    if export_truth:
-        x = labels
-    else:
-        x = model.predict(b, batch_size=10, verbose=0)
-    extracted = {}
-    for n, i in enumerate(x):
-        if n % 1000 == 0:
-            print(f"{n} of {len(x)}")
-        if export_truth:
-            li = i
-        else:
-            li = int(np.argmax(i))
-        l = reverse[li]
-        if l != 'NOISE':
-            hn      = h[n].reshape(1, LATENT)
-            pred_hn = clusters[li].predict(hn)
-            c = int(pred_hn[0])    
-            if l not in extracted:
-                extracted[l] = {}
-            if c not in extracted[l]:
-                extracted[l][c] = []
-            if li != labels[n]:
-                l_true = reverse[labels[n]]
-                if l_true not in extracted[l]:
-                    extracted[l][l_true] = []
-                extracted[l][l_true].append(ra[n])
-            extracted[l][c].append(ra[n])
-
-    for l, clusters in extracted.items():
-        for c, audio in clusters.items():
-            path = "{}/{}_{}.wav".format(out_folder, l, c)
-            write(path, 44100, np.concatenate(audio))
-
-
-def moving_average(x, w):
-    return np.convolve(x, np.ones(w), 'valid') / w
-
-
-def train_sequential(folder, labels, data, noise, l1=False, retrain=False):
-    model_id    = datetime.datetime.today().strftime("%Y%m%d")
-    print(f"train decoder for model {model_id}")
-    ids         = pkl.load(open(f"{folder}/ids.pkl", "rb"))
-    inst        = pkl.load(open(f"{folder}/instances.pkl", "rb"))
-    predictions = [x for x in pkl.load(open(f"{folder}/predictions.pkl", "rb"))]
-    lab         = pkl.load(open(f"{folder}/labels.pkl", "rb"))
-    
-    df      = pd.read_csv(labels)
-    signals = raw(data)
-    noise   = raw(noise)
-
-    reverse = {v:k for k, v in lab.items()}
-
-    if l1:
-        offsets = list(df['offset'])
-        ranges = [[start, stop] for start, stop in zip(offsets[0:-1], offsets[1:])]
-    else:
-        ranges = []
-        for _, row in df.iterrows():
-            ranges.append([row['starts'], row['stops']])
-
-    clst          = pkl.load(open(f"{folder}/clusters_window.pkl", "rb"))
-    label_mapping = LabelMapping.mapping(clst)
-    pkl.dump(label_mapping, open(f'{folder}/label_mapping.pkl', 'wb'))
-    dim = np.sum([c.n_clusters for c in clst.values()]) + 1
-
-    # SGD(learning_rate=0.01, momentum=0.9)
-    opt = Adam() 
-    if retrain:
-        encoder       = load_model(f'{folder}/base_encoder.h5')    
-        decoder       = seq2seq_classifier(WINDOW_PARAM, encoder, LATENT, dim)
-        decoder.compile(optimizer=opt, loss='categorical_crossentropy', metrics=['accuracy'])
-    else:
-        decoder = load_model(f"{folder}/decoder_nn.h5")
-
-    decoder.summary()
-    
-    TOTAL = len(predictions)
-    accuracies = []
-    for i in range(0, TOTAL * 25):
-        if i % 100 == 0 and i > 0:
-            print(f'Epoch: {i}/{TOTAL * 25} {np.mean(accuracies[-100:])}')
-        batch_x, batch_y, y = get_batch(signals, noise, inst, ranges, ids, predictions, dim, clst, label_mapping,\
-                                        FFT_LO, FFT_HI, FFT_WIN, FFT_STEP, T, batch = 3)    
-        loss, acc = decoder.train_on_batch(x=batch_x, y=batch_y)
-        accuracies.append(acc)
-        
-    decoder.save(f'{folder}/decoder_nn_{model_id}.h5')
-    if retrain:
-        enc_filters(encoder, N_FILTERS, N_BANKS, f'{folder}/decoder_nn_filters_{model_id}.png')
-    accuracies = np.convolve(accuracies, np.ones(TOTAL), 'valid') / TOTAL
-    plt.plot(moving_average(accuracies, TOTAL))
-    plt.xlabel('iter')
-    plt.ylabel('acc')
-    plt.savefig(f'{folder}/acc_seq2seq_{model_id}.png')
-    plt.close()
-    
-    
-def clustering(regions, wav_file, folder, l2_window = None): # 10):
-    instances_file   = "{}/instances.pkl".format(folder)
-    ids_file         = "{}/ids.pkl".format(folder)
-    predictions_file = "{}/predictions.pkl".format(folder)
-    distances_file   = "{}/distances.pkl".format(folder)
-    clusters_file    = "{}/clusters.pkl".format(folder)
-
-    label_dict = pkl.load(open("{}/labels.pkl".format(folder), "rb"))
-    reverse = dict([(v,k) for k, v in label_dict.items()])
-    if not os.path.exists(instances_file):
-        cls = load_model('{}/supervised.h5'.format(folder))
-        enc = load_model('{}/encoder.h5'.format(folder))
-        if l2_window is not None:
-            ids, instances, predictions = dataset_unsupervised_regions_windowed(
-                regions, wav_file, enc, cls, reverse, lo=FFT_LO, hi=FFT_HI, win=FFT_WIN, step=FFT_STEP, T=T, l2_window=l2_window, dont_window_whistle=True)
-        else:
-            ids, instances, predictions = dataset_unsupervised_regions(
-                regions, wav_file, enc, cls, lo=FFT_LO, hi=FFT_HI, win=FFT_WIN, step=FFT_STEP, T=T)   
-        print("#Instances: {}".format(len(instances)))
-        pkl.dump(ids, open(ids_file, "wb"))
-        pkl.dump(instances, open(instances_file, "wb"))
-        pkl.dump(predictions, open(predictions_file, "wb"))
-    else:
-        instances   = pkl.load(open(instances_file, "rb"))
-    if not os.path.exists(distances_file):        
-        distances = dtw_distances(instances)
-        pkl.dump(distances, open(distances_file, "wb"))    
-    else:
-        distances = pkl.load(open(distances_file, "rb")) 
-
-    n = 98
-    m = len(distances)
-    clusters = np.zeros((n, m), dtype=np.int16)    
-    for perc in range(1, 99):
-        i = perc - 1
-        if i % 10 == 0:
-            print(" ... clustering {}%".format(perc))
-        th = np.percentile(distances.flatten(), perc)
-        clustering = AgglomerativeClustering(n_clusters=None, distance_threshold=th, affinity="precomputed", linkage="complete")
-        clusters[i, :] = clustering.fit_predict(distances)
-    pkl.dump(clusters, open(clusters_file, "wb"))
-
-
-def export(csvfile, wavfile, folder, k, out, prefix="", min_c = 2):
-    print(" ... loading data")
-    
-    label_file       = "{}/labels.pkl".format(folder)
-    ids_file         = "{}/{}ids.pkl".format(folder, prefix)
-    predictions_file = "{}/{}predictions.pkl".format(folder, prefix)
-    clusters_file    = "{}/{}clusters.pkl".format(folder, prefix)
-
-    ids         = pkl.load(open(ids_file, "rb"))
-    clusters    = pkl.load(open(clusters_file, "rb"))[k, :]
-    predictions = pkl.load(open(predictions_file, "rb")) 
-    label_dict  = pkl.load(open(label_file, "rb"))
-    reverse     = dict([(v,k) for k, v in label_dict.items()])
-    
-    df       = pd.read_csv(csvfile)
-    x        = raw(wavfile)
-    print(" ... grouping clusters {}".format(np.max(clusters)))
-    ranges = []
-    for _, row in df.iterrows():
-        start = row['starts']
-        stop  = row['stops']
-        ranges.append((start, stop))
-    
-    by_cluster  = {}
-    ids_cluster = {}
-    for i, j in enumerate(ids):
-        cluster = clusters[i]
-        if cluster not in ids_cluster:
-            ids_cluster[cluster] = []
-            by_cluster[cluster]  = []
-        ids_cluster[cluster].append(i)
-        by_cluster[cluster].append(ranges[j])
-            
-    print(" ... export {} / {}".format(i, len(clusters)))
-    unmerged = []
-    counts   = [] 
-    for c, rng in by_cluster.items():
-        label = label_cluster(predictions, ids_cluster[c], reverse)
-        if label != "ECHO":
-            if len(rng) >= min_c:
-                print(" ... export cluster {} {} {} {}".format(c, htk_name(c), len(rng), label))
-                counts.append(len(rng))
-                audio = []
-                for start, stop in rng:
-                    for f in x[start:stop]:
-                        audio.append(f)
-                    for i in range(0, 1000):
-                        audio.append(0)
-                audio = np.array(audio)
-                filename = "{}/{}_{}.wav".format(out, label, c)
-                write(filename, 44100, audio.astype(np.int16)) 
+def add_noise(by_label, label_dict, reverse, resample):
+    instances = []
+    labels = []
+    for k, v in by_label.items():
+        for _ in range(0, resample):
+            i = np.random.randint(0, len(v))
+            if reverse[k] != 'NOISE':
+                noise = by_label[label_dict['NOISE']]
+                ni = np.random.randint(0, len(noise))
+                labels.append(k)
+                instances.append((v[i] + noise[ni]) / 2.0)
             else:
-                start, stop = rng[0]
-                for f in x[start:stop]:
-                    unmerged.append(f)
-                for i in range(0, 1000):
-                    unmerged.append(0)
-    print("Done Export")
-    unmerged = np.array(unmerged)
-    filename = "{}/unmerged.wav".format(out)
-    write(filename, 44100, unmerged.astype(np.int16)) 
-    counts.sort(key=lambda x: -x)
-    plt.plot(np.log(np.arange(0, len(counts)) + 1), np.log(counts))
-    plt.grid(True)
-    plt.savefig('{}/{}_log-log.png'.format(out, k))
-    plt.close()
-    
-
-def dtw_baseline(folder, k = 10, min_c = 4, nn=3, debug = False):
-    clusters_file    = "{}/clusters.pkl".format(folder)
-    distances_file   = "{}/distances.pkl".format(folder)    
-    label_file       = "{}/labels.pkl".format(folder)
-    predictions_file = "{}/predictions.pkl".format(folder)
-    instances_file   = "{}/instances.pkl".format(folder)
-    
-    distances   = pkl.load(open(distances_file, "rb"))
-    clusters    = pkl.load(open(clusters_file, "rb"))[k, :]
-    predictions = pkl.load(open(predictions_file, "rb")) 
-    label_dict  = pkl.load(open(label_file, "rb"))
-    reverse     = dict([(v,k) for k, v in label_dict.items()])
-    instances   = pkl.load(open(instances_file, "rb"))
-    
-    ids_cluster = {}
-    for i, cluster in enumerate(clusters):
-        if len(instances[i]) > 0: 
-            if cluster not in ids_cluster:
-                ids_cluster[cluster] = []
-            ids_cluster[cluster].append(i)
-            
-    train = []
-    test  = []
-    for c, ids in ids_cluster.items():
-        label = label_cluster(predictions, ids, reverse)         
-        if label != "ECHO" and len(ids) >= min_c:
-            random.shuffle(ids)                
-            n_train = int(0.9 * len(ids))
-            for i in ids[0:n_train]:
-                train.append([i, c])
-            for i in ids[n_train:len(ids)]:
-                test.append([i, c])
-    corr = 0.0
-    confusion = []
-    ldict = {}
-    cur = 0
-    for j, true in test:
-        candidates = []
-        for i, pred in train:            
-            candidates.append([pred, distances[i, j]])
-        candidates.sort(key = lambda x: x[-1])
-        neighbors = [p for p, _ in candidates[0:nn]]
-        labels    = [(p, c) for p, c in Counter(neighbors).items()]
-        labels.sort(key = lambda x: -x[1])
-
-        if true == labels[0][0]:
-            corr += 1
-        elif debug:            
-            print(true, neighbors, labels)
-        if true not in ldict: 
-            ldict[true] = cur
-            cur += 1
-        if labels[0][0] not in ldict:
-            ldict[labels[0][0]] = cur
-            cur += 1
-        confusion.append([ldict[true], ldict[labels[0][0]]])
-    conf = np.zeros((cur, cur))
-    for i, j in confusion:
-        conf[i, j] += 1
-    names = [(k, v) for k, v in ldict.items()]
-    names.sort(key = lambda x:  x[1])
-    names = [k for k, _ in names]
-    plot_result_matrix(conf, names, names, "Confusion Window")
-    plt.savefig("{}/baseline.png".format(folder))
-    plt.close()
-    print("Acc: {}".format(corr / len(test)))
-
-    
-def htk_train(folder, inputs, states, niter, k, flat=False):
-    print("Prepare project: {}".format(folder))
-    out = check_output(["rm", "-rf", folder])
-    out = check_output(["mkdir", folder])
-    out = check_output(["mkdir", "{}/data".format(folder)])
-    htk_export(inputs, "{}/data".format(folder), "{}/clusters.mlf".format(folder), folder, k)
-    files = glob.glob("{}/data/train/*.htk".format(folder))
-
-    grammar = simple_grammar("{}/clusters_TRAIN.mlf".format(folder))
-    with open("{}/gram".format(folder), 'w') as fp:
-        fp.write(grammar + "\n")
-
-    wlist = wordlist("{}/clusters_TRAIN.mlf".format(folder))
-    with open("{}/dict".format(folder), 'w') as fp:
-        fp.write(wlist + "\n")
-        
-    print("... flat start")    
-    out = check_output(["rm", "-rf", "{}/hmm0".format(folder)])
-    out = check_output(["mkdir", "{}/hmm0".format(folder)])
-    
-    if flat:
-        hmm = left_right_hmm(states, LATENT, name="proto")
-        with open("{}/proto".format(folder), "w") as fp:
-            fp.write(hmm)
-        out = check_output("HCompV -v {} -T 10 -M {}/hmm0 -m {}/proto".format(FLOOR, folder, folder).split(" ") + files)
-        mmf("{}/clusters_TRAIN.mlf".format(folder), "{}/hmm0/proto".format(folder),LATENT, "{}/hmm0/hmm_mmf".format(folder), "{}/list".format(folder))        
-    else:
-        print("INIT")
-        htk_init("{}/clusters_TRAIN.mlf".format(folder), None, LATENT, "{}/data/train/*.htk".format(folder), folder, LATENT, states, "{}/hmm0".format(folder), "{}/list".format(folder))
-    out = check_output("HParse {}/gram {}/wdnet".format(folder, folder).split(" "))
-    
-    print("---")
-    likelihoods = []
-    for i in range(1, niter + 1):
-        ll = take_step(folder, i)
-        likelihoods.append(ll)
-        print("... reest: {} {}".format(i, ll))
-    result = htk_eval(folder, niter)
-    print(result)
-    plt.plot(likelihoods)
-    plt.title("Likeihood HMM Mix")
-    plt.xlabel("epoch")
-    plt.ylabel("ll")
-    plt.savefig('{}/ll'.format(folder))
-    plt.close()
-    conf, names = htk_confusion("{}/predictions.mlf".format(folder))
-    plot_result_matrix(conf, names, names, "Confusion Window")
-    plt.savefig("{}/confusion_window.png".format(folder))
-    plt.close()
-    
-
-def htk_converter(file, folder, out):
-    print("... convert {} using {} to {}".format(file, folder, out))
-    enc      = load_model('{}/encoder.h5'.format(folder))
-    audio    = raw(file) 
-    spec     = spectrogram(audio, FFT_LO, FFT_HI, FFT_WIN, FFT_STEP)
-    windowed = windowing(spec, T)
-    x        = enc.predict(windowed, batch_size=10, verbose = 0)
-    return write_htk(x, out), x, windowed
+                labels.append(k)
+                instances.append(v[i])
+    return instances, labels
 
 
-def htk_continuous(folder, htk, noise, hmm, components=10):
-    htk_file = "{}/data/{}".format(htk, noise.split('/')[-1].replace('.wav', '.htk'))
-    n,x,_    = htk_converter(noise, folder, htk_file)
-    out      = check_output(["rm", "-rf", "{}/sil0".format(htk)])
-    out      = check_output(["mkdir", "{}/sil0".format(htk)])
+def split_train_test(instances, labels, perc_test):
+    y_train = []
+    y_test  = []
+    x_train = []
+    x_test  = []
+    for i in range(0, len(instances)):
+        if np.random.uniform() < perc_test:
+            x_test.append(instances[i])
+            y_test.append(labels[i])
+        else:
+            x_train.append(instances[i])
+            y_train.append(labels[i])
 
-    km = KMeans(components)
-    km.fit(x)
-    cmp = km.cluster_centers_
-
-    with open("{}/sil0/sil".format(htk), "w") as fp:
-        model = silence_proto(LATENT, cmp)
-        fp.write(model)    
-
-    with open("{}/list_sil".format(htk), "w") as fp:
-        fp.write("sil\n")
-
-    with open("{}/clusters_sil.mlf".format(htk), "w") as fp:
-        fp.write("#!MLF!#\n")
-        fp.write("\"*/{}\"\n".format(noise.split('/')[-1].replace('.wav', '.lab')))
-        fp.write("{} {} sil\n".format(0, n))
-        fp.write(".\n")
-    
-    out = check_output("HERest -A -T 1 -v {} -I {}/clusters_sil.mlf -M {}/sil0 -H {}/sil0/sil {}/list_sil".format(FLOOR, htk, htk, htk, htk).split(" ") + [htk_file])
-    print("Sil LL: {}".format(get_ll(out)))
-
-    out = check_output("cp {} {}/continuous".format(hmm, htk).split(" "))
-    with open("{}/continuous".format(htk), "a") as fp:
-        for i, line in enumerate(open("{}/sil0/sil".format(htk))):
-            if i > 2:
-                fp.write(line)
-
-    out = check_output("cp {}/list {}/list_continuous".format(htk, htk).split(" "))
-    with open("{}/list_continuous".format(htk), "a") as fp:
-        fp.write("\nsil\n")
-
-    grammar = simple_grammar("{}/clusters_TRAIN.mlf".format(htk), True)
-    with open("{}/gram_continuous".format(htk), 'w') as fp:
-        fp.write(grammar + "\n")
-
-    wlist = wordlist("{}/clusters_TRAIN.mlf".format(htk), True)
-    with open("{}/dict_continuous".format(htk), 'w') as fp:
-        fp.write(wlist + "\n")
-    
-    out = check_output("HParse {}/gram_continuous {}/wdnet_continuous".format(htk, htk).split(" "))
-                
-
-def sequencing(audio, folder, htk, outfolder, recode=True):
-    print("SEQUENCING")
-    if recode:        
-        out = check_output(["rm", "-rf", outfolder])
-        out = check_output(["mkdir", outfolder])
-        out = check_output(["mkdir", "{}/images".format(outfolder)]) 
-
-        model      = load_model('{}/supervised.h5'.format(folder))
-        label_dict = pkl.load(open('{}/labels.pkl'.format(folder), "rb"))
-
-        n = len(label_dict)
-        label_names = ["" for i in range(n)]
-        for l, i in label_dict.items():
-            label_names[i] = l    
-
-        htk_files   = []
-        label_files = []
-        for file in os.listdir(audio):
-            if file.endswith(".wav"):
-                path         = "{}/{}".format(audio, file)
-                out_path     = "{}/{}".format(outfolder, file).replace(".wav", ".htk")
-                out_path_lab = "{}/{}".format(outfolder, file).replace(".wav", ".csv")
-
-                _, _, w = htk_converter(path, folder, out_path)
-
-                y = model.predict(w)            
-                p = [np.max(y[i]) for i in range(len(y))]
-                l = [np.argmax(y[i]) for i in range(len(y))]
-                
-                y = [label_names[i]  for i in l] 
-                
-                df = pd.DataFrame({
-                    'labels': y,
-                    'prob': p
-                })
-                df.to_csv(out_path_lab, index=False)
-                htk_files.append(out_path)
-                label_files.append(out_path_lab)
-                print("Convert: {}".format(path))
-
-        # TODO Adjust silence model
-        cmd = "HVite -H {}/continuous -i {}/sequenced.lab -w {}/wdnet_continuous {}/dict_continuous {}/list_continuous"\
-            .format(htk, outfolder, htk, htk, htk)\
-            .split(' ')
-        cmd.extend(htk_files)
-        out = check_output(cmd)    
-    
-    annotations         = parse_mlf('{}/sequenced.lab'.format(outfolder))
-    th                  = htk_threshold('{}/sequenced.lab'.format(outfolder), outfolder)        
-    label_files         = dict([(f.replace('.csv', ''), "{}/{}".format(outfolder, f))for f in os.listdir(outfolder) if f.endswith('.csv')])
-    filtered            = plot_annotations(annotations, label_files, audio, "{}/images".format(outfolder), T // 2, th)
-    htk_sequencing_eval(filtered, outfolder)
+    x_train = np.stack(x_train).reshape(len(x_train), T, D, 1)
+    x_test  = np.stack(x_test).reshape(len(x_test), T, D, 1)
+    y_train = np.array(y_train)
+    y_test  = np.array(y_test)
+    return x_train, y_train, x_test, y_test
 
 
-def discrete_clustering(folder, regions, wav_file):
-    instances_file   = "{}/discrete_instances.pkl".format(folder)
-    ids_file         = "{}/discrete_ids.pkl".format(folder)
-    predictions_file = "{}/discrete_predictions.pkl".format(folder)
-    string_file      = "{}/discrete_strings.pkl".format(folder)
-    distances_file    = "{}/discrete_distances.pkl".format(folder)
-    clusters_file    = "{}/discrete_clusters.pkl".format(folder)
-    
-    label_dict = pkl.load(open("{}/labels.pkl".format(folder), "rb"))
-    reverse = dict([(v,k) for k, v in label_dict.items()])
-    
-    if not os.path.exists(instances_file):
-        sub = load_model('{}/supervised.h5'.format(folder))
-        enc = load_model('{}/encoder.h5'.format(folder))
-        ids, instances, predictions = dataset_unsupervised_regions(
-            regions, wav_file, enc, sub, lo=FFT_LO, hi=FFT_HI, win=FFT_WIN, step=FFT_STEP, T=T)   
-        print("#Instances: {}".format(len(instances)))
-        pkl.dump(ids, open(ids_file, "wb"))
-        pkl.dump(instances, open(instances_file, "wb"))
-        pkl.dump(predictions, open(predictions_file, "wb"))
-    else:
-        instances   = pkl.load(open(instances_file, "rb"))
-        predictions = pkl.load(open(predictions_file, "rb"))
-
-    if not os.path.exists(string_file):
-        clu = pkl.load(open('{}/clusters_window.pkl'.format(folder),'rb'))    
-        strings = []
-        for i in range(0, len(predictions)):
-            label = predictions[i].argmax(axis = 1)    
-            strg  = [clu[l].predict(instances[i][j].reshape(1, LATENT))[0] for j, l in enumerate(label)]
-            symb  = symbols(strg, label) 
-            strings.append(symb)
-        pkl.dump(strings, open(string_file, "wb"))
-    else:
-        strings = pkl.load(open(string_file, "rb"))
-        
-    if not os.path.exists(distances_file):        
-        distances = levenstein_distances(strings)
-        pkl.dump(distances, open(distances_file, "wb"))    
-    else:
-        distances = pkl.load(open(distances_file, "rb"))
-        
-    n = 98
-    m = len(distances)
-    clusters = np.zeros((n, m), dtype=np.int16)    
-    for perc in range(1, 99):
-        i = perc - 1
-        if i % 10 == 0:
-            print(" ... clustering {}%".format(perc))
-        th = np.percentile(distances.flatten(), perc)
-        clustering = AgglomerativeClustering(n_clusters=None, distance_threshold=th, affinity="precomputed", linkage="complete")
-        clusters[i, :] = clustering.fit_predict(distances)
-    pkl.dump(clusters, open(clusters_file, "wb"))
-
-    
-def discrete_decoding(folder, audio, out_folder):
-    SCALER = 1.0
-    BIAS   = 0.7
-    START  = 0.2
-    STOP   = 0.9
-
-    DAMPEN_NOISE = 0.01
-    
-    sub = load_model('{}/supervised.h5'.format(folder))
-    enc = load_model('{}/encoder.h5'.format(folder))
-    clu = pkl.load(open('{}/clusters_window.pkl'.format(folder),'rb'))
-    label_dict = pkl.load(open("{}/labels.pkl".format(folder), "rb"))
-    reverse = dict([(v,k) for k, v in label_dict.items()])
-
-    out = check_output(["rm", "-rf", out_folder])
-    out = check_output(["mkdir", out_folder])
-
-    cluster_labels = {}
-    cur = 0
-    by_file = {}
-    for filename in os.listdir(audio):
-        if filename.endswith('.wav'):
-            path        = "{}/{}".format(audio, filename)
-            img_name    = filename.replace('.wav', '.png')
-            a           = spectrogram(raw(path), lo=FFT_LO, hi=FFT_HI, win=FFT_WIN, step=FFT_STEP)
-            
-            if len(a) < 50000:
-                windowed = windowing(a, T)
-                p        = sub.predict(windowed)
-
-                p[:, label_dict['NOISE']] *= DAMPEN_NOISE
-                
-                e        = enc.predict(windowed)     
-                ay       = np.argmax(p, axis = 1)
-
-                fig, ax = plt.subplots()
-                fig.set_size_inches(len(a) / 100, len(a[0]) / 100)
-                ax.imshow(BIAS - a.T * SCALER, norm=Normalize(START, STOP), cmap='gray')                  
-                annotations = []
-                strg = []
-                for i, y in enumerate(ay):       
-                    c = clu[y].predict(e[i].reshape(1, LATENT))[0]
-                    lab = reverse[y]
-                    v = ' '
-                    if lab == 'WSTL_DOWN':
-                        v = 'D' 
-                    if lab == 'WSTL_UP':
-                        v = 'U'
-                    if lab == 'ECHO':
-                        v = 'E'
-                    if lab == 'BURST':
-                        v = 'B'
-                    s = "{}{}".format(v, c)
-                    if lab != 'NOISE':
-                        strg.append(s)
-                        annotations.append([i * T // 2, (i + 1) * T // 2, s, 1.0])
-                if len(annotations) > 0:    
-                    anno = compress(annotations)
-                    anno = [(start, stop, s) for start, stop, s, _ in anno]
-
-                    for start, stop, s in anno:
-                        if s not in cluster_labels:
-                            cluster_labels[s] = cur
-                            cur += 1
-                        color =  cluster_labels[s]
-                        plt.text(start + (stop - start) // 2 - 7 , 30, s[0], size=10, color='black')
-                        rect = patches.Rectangle((start, 0), stop - start,
-                                                 256, linewidth=1, edgecolor='r', facecolor=COLORS[color])
-                        ax.add_patch(rect)
-                    path = '{}/{}'.format(out_folder, img_name)
-                    plt.savefig(path)
-                    plt.close()
-                    by_file[filename] = (anno, strg, img_name)
-                
-    with open('{}/sequenced_strings.html'.format(out_folder), 'w') as f:
-        f.write('<HTML><BODY><TABLE border="1">')
-        f.write("""
-        <TR>
-            <TH> Context </TH>
-            <TH> Video </TH>
-            <TH> Time </TH>
-            <TH> Image </TH>
-        </TR>    
-        """)
-        for file, (_, strg, p) in by_file.items():
-            f.write("""
-            <TR>
-                <TD> {} </TD>
-                <TD> {} </TD>
-                <TD> {} </TD>
-                <TD> {} </TD>
-                <TD> 
-                   <div style="width: 1024px; height: 100px; overflow: auto">
-                     <img src="{}" height=100/> </div></TD>
-            </TR>    
-            """.format(
-                context(file), 
-                video(file, context(file)), 
-                timestamp(file), 
-                p
-            ))
-        f.write('</TABLE></BODY></HTML>')        
-        
-        
-def tune_neural_decoder(folder, csv, wav):
-    decoder = load_model(f"{folder}/decoder_nn.h5")
-    lab     = pkl.load(open(f"{folder}/labels.pkl", "rb"))
-    reverse = {v:k for k, v in lab.items()}
-
+def train(label_file, wav_file, label_file_l2, wav_file_l2, out_folder="output", perc_test=0.33, super_epochs=3, resample=10000):
     instances, ra, labels, label_dict = dataset_supervised_windows(
-        csv, wav, lo=FFT_LO, hi=FFT_HI, win=FFT_WIN, step=FFT_STEP, raw_size=RAW_AUDIO, label_dict=lab)    
+        label_file, wav_file, lo=FFT_LO, hi=FFT_HI, win=FFT_WIN, step=FFT_STEP, raw_size=RAW_AUDIO)
 
-    x = np.stack(instances).reshape(len(instances), 36, 130, 1)
-    y = np.array(labels) != lab['NOISE']
-    y = y.astype(np.int32)
-    dampeners = np.arange(100) / 100 
-    
-    best_confusion = None
-    best_acc = 0
-    best_dampener = None
+    x_unsupervised = dataset_unsupervised_windows(label_file_l2, wav_file_l2, lo=FFT_LO, hi=FFT_HI, win=FFT_WIN, step=FFT_STEP, raw_size=RAW_AUDIO, T=T, n=10000)
+    x_unsupervised = np.stack(x_unsupervised).reshape(len(x_unsupervised), T, D, 1)
 
-    for d in dampeners:
-        p = decoder.predict(x)
-        p[:,:, 0] *= d
-        local_c = p.argmax(axis=2)
-        confusion = np.zeros((2,2))
-        for i, window in enumerate(local_c):
-            for c in window:
-                if c != 0:
-                    c = 1
-                _y = y[i]
-                if _y != 0:
-                    _y = 1
-                confusion[c][_y] += 1
-        acc = (confusion[0][0] + confusion[1][1]) / confusion.sum()
-        if acc > best_acc:
-            best_acc = acc
-            best_dampener = d
-            best_confusion = confusion
-    print(f"Accuracy {best_acc} for dampening_factor {best_dampener}")
-    print(confusion)
-    
-          
-def neural_decoding(folder, in_folder, out_folder, smoothing=True):
-    decoder = load_model(f'{folder}/decoder_nn.h5')
-    lab     = pkl.load(open(f"{folder}/labels.pkl", "rb"))
-    reverse = {v:k for k, v in lab.items()}
-    label_mapping = pkl.load(open(f'{folder}/label_mapping.pkl', 'rb'))
-    print(label_mapping)
-    
-    images  = []
-    strings = []
-    files   = []
-    classifications = []
-    for f in os.listdir(in_folder):
-        if f.endswith('.wav'):        
-            x = raw(f'{in_folder}/{f}')
-            s = spectrogram(x, FFT_LO, FFT_HI, FFT_WIN, FFT_STEP)
-            print(f"LENGTH: {len(s)}")
-            s = s[0:10000] # small hack here
-            if len(s) <= 10000:
-                c = []
-                for i in range(0, len(s), 1000):
-                    x = s[i:i + 1000]
-                    a = x.reshape((1, len(x), D, 1))
-                    p = decoder.predict(a).reshape((a.shape[1], label_mapping.n + 1))
-                    p[:, 0] *= NEURAL_NOISE_DAMPENING
-                    for i in range(1, len(p[0])):
-                        dc = i2name(i, reverse, label_mapping)
-                        if dc in NEURAL_LABEL_DAMPENING:
-                            df = NEURAL_LABEL_DAMPENING[dc]
-                            print(f" ... dampen {dc} by {df}")
-                            p[:, i] *= df
-                            
-                    if len(p) > NEURAL_SMOOTH_WIN and smoothing:
-                        for i in range(1, len(p[0])):
-                            p[:, i] = np.convolve(p[:, i], np.ones(NEURAL_SMOOTH_WIN) / NEURAL_SMOOTH_WIN, mode='same')
-                    local_c = p.argmax(axis=1)
-                    local_p = p.max(axis=1)                    
-                    local_c = [reject(local_c[i], local_p[i], NEURAL_REJECT)
-                               for i in range(len(local_c))]          
-                    c += list(local_c)
-                if len([l for l in c if l > 0]) > 3:                    
-                    compr = compress_neural(c, len(s), reverse, label_mapping)
-                    strg  = [d.id for d in compr]
-                    for region in compr:
-                        classifications.append([f, region.start, region.stop, region.cls])
-                    p = f.replace('.wav', '.png')
-                    img_path = f'{out_folder}/{p}'
-                    plot_neural(s, compr, img_path)
-                    strings.append(strg)
-                    images.append(p)
-                    files.append(f)
-    
-    df = pd.DataFrame({
-        "filenames": [filename for filename, _, _, _, in classifications],
-        "start":     [start for _, start, _, _, in classifications],
-        "stop":      [stop for _, _, stop, _, in classifications],
-        "label":     [label for _, _, _, label in classifications]
-    })
-    df.to_csv(f"{out_folder}/sequenced.csv", index=False)
-    N = len(strings)
-    d = np.zeros((N, N))
-    for i in range(0, N):
-        for j in range(i, N):
-            s1 = strings[i] 
-            s2 = strings[j] 
-            l = levenstein(s1, s2)
-            d[i, j] = l
-            d[j, i] = l
+    reverse = dict([(v, k) for k, v in label_dict.items()])
+    by_label = group_by_label(instances, labels)
+    pkl.dump(label_dict, open('{}/labels.pkl'.format(out_folder), "wb"))
 
-    j, di = merge_next(0, d, set([]))
-    closed  = set([j]) 
+    instances_noise, labels_noise =  add_noise(by_label, label_dict, reverse, resample)
+    x_train, y_train, x_test, y_test = split_train_test(instances_noise, labels_noise, perc_test)
 
-    seq_sorted   = []
-    img_sorted   = []
-    files_sorted = []
-    while di < np.float('inf'):
-        j, di = merge_next(j, d, closed)
-        closed.add(j)
-        seq_sorted.append(" ".join([i2name(s, reverse, label_mapping) for s in strings[j]]))
-        img_sorted.append(images[j])
-        files_sorted.append(files[j])
-        
-    df = pd.DataFrame({
-        'files': files_sorted,
-        'strg':  seq_sorted,
-        'img':   img_sorted
-    })
-    df[['files', 'strg']].to_csv(f'{out_folder}/sequenced_strings.csv', index=None)
+    print("================= LABLES ====================")
+    print(label_dict)
+    print([(k, len(v)) for k, v in by_label.items()])
+    print("=============================================")
 
-    with open(f'{out_folder}/sequenced_strings.html', 'w') as f:
-        f.write('<HTML><BODY><TABLE border="1">')
-        f.write("""
-        <TR>
-            <TH> Filename </TH>
-            <TH> Image </TH>
-        </TR>    
-        """)
-        for seq, img, filename in zip(seq_sorted, img_sorted, files_sorted):
-            img = "/".join(img.split('/')[-2:])
-            f.write("""
-            <TR>
-                <TD> {} </TD>
-                <TD> 
-                   <div style="width: 1024px; height: 100px; overflow: auto">
-                     <img src="{}" height=100/> </div></TD>
-            </TR>    
-            """.format(
-                filename, img
-            ))
-        f.write('</TABLE></BODY> </HTML>')
+    print(f"Unsupervised: {x_unsupervised.shape}")
+    print(f"Train: {x_train.shape} / {Counter(y_train)}")
+    print(f"Test:  {x_test.shape} / {Counter(y_test)}")
 
-        
-def join_wav(folder, out_wav, out_csv):
-    raw_file = []
-    offest = [] 
-    starts = []
-    stops  = []
-    total = 0
-    for file in os.listdir(folder):        
-        if file.endswith('.wav'):
-            path = "{}/{}".format(folder, file)
-            x = raw(path)
-            raw_file.append(x)
-            starts.append(total)
-            total += len(x)
-            stops.append(total)
-    raw_file = np.hstack(raw_file)   
-    df = pd.DataFrame({
-        'starts': starts,
-        'stops': stops
-    })
-    df.to_csv(out_csv)
-    write(out_wav, 44100, raw_file)
+    base_encoder = encoder(WINDOW_PARAM, LATENT, CONV_PARAM)
+    base_encoder.summary()
+    enc = window_encoder(WINDOW_PARAM, base_encoder, LATENT)
+
+    accuracy_supervised    = []
+    accuracy_siamese       = []
+    accuracy_ae            = []
+    for i in range(0, super_epochs):
+        siamese = train_triplets(enc, by_label)
+        siamese.save('{}/siam.h5'.format(out_folder))
+        enc.save('{}/encoder.h5'.format(out_folder))
+        base_encoder.save('{}/base_encoder.h5'.format(out_folder))
+        acc_siam = neighbours_encoder(enc, x_train, y_train, x_test, y_test, label_dict, "siamese", out_folder)
+        accuracy_siamese.append(acc_siam)
+
+        ae = auto_encoder(WINDOW_PARAM, enc, LATENT, CONV_PARAM)
+        ae.summary()
+        ae.fit(x=x_unsupervised, y=x_unsupervised, batch_size=BATCH, epochs=EPOCHS, shuffle=True)
+        ae.fit(x=x_train, y=x_train, batch_size=BATCH, epochs=EPOCHS, shuffle=True)
+        ae.save('{}/ae.h5'.format(out_folder))
+        enc.save('{}/encoder.h5'.format(out_folder))
+        base_encoder.save('{}/base_encoder.h5'.format(out_folder))
+        acc_ae = neighbours_encoder(enc, x_train, y_train, x_test, y_test, label_dict, "auto encoder", out_folder)
+        accuracy_ae.append(acc_ae)
+        enc.save('{}/encoder.h5'.format(out_folder))
+
+        model = classifier(WINDOW_PARAM, enc, LATENT, 5, CONV_PARAM)
+        model.summary()
+        model.fit(x=x_train, y=y_train, validation_data=(x_test, y_test), batch_size=BATCH, epochs=EPOCHS, shuffle=True)
+        n = len(label_dict)
+        prediction_test = model.predict(x_test, verbose=0)
+        confusion = np.zeros((n,n))
+        for i in range(len(y_test)):
+            pred = np.argmax(prediction_test[i])
+            confusion[y_test[i], pred] += 1
+        accuracy = np.sum(confusion * np.eye(n)) / len(y_test)
+        accuracy_supervised.append(accuracy)
+        model.save('{}/supervised.h5'.format(out_folder))
+        enc.save('{}/encoder.h5'.format(out_folder))
+        base_encoder.save('{}/base_encoder.h5'.format(out_folder))
+
+    plt.plot(accuracy_supervised, label="supervised")
+    plt.plot(accuracy_siamese, label="nn_siam")
+    plt.plot(accuracy_ae, label="nn_ae")
+    plt.legend()
+    plt.title("Super Epochs")
+    plt.savefig('{}/super_epoch_acc.png'.format(out_folder))
+    plt.close()
+
+
+def decode(classifier_path, audio_path, label_path, out_csv, batch_size=100):
+    classifier = load_model(classifier_path)
+    labels = pkl.load(open(label_path, 'rb'))
+    n_labels = int(max(labels.values())) + 1
+
+    audio = raw(audio_path)
+    spec = spectrogram(audio, FFT_LO, FFT_HI, FFT_WIN, FFT_STEP)
+    spec = spec[0:-(len(spec) % 36), :]
+    windows = spec.reshape((len(spec) // 36, 36, 130, 1))
+    predictions = classifier.predict(windows, batch_size=batch_size)
+
+    row_names = {v:k for k, v in labels.items()}
+    row_names[-1] = 'sample'
+    data = {k:[] for k, v in row_names.items()}
+    for t, row in enumerate(predictions):
+        for i in range(0, n_labels):
+            data[i].append(row[i])
+        data[-1].append(t * 36 * FFT_STEP)
+    df = pd.DataFrame({row_names[k] : v for k, v in data.items()})    
+
+    df['WSTL'] = df.apply(lambda x: max(x.WSTL_UP, x.WSTL_DOWN), axis=1)
+    df['WSTL_REGION'] = connected_components(df['WSTL'], DETECTION_TH, SMOOTH_WIN, MIN_REGION_SZE)
+    df['BURST_REGION'] = connected_components(df['BURST'], DETECTION_TH, SMOOTH_WIN, MIN_REGION_SZE)
+    df['ECHO_REGION'] = connected_components(df['ECHO'], DETECTION_TH, SMOOTH_WIN, MIN_REGION_SZE)
+
+    df.to_csv(out_csv, index=None)
 
     
-def statistics(l1, l2, folder, out):    
-    by_pattern = ngram_statistics(l1, l2, lambda x: x[0], out, T, FFT_STEP)       
-        
-    for pattern, positions in by_pattern.items():
-        audio = []
-        pattern = pattern.replace(' ', '_')
-        for pos in positions:
-            start, stop, f, label = pos
-            wav = f"{folder}/{f}.wav"
-            x   = raw(wav)
-            if len(x) < stop:
-                print(len(x), start, stop)
-            for i in x[start:stop]:
-                audio.append(i)
-            for i in range(0, 10000):
-                audio.append(0.0)
-        audio = np.array(audio)
-        filename = f"{out}/{label}_{pattern}.wav"
-        write(filename, 44100, audio.astype(np.int16)) 
-        
-        
-def lookalike(folder, label_file_l2, wav_file_l2, to_sort, percentile=50, th = 0.1, max_inst = 250, min_inst=100, n=10, compress=True):
-    decoder = load_model(f'{folder}/decoder_nn.h5')
-    lab     = pkl.load(open(f"{folder}/labels.pkl", "rb"))
-    reverse = {v:k for k, v in lab.items()}
-    label_mapping = pkl.load(open(f'{folder}/label_mapping.pkl', 'rb'))
-
-    NOISE_LABEL = "NOISE"
-    NO_LABEL = "ERROR"
-    labeled = defaultdict(list)
-    for filename in os.listdir(to_sort):
-        if filename.endswith('.wav'):
-            path = f'{to_sort}/{filename}'
-            print(f" .. decoding: {path}")
-            regions, bounds, audio_file = split(path)
-            
-            string = []
-            for x, (start, stop) in zip(regions, bounds):
-                s = spectrogram(x, FFT_LO, FFT_HI, FFT_WIN, FFT_STEP)
-                p = decoder.predict(s.reshape(1, len(s), D, 1), verbose=0)[0]
-                if len(p) > NEURAL_SMOOTH_WIN:
-                    for i in range(0, len(p[0])):
-                        p[:, i] = np.convolve(p[:, i], np.ones(NEURAL_SMOOTH_WIN) / NEURAL_SMOOTH_WIN, mode='same')
-                    p[:, 0] *= NEURAL_NOISE_DAMPENING
-
-                    
-                for i in range(0, len(p)):
-                    k = 0
-                    max_val = 0
-                    for j in range(0, len(p[i])):
-                        if p[i][j] > max_val:
-                            max_val = p[i][j]
-                            k = j
-
-                    l = i2name(k, reverse, label_mapping)
-                    x_start = start + (FFT_STEP * i)
-                    x_end   = x_start + RAW_AUDIO  
-                    if not l.startswith('_'):
-                        if max_val < th:
-                            l = NO_LABEL   
-                        else:
-                            string.append([l, x_start, x_end, max_val])
-                    else:
-                        l = NOISE_LABEL
-                    if len(labeled[l]) < max_inst:
-                        labeled[l].append(x[x_start:x_end])
-                for i in range(2, n + 2, 5):
-                    ngram = []
-                    for entry in string:
-                        overlap = len(ngram) > 0 and (entry[2] - ngram[-1][2] < 2 * RAW_AUDIO)
-                        if len(ngram) > 0 or overlap:
-                            if compress and len(ngram) > 0 and ngram[-1][0] == entry[0]:
-                                ngram[-1][2] = entry[2]
-                            else:
-                                ngram.append(entry)
-                        else:
-                            ngram = [entry]
-                        
-                        if len(ngram) == i:
-                            prob = sum([p for _, _, _, p in ngram]) / i
-                            l = "_".join([l for l, _, _, _ in ngram])
-                            start = ngram[0][1]
-                            stop  = ngram[-1][2]  
-                            if prob >= th and len(labeled[l]) < max_inst:
-                                labeled[l].append(x[start:stop])
-                            ngram = ngram[1:]
-                            
-    for l, x in labeled.items():
-        x = [v for v in x if len(v) > 0]
-        if len(x) > min_inst:
-            random.shuffle(x)
-            out_wav = f"{to_sort}/sorted_{l}.wav"
-            audio = np.hstack([np.pad(v, 10000) for v in x[0:max_inst]])
-            print(f"\t .. write: {out_wav} {sum(audio)}")
-            write(out_wav, 44100, audio.astype(np.int16)) 
-        
-
-def neardup(query_folder, labels, wav, folder, out, k = 10, percentile=50, band=0.01, max_len_diff=5):    
-    ids         = pkl.load(open(f"{folder}/ids.pkl", "rb"))
-    inst        = pkl.load(open(f"{folder}/instances.pkl", "rb"))
-    d           = pkl.load(open(f"{folder}/distances.pkl", "rb")) 
-    df      = pd.read_csv(labels)
-    signals = raw(wav)
-    
-    th = np.percentile(d.flatten(), percentile)
-    print(f"Threshold: {th}")
-
-    ranges = []
-    for _, row in df.iterrows():
-        ranges.append([row['starts'], row['stops']])
-
-    encoder = load_model(f'{folder}/encoder.h5')
-    
-    names = []
-    queries = []
-    for f in os.listdir(query_folder):
-        if f.endswith('.wav'):            
-            path = "{}/{}".format(query_folder, f)
-            x = raw(path)
-            if len(x) > 0:            
-                s = spectrogram(x, FFT_LO, FFT_HI, FFT_WIN, FFT_STEP)
-                w = windowing(s, T)
-                e = encoder.predict(w, verbose=0)
-                queries.append(e)
-                names.append(f)
-
-    distances = np.ones((len(queries), len(inst))) * float('inf')
-    for i, q in enumerate(queries):
-        for j, x in enumerate(inst):
-            if np.abs(len(x) - len(q)) < max_len_diff:
-                d = dtw(q, x, band)
-                distances[i, j] = d
-            
-    for i in range(len(queries)):
-        audio = []
-        out_wav = f"{out}/{names[i]}"
-        neighbors = [(j, d) for j, d in enumerate(distances[i])]
-        neighbors = sorted(neighbors, key=lambda x: x[1])
-        neighbors = [(j,d) for j, d in neighbors if d < th] 
-        for j, _ in neighbors[0:k]:
-            start, stop = ranges[ids[j]]
-            audio.append(signals[start:stop])
-        audio = np.hstack(audio)   
-        write(out_wav, 44100, audio)
-        print(neighbors[0:k])
-        
-
 if __name__ == '__main__':
     print("=====================================")
     print("Simplified WDP DS Pipeline")
     print("by Daniel Kyu Hwa Kohlsdorf")
-    if len(sys.argv) >= 7 and sys.argv[1] == 'train':            
+    if len(sys.argv) == 7 and sys.argv[1] == 'train':
         l1_labels = sys.argv[2]
         l1_wav    = sys.argv[3]
         l2_labels = sys.argv[4]
         l2_wav    = sys.argv[5]
-        out       = sys.argv[6]        
+        out       = sys.argv[6]
         train(l1_labels, l1_wav, l2_labels, l2_wav, out)
-    elif len(sys.argv) >= 5 and sys.argv[1] == 'join':
-        folder  = sys.argv[2]
-        wav_out = sys.argv[3]
-        csv_out = sys.argv[4]
-        join_wav(folder, wav_out, csv_out)
-    elif len(sys.argv) >= 5 and sys.argv[1] == 'clustering':
-        labels = sys.argv[2]
-        wav    = sys.argv[3]
-        out    = sys.argv[4]
-        clustering(labels, wav, out)
-    elif len(sys.argv) >= 7 and sys.argv[1] == 'export':
-        labels   = sys.argv[2]
-        wav      = sys.argv[3]
-        clusters = sys.argv[4]
-        k        = int(sys.argv[5])
-        out      = sys.argv[6]
-        export(labels, wav, clusters, k, out)
-    elif len(sys.argv) >= 6 and sys.argv[1] == 'htk':
-        mode   = sys.argv[2]
-        if mode == 'train':
-            inputs = sys.argv[3]
-            folder = sys.argv[4]
-            states = int(sys.argv[5])
-            niter  = int(sys.argv[6])
-            k      = int(sys.argv[7])
-            htk_train(folder, inputs, states, niter, k)
-        elif mode == 'continuous':
-            folder = sys.argv[3]
-            htk    = sys.argv[4]
-            noise  = sys.argv[5]
-            hmm    = sys.argv[6]
-            htk_continuous(folder, htk, noise, hmm)
+    elif len(sys.argv) == 5 and sys.argv[1] == 'decode':
+        classifier = sys.argv[2]
+        audio      = sys.argv[3]
+        label      = sys.argv[4]
+        if audio.endswith('.wav'):
+            output = audio.replace('.wav', '.csv')
+            decode(classifier, audio, label, output)
+        elif audio.endswith('/'):    
+            for fp in os.listdir(audio):
+                path = f"{audio}{fp}"
+                output = path.replace('.wav', '.csv')
+                print(f"Decoding: {path} {output}")
+                decode(classifier, path, label, output)
         else:
-            audio  = sys.argv[3]
-            folder = sys.argv[4]
-            htk    = sys.argv[5]
-            htk_file = "{}/{}".format(htk, audio.split('/')[-1].replace('.wav', '.htk'))
-            htk_converter(audio, folder, htk_file)
-    elif len(sys.argv) >= 3 and sys.argv[1] == 'baseline':
-        folder = sys.argv[2]
-        dtw_baseline(folder)
-    elif len(sys.argv) > 5 and sys.argv[1] == 'sequencing':
-        audio  = sys.argv[2]
-        folder = sys.argv[3]
-        htk    = sys.argv[4]
-        out    = sys.argv[5]
-        sequencing(audio, folder, htk ,out)
-    elif len(sys.argv) > 5 and sys.argv[1] == 'discrete':
-        if sys.argv[2] == 'clustering':
-            labels = sys.argv[3]
-            wav    = sys.argv[4]
-            out    = sys.argv[5]
-            discrete_clustering(out, labels, wav)
-        if sys.argv[2] == 'sequencing':
-            audio  = sys.argv[3]
-            folder = sys.argv[4]
-            out    = sys.argv[5]
-            discrete_decoding(folder, audio, out)
-    elif len(sys.argv) > 6 and sys.argv[1] == 'neardup':
-        query_folder = sys.argv[2]
-        labels = sys.argv[3]        
-        wav    = sys.argv[4]
-        folder = sys.argv[5]
-        out    = sys.argv[6]
-        neardup(query_folder, labels, wav, folder, out)
-    elif len(sys.argv) > 5 and sys.argv[1] == 'train_sequential':
-        folder = sys.argv[2]
-        labels = sys.argv[3]        
-        data   = sys.argv[4]
-        noise  = sys.argv[5]        
-        train_sequential(folder, labels, data, noise)
-    elif len(sys.argv) > 4 and sys.argv[1] == 'decode_neural':        
-        folder = sys.argv[2]
-        in_folder = sys.argv[3]
-        out_folder = sys.argv[4]
-        neural_decoding(folder, in_folder, out_folder)
-    elif len(sys.argv) > 4 and sys.argv[1] == 'tune_neural_decoder':
-        model = sys.argv[2]
-        csv   = sys.argv[3]
-        wav   = sys.argv[4]        
-        tune_neural_decoder(model, csv, wav)
-    elif len(sys.argv) > 5 and sys.argv[1] == 'statistics':
-        l1 = sys.argv[2]
-        l2 = sys.argv[3]        
-        folder = sys.argv[4]
-        out = sys.argv[5]
-        statistics(l1, l2, folder, out)
-    elif len(sys.argv) > 5 and sys.argv[1] == 'lookalike':
-        l2_labels = sys.argv[2]
-        l2_wav    = sys.argv[3]
-        folder    = sys.argv[4]        
-        queries   = sys.argv[5] 
-        lookalike(folder, l2_labels, l2_wav, queries)
+            print("Audio needs to be .wav or paths ending with /")
+            
+    elif len(sys.argv) == 6 and sys.argv[1] == 'decode':
+        classifier = sys.argv[2]
+        audio      = sys.argv[3]
+        label      = sys.argv[4]
+        output     = sys.argv[5]
+        decode(classifier, audio, label, output)
     else:
         print(sys.argv)
         print("""
             Usage:
                 + train:      python pipeline.py train L1_CSV L1_AUDIO L2_CSV L2_AUDIO OUT_FOLDER
-                + seq2seq:    python pipeline.py train_sequential FOLDER LAB WAV NOISE
-                              python pipeline.py decode_neural FOLDER IN OUT
-                              python pipeline.py tune_neural_decoder FOLDER CSV WAV
-                + nearest:    python pipeline.py neardup QUERY_FOLDER LAB WAV FOLDER OUT_FOLDER
-                + join:       python pipeline.py join FOLDER_2_JOIN WAV_OUT CSV_OUT
-                + clustering: python pipeline.py clustering LABEL_FILE AUDIO_FILE OUT_FOLDER
-                + export:     python pipeline.py export LABEL_FILE AUDIO_FILE FOLDER K OUT_FOLDER
-                + discrete    python pipeline.py discrete clustering LABEL_FILE AUDIO_FILE OUT_FOLDER
-                              python pipeline.py discrete sequencing AUDIO_FOLDER FOLDER OUT_FOLDER
-                + htk:        python pipeline.py htk train FOLDER OUT_HTK STATES ITER K
-                              python pipeline.py htk continuous FOLDER OUT_HTK NOISE HMM
-                              python pipeline.py htk convert AUDIO FOLDER OUT_FOLDER 
-                + sequencing: python pipeline.py sequencing AUDIO FOLDER HTK OUT
-                + baseline:   python pipeline.py baseline FOLDER
-                + statistics: python pipeline.py statistics L1 L2 FOLDERS OUT
-                + lookalike:  python pipeline.py lookalike L2_CSV L2_AUDIO FOLDER QUERIES
+                + decode:     python pipeline.py decode CLASSIFIER (AUDIO|FOLDER) LABELS [OUTPUT]
         """)
     print("\n=====================================")

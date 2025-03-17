@@ -28,25 +28,6 @@ def encoder(in_shape, latent_dim, conv_params):
     x   = Bidirectional(LSTM(latent_dim, return_sequences=True))(loc)
     return Model(inputs =[inp], outputs=[x])
 
-
-def seq2seq_classifier(in_shape, encoder, n_latent, n_classes, lstm=True, attn=True, dropout=True):    
-    dft_dim = in_shape[1]
-    shape = (None, dft_dim, 1)
-    inp   = Input(shape)
-    x     = encoder(inp) 
-    if lstm:
-        x = LSTM(n_latent, return_sequences=True)(x)
-    if attn:
-        if not lstm:
-            x = TimeDistributed(Dense(n_latent, activation='relu'))(x)
-        attn_out = MultiHeadAttention(num_heads=64, key_dim=32)(x, x, use_causal_mask=True)
-        x = Add()([attn_out, x])
-        x = LayerNormalization()(x)
-    if dropout:
-        x = TimeDistributed(Dropout(0.5))(x) 
-    x     = TimeDistributed(Dense(n_classes, activation='softmax'))(x)
-    model = Model(inputs = [inp], outputs = [x])
-    return model    
     
 
 def window_encoder(in_shape, encoder, latent_dim):

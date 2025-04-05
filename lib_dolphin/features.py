@@ -66,7 +66,7 @@ def auto_encoder(in_shape, encoder, latent_dim, conv_params):
     return model
 
 
-def classifier(in_shape, enc, latent_dim, out_dim, conv_params):
+def classifier(in_shape, enc, out_dim):
     inp = Input(in_shape)
     x   = enc(inp)
     x   = Dropout(0.5)(x) 

@@ -2,13 +2,13 @@ import numpy as np
 import pickle as pkl
 import sys
 import os
-import matplotlib.pyplot as plt
 
 import nmslib
 
 from lib_dolphin.audio import *
 from lib_dolphin.features import *
 from lib_dolphin.parameters import *
+from lib_dolphin.discovery import *
 from lib_dolphin.connected_components import *
 
 from collections import namedtuple, Counter, defaultdict
@@ -187,7 +187,7 @@ def train(label_file, wav_file, label_file_l2, wav_file_l2, out_folder="output",
         accuracy_ae.append(acc_ae)
         enc.save('{}/encoder.h5'.format(out_folder))
 
-        model = classifier(WINDOW_PARAM, enc, LATENT, 5, CONV_PARAM)
+        model = classifier(WINDOW_PARAM, enc, c5)
         model.summary()
         model.fit(x=x_train, y=y_train, validation_data=(x_test, y_test), batch_size=BATCH, epochs=EPOCHS, shuffle=True)
         n = len(label_dict)
@@ -270,7 +270,69 @@ def extract(audio_path, csv_path, region_col, output_folder, offset,
             print(f"\t\t REJECT: {audio_path} range {row.sample_min}:{row.sample_max} |{n_samples}| {reason}")
     return instance_id
 
-    
+
+def aligned(encoder_path, l2_labels, l2_wav, out_folder, epochs=25):
+    encoder = load_model(encoder_path)
+    encoder.summary()
+    instances = dataset_unsupervised(l2_labels, l2_wav,
+                                     lo=FFT_LO, hi=FFT_HI, win=FFT_WIN,
+                                     step=FFT_STEP, raw_size=RAW_AUDIO, T=T)
+    supervised = None                            
+    print(f"#instaces: {len(instances)}")
+    for epoch in range(0, epochs):
+        embeddings = []
+        raw_windows = []
+        for spec in instances:
+            spec = spec[0:-(len(spec) % 36), :]
+            if len(spec) > 0: 
+                windows = spec.reshape((len(spec) // 36, 36, 130, 1))            
+                embedded_windows = encoder(windows)
+                raw_windows.append(windows)
+                embeddings.append(embedded_windows)
+        distances = pairwise_dtw_distance_matrix(embeddings)
+        labels = hierarchical_clustering(distances, th=np.percentile(distances, 25))
+        
+        groups = defaultdict(list)
+        instance_ids = defaultdict(list)
+        for i, (label, embedding) in enumerate(zip(labels, embeddings)):
+            groups[label].append(embedding)
+            instance_ids[label].append(i)    
+        
+        bary_centers = {
+            label: dtw_barycenter_avg(sequences)
+            for label, sequences in groups.items()
+            if len(sequences) > 0}
+
+        centers = {}
+        variances = []
+        for label, (center, variance) in bary_centers:
+            variances += variance 
+            centers[label] = center
+
+        aligned = extract_alignment_points(groups, centers, instance_ids, variance_th=np.percentile(distances, 25), min_count=5)
+        all_vectors = []
+        labels = []
+        label_dict = {}
+        label_id = 0
+        for cluster, points in aligned.items():
+            for point, ids in points.items(): 
+                key = f"{cluster}::{point}"
+                if key not in label_dict:
+                    label_dict[key] = label_id
+                    label_id += 1
+                for i, j in ids:
+                    all_vectors.append(raw_windows[i][j])
+                    labels.append(label_dict[key])
+        labels = np.array(labels)
+        all_vectors = np.stack(all_vectors)
+        n_labels = max(label_dict.values()) + 1
+        supervised = classifier(WINDOW_PARAM, encoder, n_labels)
+        supervised.fit(all_vectors, labels, epochs=25)
+        print(f"Centers: {max(groups.keys())} Alignemnt: {max(labels)}")
+        encoder.save('{}/encoder_finetuning.h5'.format(out_folder))
+        supervised.save('{}/supervised_alignment_points.h5'.format(out_folder))
+
+            
 if __name__ == '__main__':
     print("=====================================")
     print("Simplified WDP DS Pipeline")
@@ -282,6 +344,12 @@ if __name__ == '__main__':
         l2_wav    = sys.argv[5]
         out       = sys.argv[6]
         train(l1_labels, l1_wav, l2_labels, l2_wav, out)
+    elif len(sys.argv) == 6 and sys.argv[1] == 'aligned':
+        encoder   = sys.argv[2]
+        l2_labels = sys.argv[3]
+        l2_wav    = sys.argv[4]
+        out       = sys.argv[5]
+        aligned(encoder, l2_labels, l2_wav, out)
     elif len(sys.argv) == 5 and sys.argv[1] == 'decode':
         classifier = sys.argv[2]
         audio      = sys.argv[3]
@@ -318,11 +386,12 @@ if __name__ == '__main__':
                     instance_id = extract(path, csv, col, output, instance_id)
         else:
             print("Audio needs to be paths ending with /")            
-    else:
+    else:        
         print(sys.argv)
         print("""
             Usage:
                 + train:      python pipeline.py train L1_CSV L1_AUDIO L2_CSV L2_AUDIO OUT_FOLDER
+                + aligned:    python pipeline.py aligned ENCODER L2_CSV L2_AUDIO OUT_FOLDER
                 + decode:     python pipeline.py decode CLASSIFIER (AUDIO|FOLDER) LABELS [OUTPUT]
                 + extract:    python pipeline.py extract (AUDIO|FOLDER) COL OUTPUT
         """)

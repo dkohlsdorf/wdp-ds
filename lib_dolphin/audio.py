@@ -94,3 +94,20 @@ def dataset_unsupervised_windows(label, wavfile, lo, hi, win, step, raw_size, T,
                     instances.append(w[i])
     random.shuffle(instances)
     return instances[0:n]
+
+
+def dataset_unsupervised(label, wavfile, lo, hi, win, step, raw_size, T, n=10000):
+    df = pd.read_csv(label)
+    audio = raw(wavfile)
+    instances = []
+    for _, row in df.iterrows():
+        start = row['starts']
+        stop = row['stops']
+        w = audio[start:stop]
+        if len(w) > 0:
+            s = spectrogram(w, lo, hi, win, step)
+            instances.append(s)
+        if len(instances) >= n:
+            break
+    random.shuffle(instances)
+    return instances

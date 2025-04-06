@@ -271,7 +271,7 @@ def extract(audio_path, csv_path, region_col, output_folder, offset,
     return instance_id
 
 
-def aligned(encoder_path, l2_labels, l2_wav, out_folder, epochs=25):
+def aligned(encoder_path, l2_labels, l2_wav, out_folder, epochs=5):
     encoder = load_model(encoder_path)
     encoder.summary()
     instances = dataset_unsupervised(l2_labels, l2_wav,
@@ -305,7 +305,7 @@ def aligned(encoder_path, l2_labels, l2_wav, out_folder, epochs=25):
 
         centers = {}
         variances = []
-        for label, (center, variance) in bary_centers:
+        for label, (center, variance) in bary_centers.items():
             variances += variance 
             centers[label] = center
 

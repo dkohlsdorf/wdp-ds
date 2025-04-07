@@ -291,7 +291,7 @@ def aligned(encoder_path, l2_labels, l2_wav, out_folder, epochs=5, batch_size=10
             spec = spec[0:-(len(spec) % 36), :]
             if len(spec) > 0: 
                 windows = spec.reshape((len(spec) // 36, 36, 130, 1))            
-                embedded_windows = encoder.predict(windows)
+                embedded_windows = encoder.predict(windows, batch_size = batch_size, verbose = 0)
                 raw_windows.append(windows)
                 embeddings.append(embedded_windows)
             instance_id += 1

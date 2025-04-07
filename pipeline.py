@@ -271,7 +271,7 @@ def extract(audio_path, csv_path, region_col, output_folder, offset,
     return instance_id
 
 
-def aligned(encoder_path, l2_labels, l2_wav, out_folder, epochs=5):
+def aligned(encoder_path, l2_labels, l2_wav, out_folder, epochs=5, batch_size=100):
     encoder = load_model(encoder_path)
     encoder.summary()
     instances = dataset_unsupervised(l2_labels, l2_wav,
@@ -286,11 +286,11 @@ def aligned(encoder_path, l2_labels, l2_wav, out_folder, epochs=5):
             spec = spec[0:-(len(spec) % 36), :]
             if len(spec) > 0: 
                 windows = spec.reshape((len(spec) // 36, 36, 130, 1))            
-                embedded_windows = encoder(windows)
+                embedded_windows = encoder.predict(windows, batch_size = batch_size, verbose = 0)
                 raw_windows.append(windows)
                 embeddings.append(embedded_windows)
         distances = pairwise_dtw_distance_matrix(embeddings)
-        labels = hierarchical_clustering(distances, th=np.percentile(distances, 25))
+        labels = hierarchical_clustering(distances, th=np.percentile(distances, 50))
         
         groups = defaultdict(list)
         instance_ids = defaultdict(list)
@@ -309,7 +309,7 @@ def aligned(encoder_path, l2_labels, l2_wav, out_folder, epochs=5):
             variances += variance 
             centers[label] = center
 
-        aligned = extract_alignment_points(groups, centers, instance_ids, variance_th=np.percentile(distances, 25), min_count=5)
+        aligned = extract_alignment_points(groups, centers, instance_ids, variance_th=np.percentile(distances, 0.1), min_count=5)
         all_vectors = []
         labels = []
         label_dict = {}
@@ -329,8 +329,9 @@ def aligned(encoder_path, l2_labels, l2_wav, out_folder, epochs=5):
         supervised = classifier(WINDOW_PARAM, encoder, n_labels)
         supervised.fit(all_vectors, labels, epochs=25)
         print(f"Centers: {max(groups.keys())} Alignemnt: {max(labels)}")
-        encoder.save('{}/encoder_finetuning.h5'.format(out_folder))
-        supervised.save('{}/supervised_alignment_points.h5'.format(out_folder))
+        encoder.save('{}/encoder_finetuning_epoch{}.h5'.format(out_folder, epoch))
+        supervised.save('{}/supervised_alignment_points_epoch{}.h5'.format(out_folder, epoch))
+        pkl.dump(label_dict, open('{}/labels{}.pkl'.format(out_folder, epoch), "wb"))
 
             
 if __name__ == '__main__':

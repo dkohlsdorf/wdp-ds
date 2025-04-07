@@ -277,21 +277,32 @@ def aligned(encoder_path, l2_labels, l2_wav, out_folder, epochs=5, batch_size=10
     instances = dataset_unsupervised(l2_labels, l2_wav,
                                      lo=FFT_LO, hi=FFT_HI, win=FFT_WIN,
                                      step=FFT_STEP, raw_size=RAW_AUDIO, T=T)
-    supervised = None                            
-    print(f"#instaces: {len(instances)}")
+                                    
+    n_instances = len(instances)
     for epoch in range(0, epochs):
+        print(f"decoding #instaces: {n_instances} epoch: {epoch}")
         embeddings = []
         raw_windows = []
+        instance_id = 0
         for spec in instances:
+            if instance_id % 100 == 0:
+                percentage = instance_id / n_instances
+                print(f"Percentage: {percentage * 100}")
             spec = spec[0:-(len(spec) % 36), :]
             if len(spec) > 0: 
                 windows = spec.reshape((len(spec) // 36, 36, 130, 1))            
-                embedded_windows = encoder.predict(windows, batch_size = batch_size, verbose = 0)
+                embedded_windows = encoder.predict(windows)
                 raw_windows.append(windows)
                 embeddings.append(embedded_windows)
+            instance_id += 1
+
+        print("Compute distances")
         distances = pairwise_dtw_distance_matrix(embeddings)
-        labels = hierarchical_clustering(distances, th=np.percentile(distances, 50))
         
+        print("Clustering")
+        labels = hierarchical_clustering(distances, th=np.percentile(distances, 50))
+
+        print("Barycentering")
         groups = defaultdict(list)
         instance_ids = defaultdict(list)
         for i, (label, embedding) in enumerate(zip(labels, embeddings)):
@@ -310,6 +321,9 @@ def aligned(encoder_path, l2_labels, l2_wav, out_folder, epochs=5, batch_size=10
             centers[label] = center
 
         aligned = extract_alignment_points(groups, centers, instance_ids, variance_th=np.percentile(distances, 0.1), min_count=5)
+        print(f"Centers: {max(groups.keys())} Alignemnt: {max(labels)}")
+
+        print("Training supervised model")
         all_vectors = []
         labels = []
         label_dict = {}
@@ -328,7 +342,7 @@ def aligned(encoder_path, l2_labels, l2_wav, out_folder, epochs=5, batch_size=10
         n_labels = max(label_dict.values()) + 1
         supervised = classifier(WINDOW_PARAM, encoder, n_labels)
         supervised.fit(all_vectors, labels, epochs=25)
-        print(f"Centers: {max(groups.keys())} Alignemnt: {max(labels)}")
+        print("save models")
         encoder.save('{}/encoder_finetuning_epoch{}.h5'.format(out_folder, epoch))
         supervised.save('{}/supervised_alignment_points_epoch{}.h5'.format(out_folder, epoch))
         pkl.dump(label_dict, open('{}/labels{}.pkl'.format(out_folder, epoch), "wb"))

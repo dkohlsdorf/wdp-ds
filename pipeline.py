@@ -321,7 +321,6 @@ def aligned(encoder_path, l2_labels, l2_wav, out_folder, epochs=5, batch_size=10
             centers[label] = center
 
         aligned = extract_alignment_points(groups, centers, instance_ids, variance_th=np.percentile(distances, 0.1), min_count=5)
-        print(f"Centers: {max(groups.keys())} Alignemnt: {max(labels)}")
 
         print("Training supervised model")
         all_vectors = []
@@ -340,6 +339,7 @@ def aligned(encoder_path, l2_labels, l2_wav, out_folder, epochs=5, batch_size=10
         labels = np.array(labels)
         all_vectors = np.stack(all_vectors)
         n_labels = max(label_dict.values()) + 1
+        print(f"Centers: {max(groups.keys())} Alignemnt: {n_labels}")        
         supervised = classifier(WINDOW_PARAM, encoder, n_labels)
         supervised.fit(all_vectors, labels, epochs=25)
         print("save models")

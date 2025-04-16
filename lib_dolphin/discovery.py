@@ -320,7 +320,7 @@ def aligned(encoder_path, l2_labels, l2_wav, out_folder, epochs=15, batch_size=1
             variances += variance 
             centers[label] = center
 
-        aligned = extract_alignment_points(groups, centers, instance_ids, variance_th=np.percentile(variances, 10), min_count=5)
+        aligned = extract_alignment_points(groups, centers, instance_ids, variance_th=np.percentile(variances, 50), min_count=5)
 
         print("Training supervised model")
         all_vectors = []

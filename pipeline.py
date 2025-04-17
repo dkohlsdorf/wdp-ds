@@ -271,7 +271,7 @@ def extract(audio_path, csv_path, region_col, output_folder, offset,
     return instance_id
 
 
-def aligned(encoder_path, l2_labels, l2_wav, out_folder, epochs=5, batch_size=100):
+def aligned(encoder_path, l2_labels, l2_wav, out_folder, epochs=15, batch_size=100):
     encoder = load_model(encoder_path)
     encoder.summary()
     instances = dataset_unsupervised(l2_labels, l2_wav,
@@ -300,7 +300,7 @@ def aligned(encoder_path, l2_labels, l2_wav, out_folder, epochs=5, batch_size=10
         distances = pairwise_dtw_distance_matrix(embeddings)
         
         print("Clustering")
-        labels = hierarchical_clustering(distances, th=np.percentile(distances, 50))
+        labels = hierarchical_clustering(distances, th=np.percentile(distances, 75))
 
         print("Barycentering")
         groups = defaultdict(list)
@@ -319,8 +319,10 @@ def aligned(encoder_path, l2_labels, l2_wav, out_folder, epochs=5, batch_size=10
         for label, (center, variance) in bary_centers.items():
             variances += variance 
             centers[label] = center
-
-        aligned = extract_alignment_points(groups, centers, instance_ids, variance_th=np.percentile(distances, 0.1), min_count=5)
+        th = np.percentile([var for var in variances if var > 0.0], 95)
+        aligned = extract_alignment_points(groups, centers, instance_ids, variance_th=th, min_count=5)
+        print(f"Threshold: {th}")
+        print(f"Centers: {len(centers)}")
 
         print("Training supervised model")
         all_vectors = []
@@ -336,10 +338,14 @@ def aligned(encoder_path, l2_labels, l2_wav, out_folder, epochs=5, batch_size=10
                 for i, j in ids:
                     all_vectors.append(raw_windows[i][j])
                     labels.append(label_dict[key])
+                    
+        coverage = len(set([key.split('::')[0] for key in label_dict.keys()]))
+        print(f"Coverage: {coverage}")
+        print(f"Aligned: {len(label_dict)}")
+
         labels = np.array(labels)
         all_vectors = np.stack(all_vectors)
         n_labels = max(label_dict.values()) + 1
-        print(f"Centers: {max(groups.keys())} Alignemnt: {n_labels}")        
         supervised = classifier(WINDOW_PARAM, encoder, n_labels)
         supervised.fit(all_vectors, labels, epochs=25)
         print("save models")

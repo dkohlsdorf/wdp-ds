@@ -9,21 +9,20 @@ def pairwise_dtw_distance_matrix(sequences):
     N = len(sequences)
     D = np.zeros((N * (N - 1)) // 2)
     k = 0
-
     total = len(D)
     for i in range(N):
         for j in range(i + 1, N):
             if k % 10000 == 0:
                 percentage = k / total
                 print(f"DTW distances: {percentage * 100}")
-            dist, _ = fastdtw(sequences[i], sequences[j], dist=lambda x, y: np.linalg.norm(x - y))
-            D[k] = dist
+            dist, path = fastdtw(sequences[i], sequences[j], dist=lambda x, y: np.linalg.norm(x - y))
+            D[k] = dist / len(path)
             k += 1
     return D
 
 
 def hierarchical_clustering(distances, th):
-    Z = linkage(distances, method='average')
+    Z = linkage(distances, method='complete')
     labels = fcluster(Z, t=th, criterion='distance')
     return labels
 

@@ -300,7 +300,7 @@ def aligned(encoder_path, l2_labels, l2_wav, out_folder, epochs=15, batch_size=1
         distances = pairwise_dtw_distance_matrix(embeddings)
         
         print("Clustering")
-        labels = hierarchical_clustering(distances, th=np.percentile(distances, 20))
+        labels = hierarchical_clustering(distances, th=np.percentile(distances, 50))
 
         print("Barycentering")
         groups = defaultdict(list)

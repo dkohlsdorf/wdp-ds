@@ -270,96 +270,6 @@ def extract(audio_path, csv_path, region_col, output_folder, offset,
             print(f"\t\t REJECT: {audio_path} range {row.sample_min}:{row.sample_max} |{n_samples}| {reason}")
     return instance_id
 
-
-def aligned(encoder_path, l2_labels, l2_wav, out_folder, epochs=15, batch_size=100):
-    encoder = load_model(encoder_path)
-    encoder.summary()
-    instances = dataset_unsupervised(l2_labels, l2_wav,
-                                     lo=FFT_LO, hi=FFT_HI, win=FFT_WIN,
-                                     step=FFT_STEP, raw_size=RAW_AUDIO, T=T)
-                                    
-    n_instances = len(instances)
-    for epoch in range(0, epochs):
-        print(f"decoding #instaces: {n_instances} epoch: {epoch}")
-        embeddings = []
-        raw_windows = []
-        instance_id = 0
-        for spec in instances:
-            if instance_id % 100 == 0:
-                percentage = instance_id / n_instances
-                print(f"Percentage: {percentage * 100}")
-            spec = spec[0:-(len(spec) % 36), :]
-            if len(spec) > 0: 
-                windows = spec.reshape((len(spec) // 36, 36, 130, 1))            
-                embedded_windows = encoder.predict(windows, batch_size = batch_size, verbose = 0)
-                raw_windows.append(windows)
-                embeddings.append(embedded_windows)
-            instance_id += 1
-
-        print("Compute distances")
-        distances = pairwise_dtw_distance_matrix(embeddings)
-        
-        print("Clustering")
-        labels = hierarchical_clustering(distances, th=np.percentile(distances, 25))
-        for th in [1, 5, 10, 25, 50, 75, 90, 95, 99]:
-            print(f"{th}: {np.percentile(distances, th)}")
-        print("Barycentering")
-        groups = defaultdict(list)
-        instance_ids = defaultdict(list)
-        for i, (label, embedding) in enumerate(zip(labels, embeddings)):
-            groups[label].append(embedding)
-            instance_ids[label].append(i)    
-        for k, v in groups.items():
-            print(f"\t {k}: {len(v)}")
-            
-        bary_centers = {
-            label: dtw_barycenter_avg(sequences)
-            for label, sequences in groups.items()
-            if len(sequences) > 0}
-
-        centers = {}
-        variances = []
-        for label, (center, variance) in bary_centers.items():
-            variances += variance 
-            centers[label] = center
-
-        for th in [1, 5, 10, 25, 50, 75, 90, 95, 99]:
-            print(f"{th}: {np.percentile([var for var in variances if var > 0.0], th)}")
-        
-        th = np.percentile([var for var in variances if var > 0.0], 25)
-        aligned = extract_alignment_points(groups, centers, instance_ids, variance_th=th, min_count=5)
-        print(f"Threshold: {th}")
-        print(f"Centers: {len(centers)}")
-
-        print("Training supervised model")
-        all_vectors = []
-        labels = []
-        label_dict = {}
-        label_id = 0
-        for cluster, points in aligned.items():
-            for point, ids in points.items(): 
-                key = f"{cluster}::{point}"
-                if key not in label_dict:
-                    label_dict[key] = label_id
-                    label_id += 1
-                for i, j in ids:
-                    all_vectors.append(raw_windows[i][j])
-                    labels.append(label_dict[key])
-                    
-        coverage = len(set([key.split('::')[0] for key in label_dict.keys()]))
-        print(f"Coverage: {coverage}")
-        print(f"Aligned: {len(label_dict)}")
-
-        labels = np.array(labels)
-        all_vectors = np.stack(all_vectors)
-        n_labels = max(label_dict.values()) + 1
-        supervised = classifier(WINDOW_PARAM, encoder, n_labels)
-        supervised.fit(all_vectors, labels, epochs=25)
-        print("save models")
-        encoder.save('{}/encoder_finetuning_epoch{}.h5'.format(out_folder, epoch))
-        supervised.save('{}/supervised_alignment_points_epoch{}.h5'.format(out_folder, epoch))
-        pkl.dump(label_dict, open('{}/labels{}.pkl'.format(out_folder, epoch), "wb"))
-
             
 if __name__ == '__main__':
     print("=====================================")
@@ -372,12 +282,6 @@ if __name__ == '__main__':
         l2_wav    = sys.argv[5]
         out       = sys.argv[6]
         train(l1_labels, l1_wav, l2_labels, l2_wav, out)
-    elif len(sys.argv) == 6 and sys.argv[1] == 'aligned':
-        encoder   = sys.argv[2]
-        l2_labels = sys.argv[3]
-        l2_wav    = sys.argv[4]
-        out       = sys.argv[5]
-        aligned(encoder, l2_labels, l2_wav, out)
     elif len(sys.argv) == 5 and sys.argv[1] == 'decode':
         classifier = sys.argv[2]
         audio      = sys.argv[3]
@@ -419,7 +323,6 @@ if __name__ == '__main__':
         print("""
             Usage:
                 + train:      python pipeline.py train L1_CSV L1_AUDIO L2_CSV L2_AUDIO OUT_FOLDER
-                + aligned:    python pipeline.py aligned ENCODER L2_CSV L2_AUDIO OUT_FOLDER
                 + decode:     python pipeline.py decode CLASSIFIER (AUDIO|FOLDER) LABELS [OUTPUT]
                 + extract:    python pipeline.py extract (AUDIO|FOLDER) COL OUTPUT
         """)

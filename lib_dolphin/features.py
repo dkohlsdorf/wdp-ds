@@ -104,9 +104,9 @@ def triplet_model(in_shape, encoder, latent, margin=1.0):
     anchor = Input(in_shape)
     pos    = Input(in_shape)
     neg    = Input(in_shape)
-    z_a    = encoder(anchor)[0]
-    z_p    = encoder(pos)[0]
-    z_n    = encoder(neg)[0]
+    z_a    = encoder(anchor)
+    z_p    = encoder(pos)
+    z_n    = encoder(neg)
     conc   = Concatenate()([z_a, z_p, z_n])
 
     model   = tf.keras.models.Model(inputs=[anchor, pos, neg], outputs=conc)  

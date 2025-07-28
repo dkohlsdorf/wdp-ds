@@ -140,7 +140,7 @@ def split_train_test(instances, labels, perc_test):
 def train(label_file, wav_file, label_file_l2, wav_file_l2, out_folder="output", perc_test=0.33, super_epochs=3, resample=10000):
     instances, ra, labels, label_dict = dataset_supervised_windows(
         label_file, wav_file, lo=FFT_LO, hi=FFT_HI, win=FFT_WIN, step=FFT_STEP, raw_size=RAW_AUDIO)
-
+    
     x_unsupervised = dataset_unsupervised_windows(label_file_l2, wav_file_l2, lo=FFT_LO, hi=FFT_HI, win=FFT_WIN, step=FFT_STEP, raw_size=RAW_AUDIO, T=T, n=10000)
     x_unsupervised = np.stack(x_unsupervised).reshape(len(x_unsupervised), T, D, 1)
 

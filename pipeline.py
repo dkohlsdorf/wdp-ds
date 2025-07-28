@@ -8,7 +8,6 @@ import nmslib
 from lib_dolphin.audio import *
 from lib_dolphin.features import *
 from lib_dolphin.parameters import *
-from lib_dolphin.discovery import *
 from lib_dolphin.connected_components import *
 
 from collections import namedtuple, Counter, defaultdict

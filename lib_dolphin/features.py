@@ -28,15 +28,6 @@ def encoder(in_shape, latent_dim, conv_params):
     x   = Bidirectional(LSTM(latent_dim, return_sequences=True))(loc)
     return Model(inputs =[inp], outputs=[x])
 
-    
-
-def window_encoder(in_shape, encoder, latent_dim):
-    inp   = Input(in_shape)
-    x     = encoder(inp) 
-    x     = LSTM(latent_dim)(x)            
-    model = Model(inputs = [inp], outputs = [x])
-    return model
-
 
 def decoder(length, latent_dim, output_dim, conv_params):
     inp = Input((latent_dim))
@@ -55,20 +46,29 @@ def decoder(length, latent_dim, output_dim, conv_params):
     return Model(inputs = [inp], outputs = [x])
 
 
+
+def window_encoder(in_shape, encoder, latent_dim):
+    inp   = Input(in_shape)
+    x     = encoder(inp)[0]
+    x     = LSTM(latent_dim)(x)            
+    model = Model(inputs = [inp], outputs = [x])
+    return model
+
+
 def auto_encoder(in_shape, encoder, latent_dim, conv_params):
     dec = decoder(in_shape[0], latent_dim, in_shape[1], conv_params)
     dec.summary()
     inp = Input(in_shape)
-    x   = encoder(inp) 
-    x   = dec(x) 
+    x   = encoder(inp)[0]
+    x   = dec(x)[0]
     model = Model(inputs = [inp], outputs = [x])
     model.compile(optimizer = RMSprop(), loss='mse')
     return model
 
 
-def classifier(in_shape, enc, latent_dim, out_dim, conv_params):
+def classifier(in_shape, encoder, latent_dim, out_dim, conv_params):
     inp = Input(in_shape)
-    x   = enc(inp)
+    x   = encoder(inp)[0]
     x   = Dropout(0.5)(x) 
     x   = Dense(out_dim, activation='softmax')(x) 
     model = Model(inputs = [inp], outputs = [x])
@@ -97,16 +97,16 @@ class TripletLoss(Loss):
 
 def triplet_model(in_shape, encoder, latent, margin=1.0):
     i = Input(in_shape)
-    e = encoder(i)
+    e = encoder(i)[0]
     e = tf.keras.layers.Lambda(lambda x: tf.math.l2_normalize(x, axis=1))(e)
     encoder = tf.keras.models.Model(inputs=i, outputs=e)  
 
     anchor = Input(in_shape)
     pos    = Input(in_shape)
     neg    = Input(in_shape)
-    z_a    = encoder(anchor)
-    z_p    = encoder(pos)
-    z_n    = encoder(neg)
+    z_a    = encoder(anchor)[0]
+    z_p    = encoder(pos)[0]
+    z_n    = encoder(neg)[0]
     conc   = Concatenate()([z_a, z_p, z_n])
 
     model   = tf.keras.models.Model(inputs=[anchor, pos, neg], outputs=conc)  

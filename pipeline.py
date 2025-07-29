@@ -186,7 +186,7 @@ def train(label_file, wav_file, label_file_l2, wav_file_l2, out_folder="output",
         accuracy_ae.append(acc_ae)
         enc.save('{}/encoder.h5'.format(out_folder))
 
-        model = classifier(WINDOW_PARAM, enc, c5)
+        model = classifier(WINDOW_PARAM, enc, LATENT, 5, CONV_PARAM)
         model.summary()
         model.fit(x=x_train, y=y_train, validation_data=(x_test, y_test), batch_size=BATCH, epochs=EPOCHS, shuffle=True)
         n = len(label_dict)

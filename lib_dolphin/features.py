@@ -30,7 +30,7 @@ def encoder(in_shape, latent_dim, conv_params):
 
 
 def decoder(length, latent_dim, output_dim, conv_params):
-    inp = Input((latent_dim))
+    inp = Input((latent_dim, ))
     x   = Reshape((1, latent_dim))(inp)
     x   = ZeroPadding1D((0, length - 1))(x)
     x   = LSTM(latent_dim, return_sequences=True)(x)    

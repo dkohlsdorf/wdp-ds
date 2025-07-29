@@ -2,6 +2,7 @@ import numpy as np
 import pickle as pkl
 import sys
 import os
+import matplotlib.pyplot as plt
 
 import nmslib
 

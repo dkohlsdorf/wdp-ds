@@ -10,5 +10,3 @@ using the commands at the side. You can use the controls
 described at the side to navigate the spectrogram.
 At the bottom you can see the raw audio.
 The output of the program is an audio file with all the audio snippets:
-
-<img src="images/spec_export.png"/>

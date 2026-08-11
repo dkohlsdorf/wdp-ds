@@ -2,6 +2,7 @@ import numpy as np
 import pickle as pkl
 import sys
 import os
+import matplotlib.pyplot as plt
 
 import nmslib
 
@@ -140,7 +141,7 @@ def split_train_test(instances, labels, perc_test):
 def train(label_file, wav_file, label_file_l2, wav_file_l2, out_folder="output", perc_test=0.33, super_epochs=3, resample=10000):
     instances, ra, labels, label_dict = dataset_supervised_windows(
         label_file, wav_file, lo=FFT_LO, hi=FFT_HI, win=FFT_WIN, step=FFT_STEP, raw_size=RAW_AUDIO)
-
+    
     x_unsupervised = dataset_unsupervised_windows(label_file_l2, wav_file_l2, lo=FFT_LO, hi=FFT_HI, win=FFT_WIN, step=FFT_STEP, raw_size=RAW_AUDIO, T=T, n=10000)
     x_unsupervised = np.stack(x_unsupervised).reshape(len(x_unsupervised), T, D, 1)
 
@@ -186,7 +187,7 @@ def train(label_file, wav_file, label_file_l2, wav_file_l2, out_folder="output",
         accuracy_ae.append(acc_ae)
         enc.save('{}/encoder.h5'.format(out_folder))
 
-        model = classifier(WINDOW_PARAM, enc, c5)
+        model = classifier(WINDOW_PARAM, enc, LATENT, 5, CONV_PARAM)
         model.summary()
         model.fit(x=x_train, y=y_train, validation_data=(x_test, y_test), batch_size=BATCH, epochs=EPOCHS, shuffle=True)
         n = len(label_dict)
